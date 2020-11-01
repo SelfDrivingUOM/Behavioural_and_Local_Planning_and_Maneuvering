@@ -47,7 +47,7 @@ class LocalPlanner:
         self.number_of_layers = NUMBER_OF_LAYERS
         self.prev_goal_t=1000
         self.vals  = [0.0,0.0,0.000001]
-        self.LUT = np.load("/home/selfdriving/Desktop/LUT.npz")["arr_0"]
+        self.LUT = np.load("/home/selfdriving/BP_with_git/LUT.npz")["arr_0"]
         
     ######################################################
     # GOAL STATE COMPUTATION
