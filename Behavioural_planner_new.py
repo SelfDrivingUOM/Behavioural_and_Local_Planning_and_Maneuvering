@@ -8,43 +8,67 @@ import local_planner
 from tools.misc import get_speed
 from tools.misc import debug_print
 from tools.misc import draw_bound_box
+import carla
 
-BP_LOOKAHEAD_BASE      = 10.0             # m
-BP_LOOKAHEAD_TIME      = 1.0              # s
+
+BP_LOOKAHEAD_BASE              = 10.0       # m
+BP_LOOKAHEAD_TIME              = 1.0        # s
+INTERSECTION_APPROACH_DISTANCE = 5
 
 #states
 FOLLOW_LANE            = 0
 DECELERATE_TO_STOP     = 1
 STAY_STOPPED           = 2
+OVERTAKE               = 3
+FOLLOW_LEAD_VEHICLE    = 4
+INTERSECTION           = 5
 
 ##initial state
 
+"""
+    State Offsets
+
+Follow Lane Offset  - 10cm
+
+
+"""
+
+FOLLOW_LANE_OFFSET = 0.1
+DECELERATE_OFFSET = 0.1
+
 
 class BehaviouralPlanner:
-    def __init__(self, lp, waypoints,environment, world):
+    def __init__(self, lp, waypoints,environment, world,HOP_RESOLUTION,world_map,ego_vehicle):
         self._lp            = lp
         self._waypoints     = waypoints
         self._goal_state    = [0.0, 0.0, 0.0]
         self._goal_index    = 0
         self._environment   = environment
+        self._hop_resolution= HOP_RESOLUTION
         self._world         = world
         self._state         = FOLLOW_LANE
         self._lookahead     = BP_LOOKAHEAD_BASE
         self.paths = None
         self._goal_state_next =None
-        self.min_collision_idx = None
+        self.min_collision_idx00000 = None
+
+        self._map = world_map
+        self._not_passed = False
+        self.ego_vehicle = ego_vehicle
 
 
     def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed):
-
+        print(self._state)
         open_loop_speed = self._lp._velocity_planner.get_open_loop_speed(current_timestamp - prev_timestamp)
         self._lookahead= BP_LOOKAHEAD_BASE + BP_LOOKAHEAD_TIME * open_loop_speed 
-        vehicles_static, vehicles_dynamic, walkers = self._environment.get_actors(30)
+        vehicles_static, vehicles_dynamic, walkers,closest_vehicle = self._environment.get_actors(30)
         obstacle_actors = vehicles_static + vehicles_dynamic + walkers
         
         # draw_bound_box(obstacle_actors,self._world)
         
         if (self._state   == FOLLOW_LANE):
+
+            
             # First, find the closest index to the ego vehicle.
             closest_len, closest_index = self.get_closest_index(ego_state)
             # Next, find the goal index that lies within the lookahead distance
@@ -53,6 +77,7 @@ class BehaviouralPlanner:
             self._goal_index = goal_index
             self._goal_state = self._waypoints[goal_index]
 
+            # print(do_stop,intersection)
 
             if goal_index < (self._waypoints.shape[0]-1):
                 point_1 = self._waypoints[goal_index+1]
@@ -67,8 +92,8 @@ class BehaviouralPlanner:
             goal_state = goal_set[0]
             gi = goal_index_set[0]
 
-            goal_state_set = self._lp.get_goal_state_set(point_1,point_2,goal_state, ego_state)
-            
+            goal_state_set = self._lp.get_goal_state_set(point_1,point_2,goal_state, ego_state,FOLLOW_LANE_OFFSET)
+            # print(goal_state_set)
             # Calculate planned paths in the local frame.
             paths, path_validity = self._lp.plan_paths(goal_state_set)
 
@@ -76,38 +101,93 @@ class BehaviouralPlanner:
             paths = local_planner.transform_paths(paths, ego_state)
 
             collision_check_array,min_collision = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world)
-            
-
-            # print(min_collisions)
-            # Compute the best local path.
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
 
-            if((abs(best_index - self._lp._num_paths//2))>= 3):
+
+
+            # if((abs(best_index - self._lp._num_paths//2))>= 3):
         
+            #     self._state   = DECELERATE_TO_STOP
+            #     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+            #     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+            #     self._goal_state[2] = 0
+
+            if(self.check_walkers(self._map,walkers,ego_state,closest_index,self._waypoints)):
+                
                 self._state   = DECELERATE_TO_STOP
                 self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
                 self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
                 self._goal_state[2] = 0
+            
+            elif(best_index == None): ##LANE PATHS BLOCKED
+                
+                if(self.can_overtake()):
 
+                    ##### FIX GOAL STATE PROPERLY
+                    self._state   = OVERTAKE
+                    self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+                    self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+                    self._goal_state[2] = 0
+                
+                
+                elif(self.need_to_stop(closest_vehicle,closest_index,ego_state)):
+                    
+                    self._state   = DECELERATE_TO_STOP
+                    self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+                    self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+                    self._goal_state[2] = 0
+
+                else:
+
+                    self._state   = FOLLOW_LEAD_VEHICLE
+                    self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+                    self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+                    self._goal_state[2] = 0
+
+            # elif(self.is_approaching_intersection(self._waypoints,closest_index,ego_state)):
+
+            #     self._state   = INTERSECTION
+            #     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+            #     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+            #     self._goal_state[2] = 0
             else:
 
-                best_index = 7
+                self._state   = FOLLOW_LANE
+
+                best_index = 5
                 best_path = paths[best_index]
             
                 debug_print(paths,self._world,best_index)
                 local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
 
                 return local_waypoints
+              
 
-        if (self._state == DECELERATE_TO_STOP):
+            # if(validity):
+            #     self._state   = DECELERATE_TO_STOP
+
+            # else:
+
+            #     best_index = 7
+            #     best_path = paths[best_index]
             
+            #     debug_print(paths,self._world,best_index)
+            #     local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
+
+            #     return local_waypoints
+
+        elif (self._state == DECELERATE_TO_STOP):
+            print("lol")
             # print(self.paths.shape)
             
             goal_set, goal_index_set =  self._lp.lattice_layer_stations(self._goal_state , self._waypoints, ego_state)
             
             goal_state = goal_set[0]
             gi = goal_index_set[0]
-            goal_state_set = self._lp.get_goal_state_set(self._goal_state_next,self._goal_state, self._goal_state, ego_state)
+
+
+            # print(self._goal_state_next,self._goal_state, self._goal_state, ego_state)
+            goal_state_set = self._lp.get_goal_state_set(self._goal_state_next,self._goal_state, self._goal_state, ego_state,DECELERATE_OFFSET)
 
             paths, path_validity = self._lp.plan_paths(goal_state_set)
 
@@ -125,8 +205,13 @@ class BehaviouralPlanner:
 
             # raise Exception
             return local_waypoints
-        if (self._state   == STAY_STOPPED):
+        elif (self._state   == STAY_STOPPED):
             pass
+
+        elif(self._state == OVERTAKE):
+
+            pass
+            
 
     def get_closest_index(self, ego_state):
         """
@@ -167,6 +252,179 @@ class BehaviouralPlanner:
             if arc_length > self._lookahead: break
 
         return wp_index
+
+
+    def is_approaching_intersection(self, waypoints, closest_index,ego_state):
+
+        index_length_for_approaching = int(INTERSECTION_APPROACH_DISTANCE/self._hop_resolution)
+        checking_waypoint = waypoints[closest_index+index_length_for_approaching]
+        loc=carla.Location(x=checking_waypoint[0] , y=checking_waypoint[1],z = 1.843102)
+
+        exwp = self._map.get_waypoint(loc)
+        ego_wayp =  self._map.get_waypoint(carla.Location(x=ego_state[0] , y=ego_state[1],z= 1.843102))
+
+        out=exwp.is_junction
+
+        if(out):
+            self._not_passed = True
+            return out
+    
+        elif(ego_wayp.is_junction):
+            self._not_passed = False
+            return True
+
+        elif(self._not_passed):
+            return True
+
+        else:
+            return False
+                # return True
+                # self._within_int = False
+                # return True
+            # else:
+            #     return False
+
+
+
+        # print(out)
+
+
+
+    def check_walkers(self,world_map,walkers,ego_state,closest_index,waypoints):
+
+        ego_waypoint = world_map.get_waypoint(carla.Location(x=ego_state[0], y=ego_state[1], z= 1.843102 ),project_to_road=True)
+        ego_road = ego_waypoint.road_id
+        ego_lane = ego_waypoint.lane_id
+
+        ped_cross = False
+
+        vec_x = waypoints[closest_index+1][0] - ego_state[0]
+        vec_y = waypoints[closest_index+1][1] - ego_state[1]
+        vec = np.array([vec_x,vec_y])
+        
+        # print(vec,)
+        # head = np.array([np.cos(np.radians(ego_state[2])),np.sin(np.radians(ego_state[2]))])
+        rot_mat = np.array([[np.cos(np.pi/2),-np.sin(np.pi/2)],
+                            [np.sin(np.pi/2),np.cos(np.pi/2)]])
+        vec_rd = np.matmul(rot_mat,vec)
+        if walkers:
+            for person in walkers:
+                walker_loc= person.get_location()
+                vec_wx = walker_loc.x  - ego_state[0]
+                vec_wy = walker_loc.y  - ego_state[1]
+                vec_w = np.array([vec_wx,vec_wy])
+                cross_ = np.cross(vec_rd,vec_w)
+                
+                # print(cross_,ego_lane,ped_cross)
+                # print(vec,vec_w)
+                
+                if (cross_ < 0):
+                    
+                    walker_waypoint=world_map.get_waypoint(carla.Location(x=walker_loc.x, y=walker_loc.y, z= 1.843102 ),project_to_road=True,lane_type=carla.LaneType.Driving)
+                    w_lane = walker_waypoint.lane_id
+                    w_road = walker_waypoint.road_id
+                    print(ego_lane,w_lane)
+                    if (ego_lane==w_lane):
+                        # print("XXX")
+                        return True       # decelarate to stop
+
+                    elif (ego_lane-1==0):
+                        if ((w_lane==ego_lane-2) or (w_lane==ego_lane-1)):
+                            return True       # check velocity
+                        elif (w_lane==ego_lane+1):
+                            return True       # check velocity
+                        else:
+                            return False
+
+                    elif (ego_lane+1==0):
+                        if ((w_lane==ego_lane+2) or (w_lane==ego_lane+1)):
+                            return True       # check velocity
+                        elif (w_lane==ego_lane-1):
+                            return True         # check velocity
+                        else:
+                            return False
+                            
+                    elif ((w_lane==ego_lane-1) or (w_lane==ego_lane+1)):
+                        return True             # check velocity
+                    else:
+                        return False
+
+                else:
+                    return False
+        else:
+            return False
+
+    """
+    This function return 2 values
+
+        i. Do we need to stop (bool)
+        ii. Are we at n intersection (bool)
+
+    These will be used as necessary 
+    """
+
+    def need_to_stop(self,lead_vehicle,closest_index,ego_state):
+        
+        # stop = False
+        is_intersection = self.is_approaching_intersection(self._waypoints,closest_index,ego_state)       
+        # distance_lead = get_road_dist(collission_idx)
+        
+        if(is_intersection):
+            green_light = self.is_green_light(self.ego_vehicle)
+
+            # print(green_light)
+            if(green_light):
+                return False,is_intersection
+            else:
+                # stp = not stop
+                return True,is_intersection
+        else:
+
+            if(lead_vehicle!=None):
+                #lead_vehicle = lane_vehicles[0]
+                lead_velocity = lead_vehicle.get_velocity()
+                val_ = np.linalg.norm([lead_velocity.x,lead_velocity.y,lead_velocity.z])
+
+                if(val_ <0.5):
+                    return True,is_intersection 
+                else:
+                    return False, is_intersection
+            else:
+            
+                return True,is_intersection
+
+    """
+    This function returns distance to the lead vehicle
+    """
+
+    def get_road_dist(self,collission_idx,path):
+
+
+        mask = np.ones(collission_idx-1,path.shape[0],1)-np.ones(collission_idx-1,path.shape[0])
+        diff_points = mask@path
+
+        diff_points = np.square(diff_points)
+
+        distance_lead = np.sum(np.sum(diff_points,axis =1))
+        
+        return distance_lead
+
+    """
+    This function returns distance to the lead vehicle
+    """
+
+    def is_green_light(self,ego_vehicle):
+
+        traffic_light = ego_vehicle.get_traffic_light_state()
+        # print(traffic_light)
+        if(traffic_light =="Green"):
+            return True
+        else:
+            return False
+
+    def can_overtake(self):
+
+        return False 
 
 
 

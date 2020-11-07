@@ -56,7 +56,7 @@ class LocalPlanner:
     # perpendicular to the goal yaw of the ego vehicle.
     ######################################################
 
-    def get_goal_state_set(self, point_1,point_2, goal_state, ego_state):
+    def get_goal_state_set(self, point_1,point_2, goal_state, ego_state,offset_):
 
         # wp1_x = (waypoints[goal_index+1][0] - ego_state[0]) * cos(-ego_state[2]) - (waypoints[goal_index+1][1] - ego_state[1]) * sin(-ego_state[2])
         # wp1_y = (waypoints[goal_index+1][0] - ego_state[0]) * sin(-ego_state[2]) + (waypoints[goal_index+1][1] - ego_state[1]) * cos(-ego_state[2])
@@ -120,7 +120,7 @@ class LocalPlanner:
         goal_state_set = []
         for i in range(self._num_paths):
 
-            offset = (i - self._num_paths // 2) * self._path_offset
+            offset = (i - self._num_paths // 2) * offset_
 
             x_offset = offset * cos(goal_t + pi/2)
             y_offset = offset * sin(goal_t + pi/2)
@@ -364,7 +364,7 @@ def transform_paths(paths, ego_state):
     #change to num paths
     paths_np = np.array(paths)
 
-    transformed_paths_np = np.empty((15,3,49))
+    transformed_paths_np = np.empty((11,3,49))
 
     transformed_paths_np[:,0,:] = ego_state[0] + (paths_np[:,0,:]*np.cos(ego_state[2])) - (paths_np[:,1,:]*np.sin(ego_state[2]))
     transformed_paths_np[:,1,:] = ego_state[1] + (paths_np[:,0,:]*np.sin(ego_state[2])) + (paths_np[:,1,:]*np.cos(ego_state[2]))

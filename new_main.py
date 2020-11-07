@@ -9,14 +9,14 @@ SIMULATION_TIME_STEP   = 0.03
 # --  Planning Constants -------------------------------------------------------aaaaaaaaaaaaaaaaa
 # ==============================================================================
 
-
+HOP_RESOLUTION=1
 DIST_THRESHOLD_TO_LAST_WAYPOINT = 2.0  # some distance from last position before
                                        # simulation ends
 
-NUM_PATHS              = 15               # 
+NUM_PATHS              = 11               # 
 BP_LOOKAHEAD_BASE      = 10.0             # m
 BP_LOOKAHEAD_TIME      = 1.0              # s
-PATH_OFFSET            = 0.75              # m
+PATH_OFFSET            = 0.1              # m
 NUMBER_OF_LAYERS       = 1
 CIRCLE_OFFSETS         = [-1.0, 1.0, 3.0] # m
 CIRCLE_RADII           = [1.8, 1.8, 1.8]  # m
@@ -57,7 +57,6 @@ except IndexError:
 
 try:
     sys.path.append('/home/selfdriving/yasintha/Path_planner_6/')
-
 except IndexError:
     pass
 
@@ -167,22 +166,6 @@ def debug_print(paths,world,best_index):
 				#print(loc)
 				world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=0.1,persistent_lines=True)
 
-def debug_sub_print(paths,world):
-    #print(len(paths))
-    #print(len(paths[0]))
-    #print(len(paths[0][0]))
-    for path in paths:
-        for sub_branch in path:
-            le=len(sub_branch[0])
-            
-            for i in range(le):
-                x=sub_branch[0][i]
-                y=sub_branch[1][i]
-                t=sub_branch[2][i]
-
-                loc=carla.Location(x=x , y=y,z=0)
-			    #print(loc)
-                world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=0.1,persistent_lines=True)
 
 def find_weather_presets():
     rgx = re.compile('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)')
@@ -656,9 +639,9 @@ def game_loop(args):
         
         start_point = world_map.get_spawn_points()[50]
         end_point = world_map.get_spawn_points()[10]
-
+        # print(start_point)
         #environment = Environment(world.world,world_map,world.player)
-        environment = Environment(world.world,world.player)
+        environment = Environment(world.world,world.player,world_map)
         ################################################################
         ############        Initializing Local Planner     #############
         ################################################################
@@ -684,10 +667,10 @@ def game_loop(args):
         
 		
         ################################################################
-		#####        Obtaining Global Route with hop of 0.5 m      #####
+		###  Obtaining Global Route with hop of given resolution     ###
 		################################################################
 
-        route = trace_route(start_point, end_point,1, world.player, world.world)
+        route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
         waypoints = np.array(route)[:,0]
         waypoints_np = np.empty((0,3))
         vehicle_speed = 5
@@ -700,6 +683,11 @@ def game_loop(args):
         waypoints_np = add_lane_change_waypoints(waypoints_np,lp,vehicle_speed, world.world)
 
         waypoints_np = remove_dup_wp(waypoints_np)
+
+        blueprint_library = client.get_world().get_blueprint_library()
+        walker_bp = blueprint_library.filter("model3")[0]
+        walker_transform=carla.Transform(carla.Location(x= 65.9679183959961, y=-196.49017333984375, z= 1.843102 ),carla.Rotation(yaw= 1.4203450679814286772))
+        walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
         for w in waypoints_np:
             world.world.debug.draw_string(carla.Location(x=w[0],y=w[1],z=0), 'O', draw_shadow=False,
@@ -717,7 +705,7 @@ def game_loop(args):
         #########        Initializing Behavioural Planner      #########
         ################################################################
 
-        bp = BehaviouralPlanner(lp,waypoints_np,environment,world.world)
+        bp = BehaviouralPlanner(lp,waypoints_np,environment,world.world,HOP_RESOLUTION,world_map,world.player)
 
 
 

@@ -21,6 +21,7 @@ except IndexError:
 # -- imports -------------------------------------------------------------------
 # ==============================================================================
 
+MAX_WEIGHT = 100000
 
 import carla
 
@@ -315,18 +316,27 @@ class CollisionChecker:
             #         score = float('Inf')
                     
                 # Set the best index to be the path index with the lowest score
-            best_index = np.where(total_score == np.amin(total_score))[0][0]
 
-            ##!!!###
-            #--- ~~~~~~~~~~~~~~~~~~~ ---#
-            '''if abs(best_index - self.prev_path_index)<=3:
-                best_index = self.prev_path_index
+            temp_ = np.amin(total_score)
 
-            self.prev_path_index = best_index'''
-            #--- ~~~~~~~~~~~~~~~~~~~ ---#
-            ##!!!###
 
-            return best_index
+            if(temp_ == MAX_WEIGHT):
+                return None
+            else:
+                best_index = np.where(total_score == temp_)[0][0]
+
+                ##!!!###
+                #--- ~~~~~~~~~~~~~~~~~~~ ---#
+                '''if abs(best_index - self.prev_path_index)<=3:
+                    best_index = self.prev_path_index
+
+                self.prev_path_index = best_index'''
+                #--- ~~~~~~~~~~~~~~~~~~~ ---#
+                ##!!!###
+                # print(best_index)
+
+       
+                return best_index
 
 
 def get_speed(vehicle):
