@@ -435,15 +435,15 @@ class HUD(object):
                 ('Speed:', c.speed, 0.0, 5.556),
                 ('Jump:', c.jump)]
 
-        if len(vehicles) > 1:
-            self._info_text += ['Nearby vehicles:']
-            distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
-            vehicles = [(distance(x.get_location()), x) for x in vehicles if x.id != world.player.id]
-            for d, vehicle in sorted(vehicles):
-                if d > 200.0:
-                    break
-                vehicle_type = get_actor_display_name(vehicle, truncate=22)
-                self._info_text.append('% 4dm %s' % (d, vehicle_type))
+        # if len(vehicles) > 1:
+        #     self._info_text += ['Nearby vehicles:']
+        #     distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
+        #     vehicles = [(distance(x.get_location()), x) for x in vehicles if x.id != world.player.id]
+        #     for d, vehicle in sorted(vehicles):
+        #         if d > 200.0:
+        #             break
+        #         vehicle_type = get_actor_display_name(vehicle, truncate=22)
+        #         self._info_text.append('% 4dm %s' % (d, vehicle_type))
 
     def toggle_info(self):
         self._show_info = not self._show_info
@@ -637,6 +637,17 @@ def game_loop(args):
         world.world.debug.draw_line(carla.Location(x=-50 , y=0,z=0),carla.Location(x=200 , y=0,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
         world.world.debug.draw_line(carla.Location(x=0 , y=-50,z=0),carla.Location(x=0 , y=200,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
         
+
+
+        # blueprint_library = world.world.get_blueprint_library()
+        # walker_bp = blueprint_library.find('walker.pedestrian.0001')
+        # walker_transform=carla.Transform(carla.Location(x=-1150, y=-12510.49017333984375, z= 15.2402 ),carla.Rotation(yaw= 1.4203450679814286772))
+        # walker = world.world.try_spawn_actor(walker_bp, walker_transform)
+        # walker.go_to_location(carla.Location(x=39.9679183959961, y=-191.49017333984375, z= 1.843102 ),carla.Rotation(yaw= 1.4203450679814286772))
+        # carla
+
+
+
         start_point = world_map.get_spawn_points()[50]
         end_point = world_map.get_spawn_points()[10]
         # print(start_point)
@@ -684,10 +695,45 @@ def game_loop(args):
 
         waypoints_np = remove_dup_wp(waypoints_np)
 
-        blueprint_library = client.get_world().get_blueprint_library()
-        walker_bp = blueprint_library.filter("model3")[0]
-        walker_transform=carla.Transform(carla.Location(x= 65.9679183959961, y=-196.49017333984375, z= 1.843102 ),carla.Rotation(yaw= 1.4203450679814286772))
-        walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
+        # blueprint_library = client.get_world().get_blueprint_library()
+        # walker_bp = blueprint_library.filter("walker")[0]
+
+        # walker_transform=carla.Transform(carla.Location(x=-5.9679183959961, y=-191.49017333984375, z= 1.843102 ),carla.Rotation(yaw= 1.4203450679814286772))
+        # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
+
+
+        # if walker!=None:
+        #     ##!!!###
+        #     walker_control = carla.WalkerControl()
+        #     walker_control.speed = 0.16
+
+        #     walker_heading = -90
+        #     walker_rotation = carla.Rotation(0,walker_heading,0)
+        #     walker_control.direction = walker_rotation.get_forward_vector()
+        #     walker.apply_control(walker_control)
+        #     ##!!!###
+
+        #     actor_list.append(walker)
+
+        loc = carla.Location(x= -5.5, y=-193.8, z= 1.152402 )
+        world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+
+        waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = ( carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk ) )
+        print(waypoint.lane_type,waypoint.lane_id,waypoint.section_id)
+        # world.world.debug.draw_string(waypoint.transform.location, 'X', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=10000,persistent_lines=True)
+        # print(waypoint.lane_id,waypoint.lane_type)
+
+        # walker_transform=carla.Transform(carla.Location(x= -6.5, y=-125.1, z= 1.152402 ),carla.Rotation(yaw= 1.4203450679814286772))
+        
+        # walker_transform=carla.Transform(carla.Location(x= -12.5, y=-125.1, z= 1.152402 ),carla.Rotation(yaw= 1.4203450679814286772))
+        
+        # debug_print()
+        # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
+
+        # walker.go_to_location(carla.Location(x = 1951,y = -12672 ,z= 14.6974))
+        # walker.set_max_speed(0.2)
+
+
 
         for w in waypoints_np:
             world.world.debug.draw_string(carla.Location(x=w[0],y=w[1],z=0), 'O', draw_shadow=False,

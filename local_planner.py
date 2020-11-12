@@ -103,6 +103,8 @@ class LocalPlanner:
         goal_t = heading - ego_state[2]
         goal_v = goal_state[2]
 
+
+        # goal_t*=0.8
         if goal_t > pi:
             goal_t -= 2*pi
         elif goal_t < -pi:
@@ -221,7 +223,7 @@ class LocalPlanner:
         path_validity = []
         #print(goal_state_set[7][2])
 
-        toc = time.time()
+        # toc = time.time()
         
         # processes = []
         # manager = multiprocessing.Manager()
