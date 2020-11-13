@@ -4,7 +4,7 @@ ITER_FOR_SIM_TIMESTEP  = 100     # no. iterations to compute approx sim timestep
 WAIT_TIME_BEFORE_START = 0       # game seconds (time before controller start)
 TOTAL_RUN_TIME         = 100.00  # game seconds (total runtime before sim end)
 TOTAL_FRAME_BUFFER     = 300     # number of frames to buffer after total runtime
-SIMULATION_TIME_STEP   = 0.03
+SIMULATION_TIME_STEP   = 0.034
 # ==============================================================================
 # --  Planning Constants -------------------------------------------------------aaaaaaaaaaaaaaaaa
 # ==============================================================================
@@ -411,7 +411,7 @@ class HUD(object):
         t = world.player.get_transform()
         v = world.player.get_velocity()
         c = world.player.get_control()
-        vehicles = world.world.get_actors().filter('vehicle.*')
+        # vehicles = world.world.get_actors().filter('vehicle.*')
         self._info_text = [
             'Server:  % 16.0f FPS' % self.server_fps,
             'Client:  % 16.0f FPS' % clock.get_fps(),
@@ -695,11 +695,11 @@ def game_loop(args):
 
         waypoints_np = remove_dup_wp(waypoints_np)
 
-        # blueprint_library = client.get_world().get_blueprint_library()
-        # walker_bp = blueprint_library.filter("walker")[0]
+        blueprint_library = client.get_world().get_blueprint_library()
+        walker_bp = blueprint_library.filter("walker")[0]
 
-        # walker_transform=carla.Transform(carla.Location(x=-5.9679183959961, y=-191.49017333984375, z= 1.843102 ),carla.Rotation(yaw= 1.4203450679814286772))
-        # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
+        walker_transform=carla.Transform(carla.Location(x=-3.5, y=-149.49017333984375, z= 0 ),carla.Rotation(yaw= 1.4203450679814286772))
+        walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
 
         # if walker!=None:
@@ -715,19 +715,21 @@ def game_loop(args):
 
         #     actor_list.append(walker)
 
-        loc = carla.Location(x= -5.5, y=-193.8, z= 1.152402 )
+        loc = carla.Location(x=-9.5, y=-141.49017333984375,z = 0 )
         world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
 
         waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = ( carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk ) )
-        print(waypoint.lane_type,waypoint.lane_id,waypoint.section_id)
+        print(waypoint.lane_type,waypoint.lane_id,waypoint.section_id,waypoint.is_junction)
+
+        world.world.debug.draw_string(waypoint.transform.location, 'X', draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=10000,persistent_lines=True)
         # world.world.debug.draw_string(waypoint.transform.location, 'X', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=10000,persistent_lines=True)
         # print(waypoint.lane_id,waypoint.lane_type)
 
         # walker_transform=carla.Transform(carla.Location(x= -6.5, y=-125.1, z= 1.152402 ),carla.Rotation(yaw= 1.4203450679814286772))
         
-        # walker_transform=carla.Transform(carla.Location(x= -12.5, y=-125.1, z= 1.152402 ),carla.Rotation(yaw= 1.4203450679814286772))
+        # # walker_transform=carla.Transform(carla.Location(x= -12.5, y=-125.1, z= 1.152402 ),carla.Rotation(yaw= 1.4203450679814286772))
         
-        # debug_print()
+        # # debug_print()
         # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
         # walker.go_to_location(carla.Location(x = 1951,y = -12672 ,z= 14.6974))
@@ -949,7 +951,7 @@ def game_loop(args):
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
-
+            # print(1/(toc - tic))
             if(toc-tic>SIMULATION_TIME_STEP):
                 continue
             else:

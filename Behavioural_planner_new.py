@@ -51,7 +51,8 @@ class BehaviouralPlanner:
         self._lookahead     = BP_LOOKAHEAD_BASE
         self.paths = None
         self._goal_state_next =None
-        self.min_collision_idx00000 = None
+        self.min_collision = None
+        self._collission_actor  = None
 
         self._map = world_map
         self._not_passed = False
@@ -62,14 +63,14 @@ class BehaviouralPlanner:
         # print(self._state)
         open_loop_speed = self._lp._velocity_planner.get_open_loop_speed(current_timestamp - prev_timestamp)
         self._lookahead= BP_LOOKAHEAD_BASE + BP_LOOKAHEAD_TIME * open_loop_speed 
-        vehicles_static, vehicles_dynamic, walkers,closest_vehicle = self._environment.get_actors(self._lookahead)
+        vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,walkers_y = self._environment.get_actors(self._lookahead)
         
         vehicles_static = list(vehicles_static)
         vehicles_dynamic = list(vehicles_dynamic)
         walkers = list(walkers)
 
         # print(vehicles_static,vehicles_dynamic,walkers)
-        obstacle_actors = vehicles_static + vehicles_dynamic + walkers
+        obstacle_actors = vehicles_static + vehicles_dynamic 
         
         # draw_bound_box(obstacle_actors,self._world)
         
@@ -102,7 +103,7 @@ class BehaviouralPlanner:
             goal_state_set = self._lp.get_goal_state_set(point_1,point_2,goal_state, ego_state,FOLLOW_LANE_OFFSET)
             # print(goal_state_set)
             # Calculate planned paths in the local frame.
-            paths, path_validity = self._lp.plan_paths(goal_state_set)
+            paths, path_validity,mid_path_len = self._lp.plan_paths(goal_state_set)
 
             # Transform those paths back to the global frame.
             paths = local_planner.transform_paths(paths, ego_state)
@@ -123,12 +124,15 @@ class BehaviouralPlanner:
             #     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
             #     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
             #     self._goal_state[2] = 0
-
-            if(self.check_walkers(self._map,walkers,ego_state,closest_index,self._waypoints,paths,best_index)):
-                
+            # print(self._map,walkers,ego_state,closest_index,self._waypoints,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len)
+            walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,closest_index,self._waypoints,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len)
+            
+            if(walker_collide):
+                # self._collission_actor = col_walker
                 self._state   = DECELERATE_TO_STOP
-                self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-2,1)]
-                self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision-1,0)]
+                self._collission_index = min_collision
+                self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-5,1)]
+                self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision-4,0)]
                 self._goal_state[2] = 0
             
             elif(best_index == None): ##LANE PATHS BLOCKED
@@ -144,9 +148,10 @@ class BehaviouralPlanner:
                 
                 elif(self.need_to_stop(closest_vehicle,closest_index,ego_state)):
                     
+                    self._collission_actor = closest_vehicle
                     self._state   = DECELERATE_TO_STOP
-                    self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
-                    self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+                    self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-5,1)]
+                    self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision-4,0)]
                     self._goal_state[2] = 0
 
                 else:
@@ -180,6 +185,12 @@ class BehaviouralPlanner:
 
 
         elif (self._state == DECELERATE_TO_STOP):
+
+
+            # self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+            # self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+            # self._goal_state[2] = 0
+
             # print("lol")
             # print(self.paths.shape)
             
@@ -192,7 +203,7 @@ class BehaviouralPlanner:
             # print(self._goal_state_next,self._goal_state, self._goal_state, ego_state)
             goal_state_set = self._lp.get_goal_state_set(self._goal_state_next,self._goal_state, self._goal_state, ego_state,DECELERATE_OFFSET)
 
-            paths, path_validity = self._lp.plan_paths(goal_state_set)
+            paths, path_validity,mid_path_len = self._lp.plan_paths(goal_state_set)
 
             # Transform those paths back to the global frame.
             paths = local_planner.transform_paths(paths, ego_state)
@@ -293,7 +304,7 @@ class BehaviouralPlanner:
 
 
 
-    def check_walkers(self,world_map,walkers,ego_state,closest_index,waypoints,paths,best_index):
+    def check_walkers(self,world_map,walkers,ego_state,closest_index,waypoints,paths,best_index,vec_rd,min_collision,walkers_y,mid_path_len):
 
             if(best_index == None):
                 print("brrrr")
@@ -311,124 +322,160 @@ class BehaviouralPlanner:
             dest_lane = dest_waypoint.lane_id
             dest_section= dest_waypoint.section_id
 
-            vec_x = waypoints[closest_index+1][0] - ego_state[0]
-            vec_y = waypoints[closest_index+1][1] - ego_state[1]
-            vec = np.array([vec_x,vec_y])
+            # vec_x = waypoints[closest_index+1][0] - ego_state[0]
+            # vec_y = waypoints[closest_index+1][1] - ego_state[1]
+            # vec = np.array([vec_x,vec_y])
         
-            # print(vec,)
-            # head = np.array([np.cos(np.radians(ego_state[2])),np.sin(np.radians(ego_state[2]))])
-            rot_mat = np.array([[np.cos(np.pi/2),-np.sin(np.pi/2)],
-                                [np.sin(np.pi/2),np.cos(np.pi/2)]])
-            vec_rd = np.matmul(rot_mat,vec)
-            vec_rd = vec_rd / (np.sqrt(np.sum(np.square(vec_rd))))
-            
+            # # print(vec,)
+            # # head = np.array([np.cos(np.radians(ego_state[2])),np.sin(np.radians(ego_state[2]))])
+            # rot_mat = np.array([[np.cos(np.pi/2),-np.sin(np.pi/2)],
+            #                     [np.sin(np.pi/2),np.cos(np.pi/2)]])
+            # vec_rd = np.matmul(rot_mat,vec)
+            # vec_rd = vec_rd / (np.sqrt(np.sum(np.square(vec_rd))))
+            counter = -1
             if walkers:
                 for person in walkers:
+                    counter+=1
                     walker_loc= person.get_location()
                     walker_waypoint=world_map.get_waypoint(carla.Location(x=walker_loc.x, y=walker_loc.y, z= 1.843102 ),project_to_road=True,lane_type = ( carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk | carla.LaneType.Parking))
                     # print(walker_waypoint.lane_type)
                     w_lane = walker_waypoint.lane_id
-                    vec_wx = walker_loc.x  - ego_state[0]
-                    vec_wy = walker_loc.y  - ego_state[1]
-                    vec_w = np.array([vec_wx,vec_wy])
-                    cross_ = np.cross(vec_rd,vec_w)
+                    # vec_wx = walker_loc.x  - ego_state[0]
+                    # vec_wy = walker_loc.y  - ego_state[1]
+                    # vec_w = np.array([vec_wx,vec_wy])
+                    # cross_ = np.cross(vec_rd,vec_w)
                     
                     # print(cross_,ego_lane,ped_cross)
                     # print(vec,vec_w)
                     
-                    if (cross_ < 0):
-                        
-                        walker_pt1 = np.array([walker_loc.x,walker_loc.y]) + vec_rd 
-                        walker_pt2 = np.array([walker_loc.x,walker_loc.y]) - vec_rd
-                        walker_way_pt1=world_map.get_waypoint(carla.Location(x=walker_pt1[0], y=walker_pt1[1], z= 1.843102 ),project_to_road=True, lane_type = ( carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk | carla.LaneType.Parking))
-                        walker_way_pt2=world_map.get_waypoint(carla.Location(x=walker_pt2[0], y=walker_pt2[1], z= 1.843102 ),project_to_road=True, lane_type = ( carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk | carla.LaneType.Parking))
-                        w_pt1_lane = walker_way_pt1.lane_id
-                        w_pt2_lane = walker_way_pt2.lane_id
-                        w_speed = person.get_control().speed
-                        
-                        # walker_waypoint=world_map.get_waypoint(carla.Location(x=walker_loc.x, y=walker_loc.y, z= 1.843102 ),project_to_road=True)
-                        w_road = walker_waypoint.road_id
-                        w_section = walker_waypoint.section_id
-                        # print(ego_section,dest_section,w_section,ego_lane,dest_lane,w_lane)
+                    # if (cross>0):
+                    walker_pt1 = np.array([walker_loc.x,walker_loc.y]) + vec_rd
+                    walker_pt2 = np.array([walker_loc.x,walker_loc.y]) - vec_rd
 
-                        if (ego_section==w_section):
-                            if (ego_lane==w_lane):
-                                print("A")
-                                return True       # decelarate to stop
 
-                            elif (ego_lane-1==0):
-                                if ((w_lane==ego_lane-2) or (w_lane==ego_lane-1)or (w_lane==ego_lane+1)):
-                                    if (((ego_lane==w_pt1_lane) or (ego_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
+                    # print(walker_pt1.shape,vec_rd)
+                    walker_way_pt1=world_map.get_waypoint(carla.Location(x=walker_pt1[0], y=walker_pt1[1], z= 1.843102 ),project_to_road=True, lane_type = ( carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk | carla.LaneType.Parking))
+                    walker_way_pt2=world_map.get_waypoint(carla.Location(x=walker_pt2[0], y=walker_pt2[1], z= 1.843102 ),project_to_road=True, lane_type = ( carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk | carla.LaneType.Parking))
+                    w_pt1_lane = walker_way_pt1.lane_id
+                    w_pt2_lane = walker_way_pt2.lane_id
+                    w_speed = person.get_control().speed
+                    
+                    # walker_waypoint=world_map.get_waypoint(carla.Location(x=walker_loc.x, y=walker_loc.y, z= 1.843102 ),project_to_road=True)
+                    w_road = walker_waypoint.road_id
+                    w_section = walker_waypoint.section_id
+                    # print(walker_waypoint.lane_type,walker_waypoint.is_junction,dest_waypoint.is_junction)
 
-                                        print("B")
-                                        return True       # check velocity
-                                    else:
-                                        return False
 
-                                else:
-                                    return False
+                    self._world.debug.draw_string(walker_waypoint.transform.location, 'X', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=10000,persistent_lines=True)
 
-                            elif (ego_lane+1==0):
-                                if ((w_lane==ego_lane+2) or (w_lane==ego_lane+1) or (w_lane==ego_lane-1)):
-                                    if (((ego_lane==w_pt1_lane) or (ego_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
-                                        print("C")
-                                        return True       # check velocity
-                                    else:
-                                        return False
-                                else:
-                                    return False
-                                    
-                            elif ((w_lane==ego_lane-1) or (w_lane==ego_lane+1)):
+
+
+                    if ((dest_waypoint.is_junction) and (walker_waypoint.is_junction)):
+                        print("X")
+
+                        if(walkers_y[counter]<(mid_path_len/49)*min_collision):
+                            min_collision = walkers_y[counter]//49
+
+                        return True,person,min_collision
+                    elif (ego_section==w_section):
+                        if (ego_lane==w_lane):
+                            print("A")
+                            if(walkers_y[counter]<(mid_path_len/49)*min_collision):
+                                min_collision = walkers_y[counter]//49
+
+
+                            return True,person,min_collision      # decelarate to stop
+
+                        elif (ego_lane-1==0):
+                            if ((w_lane==ego_lane-2) or (w_lane==ego_lane-1)or (w_lane==ego_lane+1)):
                                 if (((ego_lane==w_pt1_lane) or (ego_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
-                                        print("D")
-                                        return True       # check velocity
+                                    if(walkers_y[counter]<(mid_path_len/49)*min_collision):
+                                        min_collision = walkers_y[counter]//49
+
+                                    print("B")
+                                    return True,person,min_collision       # check velocity
                                 else:
-                                    return False
+                                    return False,None,min_collision
+
                             else:
-                                return False
-                        
+                                return False,None,min_collision
+
+                        elif (ego_lane+1==0):
+                            if ((w_lane==ego_lane+2) or (w_lane==ego_lane+1) or (w_lane==ego_lane-1)):
+                                if (((ego_lane==w_pt1_lane) or (ego_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
+                                    print("C")                        
+                                    if(walkers_y[counter]<(mid_path_len/49)*min_collision):
+                                        min_collision = walkers_y[counter]//49
+
+                                    return True,person,min_collision      # check velocity
+                                else:
+                                    return False,None,min_collision
+                            else:
+                                return False,None,min_collision
+                                
+                        elif ((w_lane==ego_lane-1) or (w_lane==ego_lane+1)):
+                            if (((ego_lane==w_pt1_lane) or (ego_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
+                                    print("D")                        
+                                    if(walkers_y[counter]<(mid_path_len/49)*min_collision):
+                                        min_collision = walkers_y[counter]//49
+
+                                    return True,person,min_collision       # check velocity
+                            else:
+                                return False,None,min_collision
                         else:
-                            if (dest_section==w_section) :
-                                if (dest_lane==w_lane):
-                                    print("E")
-                                    return True       # decelarate to stop
-
-                                elif (dest_lane-1==0):
-                                    if ((w_lane==dest_lane-2) or (w_lane==dest_lane-1) or (w_lane==dest_lane+1)):
-                                        if (((dest_lane==w_pt1_lane) or (dest_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
-                                            print("F")
-                                            return True       # check velocity
-                                        else:
-                                            return False
-                                    else:
-                                        return False
-
-                                elif (dest_lane+1==0):
-                                    if ((w_lane==dest_lane+2) or (w_lane==dest_lane+1) or (w_lane==dest_lane-1)):
-                                        if (((dest_lane==w_pt1_lane) or (dest_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
-                                            print("G")
-                                            return True       # check velocity
-                                        else:
-                                            return False     # check velocity
-                                    else:
-                                        return False
-                                        
-                                elif ((w_lane==dest_lane-1) or (w_lane==dest_lane+1)):
-                                    if (((dest_lane==w_pt1_lane) or (dest_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
-                                        print("H")
-                                        return True       # check velocity
-                                    else:
-                                        return False             # check velocity
-                                else:
-                                    return False
-                        
-                            else:
-                                return False 
-
+                            return False,None,min_collision
+                    
                     else:
-                        return False
+                        if (dest_section==w_section) :
+                            if (dest_lane==w_lane):
+                                print("E")                        
+                                if(walkers_y[counter]<(mid_path_len/49)*min_collision):
+                                        min_collision = walkers_y[counter]//49
+
+                                return True,person,min_collision       # decelarate to stop
+
+                            elif (dest_lane-1==0):
+                                if ((w_lane==dest_lane-2) or (w_lane==dest_lane-1) or (w_lane==dest_lane+1)):
+                                    if (((dest_lane==w_pt1_lane) or (dest_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
+                                        print("F")                        
+                                        if(walkers_y[counter]<(mid_path_len/49)*min_collision):
+                                            min_collision = walkers_y[counter]//49
+
+                                        return True,person,min_collision       # check velocity
+                                    else:
+                                        return False,None,min_collision
+                                else:
+                                    return False,None,min_collision
+
+                            elif (dest_lane+1==0):
+                                if ((w_lane==dest_lane+2) or (w_lane==dest_lane+1) or (w_lane==dest_lane-1)):
+                                    if (((dest_lane==w_pt1_lane) or (dest_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
+                                        print("G")                        
+                                        if(walkers_y[counter]<(mid_path_len/49)*min_collision):
+                                            min_collision = walkers_y[counter]//49
+
+                                        return True,person,min_collision       # check velocity
+                                    else:
+                                        return False,None,min_collision     # check velocity
+                                else:
+                                    return False,None,min_collision
+                                    
+                            elif ((w_lane==dest_lane-1) or (w_lane==dest_lane+1)):
+                                if (((dest_lane==w_pt1_lane) or (dest_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
+                                    print("H")                        
+                                    if(walkers_y[counter]<(mid_path_len/49)*min_collision):
+                                        min_collision = walkers_y[counter]//49
+
+                                    return True,person,min_collision       # check velocity
+                                else:
+                                    return False,None,min_collision             # check velocity
+                            else:
+                                return False,None,min_collision
+                    
+                        else:
+                            return False,None,min_collision
             else:
-                return False
+                return False,None,min_collision 
 
     """
     This function return 2 values

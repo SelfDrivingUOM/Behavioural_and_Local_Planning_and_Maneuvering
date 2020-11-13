@@ -275,7 +275,8 @@ class LocalPlanner:
         #             path_validity.append(True)
         #         # print(vals)
         #         self.vals = vals
-
+        i = 0
+        mid_len = 0
         for goal_state in goal_state_set:
             
             # print(goal_state[0] - min(round(goal_state[0]/0.05),399)*0.05,min(200+ round(goal_state[1]/0.05),400),min(180+round(np.degrees(goal_state[2])),360))
@@ -295,11 +296,13 @@ class LocalPlanner:
                 path_validity.append(True)
             # print(vals)
             self.vals = vals
-        
+
+            if(i == self._num_paths//2):
+                mid_len = vals[2]
         # tic = time.time()
         # print(path_validity)
         # print(tic-toc)
-        return paths, path_validity
+        return paths, path_validity,mid_len
 
     def plan_lane_change(self, goal_state):
             

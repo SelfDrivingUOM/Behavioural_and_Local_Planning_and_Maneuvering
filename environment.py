@@ -8,6 +8,7 @@ class Environment():
         self.ego_vehicle_loc = self.ego_vehicle.get_location()
         # self.distance = 10**4
         self._map = map_
+        self.yaw = np.radians(ego_vehicle.get_transform().rotation.yaw)
 
     def get_actors(self,in_radius):
         actors = self.world.get_actors()
@@ -16,6 +17,7 @@ class Environment():
 
         in_radius_sqr = np.square(in_radius)
         self.ego_vehicle_loc = self.ego_vehicle.get_location()
+        self.yaw = np.radians(self.ego_vehicle.get_transform().rotation.yaw)
 
         return_dynamic_vehicles = []
         return_static_vehicles = []
@@ -118,35 +120,54 @@ class Environment():
             dist_static = temp_
 
         if(return_walkers!=[]):
+            """
+            Here we are sorting according to the y magnitude on the car frame, this could be implemented on the collission checker as wel to decrease the complexity
+            """
             return_walkers = np.array(return_walkers)
             dist_walkers = np.sum(np.square(return_walkers-loc),axis = 1)
-            return_walkers = walkers[dist_walkers<in_radius**2]
+            
+            crit = dist_walkers<in_radius**2
+
+            # return_walkers = walkers[crit]
+            walks = walkers[crit]
+
+            rot = np.array([[np.cos(self.yaw),-np.sin(self.yaw)],[np.cos(self.yaw),np.sin(self.yaw)]])
+
+            x_vec = rot.T@np.array([[1],[0]])
+            x_vec = x_vec.reshape((2,))
+
+            car_frame = rot@((return_walkers[crit] - loc).T)
+            # return_walkers = walkers[crit]
+
+            crit = car_frame[1] - self.ego_vehicle.bounding_box.extent.y >= 0
+            car_frame = car_frame[:,crit]
+            
+
+            car_frame = np.append(car_frame,[walks[crit]],axis = 0)
+            car_frame = car_frame[:, car_frame[1].argsort(kind = "mergesort")]
+            return_walkers = car_frame[2]
+            walkers_y = car_frame[1]
         
         if(dist_dynamic!=None and dist_static!=None):
 
             if(dist_dynamic<dist_static):
 
-                closest_vehicle = vehicles[dyn_idx]
+                closest_vehicle = vehicles[dyn_idx][0]
 
             else:
-                closest_vehicle = vehicles[stat_idx]
+                closest_vehicle = vehicles[stat_idx][0]
 
         elif(dist_dynamic!=None):
-            closest_vehicle = vehicles[dyn_idx]
+            closest_vehicle = vehicles[dyn_idx][0]
             
         elif(dist_static!=None):
-            closest_vehicle = vehicles[stat_idx]
+            closest_vehicle = vehicles[stat_idx][0]
 
 
         # closest_vehicle = min(dist_dynamic,dist_static)
 
-
-
-        return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle
-
-    
-
-
+        # print(closest_vehicle)
+        return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,walkers_y
 
 
 
