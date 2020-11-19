@@ -102,7 +102,7 @@ class PathOptimizer:
         # ------------------------------------------------------------------
 
         spiral = self.sample_spiral(p0)
-
+        # print(p0[2])
         # print(s2-s1)
 
         # return_dict[i] = [spiral,res.x,[xf,yf,tf]]
@@ -183,8 +183,10 @@ class PathOptimizer:
 
         # Set the s_points (list of s values along the spiral) to be from 0.0
         # to p[4] (final arc length)
-        s_points = np.linspace(0.0, p[4])
 
+        # print(p[4])
+        s_points = np.linspace(0.0, p[4])
+        # print(s_points.shape)
         # Compute the theta, x, and y points from the uniformly sampled
         # arc length points s_points (p[4] is the spiral arc length).
         # Use self.thetaf() to compute the theta values from the s values.
@@ -203,6 +205,9 @@ class PathOptimizer:
         t_points = self.thetaf(a, b, c, d, s_points)
         x_points = scipy.integrate.cumtrapz(np.cos(t_points),s_points)
         y_points = scipy.integrate.cumtrapz(np.sin(t_points),s_points)
+
+        # print(x_points.shape)
+        # raise Exception
         return [x_points.tolist(), y_points.tolist(), t_points[:-1].tolist()]
         # ------------------------------------------------------------------
 

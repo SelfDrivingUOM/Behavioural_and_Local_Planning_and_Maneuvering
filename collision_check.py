@@ -180,14 +180,14 @@ class CollisionChecker:
 
                       #  print(np.where(ellipse_check<0)[0],lol)
                     else:
-                        mins.append(49)
+                        mins.append(48)
                         pass
                 else:
-                    mins.append(49)
+                    mins.append(48)
                     pass
                 j += 1
         else:
-            mins = [49]*14
+            mins = [48]*14
         # print(mins)
         return collission_check_array,min(mins)
         #no collision

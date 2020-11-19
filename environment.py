@@ -91,6 +91,11 @@ class Environment():
 
         vehicles = np.array(vehicles)
         walkers = np.array(walkers)
+        walkers_y = None
+        rot = np.array([[np.cos(self.yaw),-np.sin(self.yaw)],[np.cos(self.yaw),np.sin(self.yaw)]])
+
+        x_vec = rot.T@np.array([[1],[0]])
+        x_vec = x_vec.reshape((2,))
 
         if(vehicle_lanes!=[]):
             vehicle_lanes = np.array(vehicle_lanes)
@@ -131,10 +136,7 @@ class Environment():
             # return_walkers = walkers[crit]
             walks = walkers[crit]
 
-            rot = np.array([[np.cos(self.yaw),-np.sin(self.yaw)],[np.cos(self.yaw),np.sin(self.yaw)]])
 
-            x_vec = rot.T@np.array([[1],[0]])
-            x_vec = x_vec.reshape((2,))
 
             car_frame = rot@((return_walkers[crit] - loc).T)
             # return_walkers = walkers[crit]
@@ -151,17 +153,35 @@ class Environment():
         if(dist_dynamic!=None and dist_static!=None):
 
             if(dist_dynamic<dist_static):
+                
+                temp_ = vehicles[dyn_idx][0]
 
-                closest_vehicle = vehicles[dyn_idx][0]
+                if(temp_.id ==self.ego_vehicle.id):
+                    closest_vehicle = None
+                else:
+                    closest_vehicle = vehicles[dyn_idx][0]
 
             else:
-                closest_vehicle = vehicles[stat_idx][0]
+                temp_ = vehicles[dyn_idx][0]
+                if(temp_.id ==self.ego_vehicle.id):
+                    closest_vehicle = None
+                else:
+                    # closest_vehicle = vehicles[dyn_idx][0]
+                    closest_vehicle = vehicles[stat_idx][0]
 
         elif(dist_dynamic!=None):
-            closest_vehicle = vehicles[dyn_idx][0]
-            
+            temp_ = vehicles[dyn_idx][0]
+            if(temp_.id ==self.ego_vehicle.id):
+                closest_vehicle = None
+            else:
+                closest_vehicle = vehicles[dyn_idx][0]
         elif(dist_static!=None):
-            closest_vehicle = vehicles[stat_idx][0]
+            temp_ = vehicles[dyn_idx][0]
+            if(temp_.id ==self.ego_vehicle.id):
+                closest_vehicle = None
+            else:
+                # closest_vehicle = vehicles[dyn_idx][0]
+                closest_vehicle = vehicles[stat_idx][0]
 
 
         # closest_vehicle = min(dist_dynamic,dist_static)

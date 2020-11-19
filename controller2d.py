@@ -75,6 +75,8 @@ class Controller2D(object):
             if dist < min_dist:
                 min_dist = dist
                 min_idx = i
+        # print(min_idx,len(self._waypoints)-1)
+        
         if min_idx < len(self._waypoints)-1:
             desired_speed = self._waypoints[min_idx][2]
         else:
@@ -224,7 +226,7 @@ class Controller2D(object):
             # print(pid_val)
             k_ = 0.5
             val = np.tanh(k_*pid_val)
-
+            # print(v_desired,v)
             if(val>=0):
 
                 throttle_output = val
@@ -233,7 +235,7 @@ class Controller2D(object):
             else:
 
                 throttle_output = 0
-                brake_output    = -0.5*val
+                brake_output    = -0.8*val
 
 
             ######################################################

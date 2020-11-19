@@ -275,10 +275,10 @@ class LocalPlanner:
         #             path_validity.append(True)
         #         # print(vals)
         #         self.vals = vals
-        i = 0
+        i = -1
         mid_len = 0
         for goal_state in goal_state_set:
-            
+            i+=1
             # print(goal_state[0] - min(round(goal_state[0]/0.05),399)*0.05,min(200+ round(goal_state[1]/0.05),400),min(180+round(np.degrees(goal_state[2])),360))
             self.vals = self.LUT[int(min(round(goal_state[0]/0.05),399)),int(min(200+ round(goal_state[1]/0.05),400)),int(min(180+round(np.degrees(goal_state[2])),360))]
             path,vals,goal_state = self._path_optimizer.optimize_spiral(goal_state[0], 
@@ -296,8 +296,9 @@ class LocalPlanner:
                 path_validity.append(True)
             # print(vals)
             self.vals = vals
-
+            # print(vals[2])
             if(i == self._num_paths//2):
+                # print(vals[2])
                 mid_len = vals[2]
         # tic = time.time()
         # print(path_validity)
