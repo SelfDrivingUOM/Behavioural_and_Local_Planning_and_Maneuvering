@@ -37,7 +37,7 @@ class PathOptimizer:
     # goal point, (xf, yf, tf).
     def optimize_spiral(self, xf, yf, tf,vals):
         """Optimization function used for finding the optimization parameters.
-
+ 
         Assumptions:
             1. The first point in the spiral is in origin of the vehicle frame
             2. Assumes that the curvature for the endpoints to be zero

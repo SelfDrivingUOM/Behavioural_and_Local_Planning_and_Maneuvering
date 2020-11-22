@@ -1,4 +1,5 @@
 from __future__ import print_function
+from tools import misc
 
 ITER_FOR_SIM_TIMESTEP  = 100     # no. iterations to compute approx sim timestep
 WAIT_TIME_BEFORE_START = 0       # game seconds (time before controller start)
@@ -88,6 +89,7 @@ import random
 import re
 import weakref
 from math import sin, cos, pi, sqrt
+import hull
 
 try:
     import pygame
@@ -275,7 +277,7 @@ def find_beta(vel,dir):
 # -- World ---------------------------------------------------------------------
 # ==============================================================================
 class World(object):
-    def __init__(self, carla_world, hud, args):
+    def __init__(self, carla_world, hud, args,spawn_point):
         self.world = carla_world
         self.actor_role_name = args.rolename
         try:
@@ -292,12 +294,12 @@ class World(object):
         self._weather_index = 0
         self._actor_filter = args.filter
         self._gamma = args.gamma
-        self.start()
+        self.start(spawn_point)
         self.world.on_tick(hud.on_world_tick)
         self.recording_enabled = False
         self.recording_start = 0
 
-    def start(self):
+    def start(self,spawn_point):
         self.player_max_speed = 1.589
         self.player_max_speed_fast = 3.713
         # Keep same camera config if the camera manager exists.
@@ -333,7 +335,7 @@ class World(object):
                 print('There are no spawn points available in your map/town.')
                 print('Please add some Vehicle Spawn Point to your UE4 scene.')
                 sys.exit(1)
-            spawn_point = self.map.get_spawn_points()[50]
+            spawn_point = self.map.get_spawn_points()[spawn_point]
             # spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         # Set up the sensors.
@@ -611,22 +613,18 @@ class CameraManager(object):
         if self.recording:
             image.save_to_disk('_out/%08d' % image.frame)
 
-# ==============================================================================
-# -- game_loop() ---------------------------------------------------------------
-# ==============================================================================
-
 
 def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
-
+    spawn_point = 40  ##20/40-best
     try:
         
         client = carla.Client(args.host, args.port)
         client.set_timeout(2.0)
 
-        # client.load_world("Town03")
+        client.load_world("Town05")
         # client.generate_opendrive_world("/home/selfdriving/carla-precompiled/CARLA_0.9.9/CarlaUE4/Content/Carla/Maps/OpenDrive/Town03.xodr")
 
         display = pygame.display.set_mode(
@@ -634,7 +632,7 @@ def game_loop(args):
             pygame.HWSURFACE | pygame.DOUBLEBUF)
 
         hud = HUD(args.width, args.height)
-        world = World(client.get_world(), hud, args)
+        world = World(client.get_world(), hud, args,spawn_point)
         # world = client.load_world('Town02')
         
         clock = pygame.time.Clock()
@@ -644,8 +642,8 @@ def game_loop(args):
         world.world.debug.draw_line(carla.Location(x=0 , y=-50,z=0),carla.Location(x=0 , y=200,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
         
 
-        start_point = world_map.get_spawn_points()[50]
-        end_point = world_map.get_spawn_points()[10]
+        start_point = world_map.get_spawn_points()[spawn_point]
+        end_point = world_map.get_spawn_points()[0]
         # print(start_point)
         #environment = Environment(world.world,world_map,world.player)
         environment = Environment(world.world,world.player,world_map)
@@ -660,22 +658,23 @@ def game_loop(args):
         LENGTH = world.player.bounding_box.extent.x*2
         WIDTH = world.player.bounding_box.extent.y*2
 
-        lp = local_planner.LocalPlanner(NUM_PATHS,
-                                        PATH_OFFSET,
-                                        LENGTH,
-                                        WIDTH,
-                                        PATH_SELECT_WEIGHT,
-                                        TIME_GAP,
-                                        A_MAX,
-                                        SLOW_SPEED,
-                                        STOP_LINE_BUFFER,
-                                        NUMBER_OF_LAYERS)
-
         
 		
         ################################################################
 		###  Obtaining Global Route with hop of given resolution     ###
 		################################################################
+
+        lp = local_planner.LocalPlanner(NUM_PATHS,
+                        PATH_OFFSET,
+                        LENGTH,
+                        WIDTH,
+                        PATH_SELECT_WEIGHT,
+                        TIME_GAP,
+                        A_MAX,
+                        SLOW_SPEED,
+                        STOP_LINE_BUFFER,
+                        NUMBER_OF_LAYERS)
+
 
         route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
         waypoints = np.array(route)[:,0]
@@ -691,6 +690,7 @@ def game_loop(args):
 
         waypoints_np = remove_dup_wp(waypoints_np)
 
+        # lp.waypoints_update(waypoints_np)
         # blueprint_library = client.get_world().get_blueprint_library()
         # walker_bp = blueprint_library.filter("walker")[0]
 
@@ -712,17 +712,82 @@ def game_loop(args):
         #     actor_list.append(walker)
         # x = -70 - 5 junction
         #3 junction x = -70, y =150
-        # loc = carla.Location(x = 30, y=180,z = 0 )
-        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=100,persistent_lines=True)
+
+        # get_line(np.array([(1,1),(2,2),(2,3),(5,3)]))
+
+        # raise Exception
+        # loc = carla.Location(x = -120, y = 140,z = 0 )
+        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
 
         # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
+        
+        # junc_points = misc.print_junction(world,waypoint)
 
-        # # print(waypoint.get_junction())
 
+        # loc = carla.Location(x = 22, y = 140,z = 0 )
+        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+
+        # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
+        # junc_points = misc.print_junction(world,waypoint)
+
+
+        # loc = carla.Location(x = 27, y = 190,z = 0 )
+        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+
+        # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
+        # junc_points = misc.print_junction(world,waypoint)
+
+
+
+        # loc = carla.Location(x = 155, y = 0,z = 0 )
+        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+
+        # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
+        
+        # junc_points = misc.print_junction(world,waypoint)
+
+        # loc = carla.Location(x = -270, y = 0,z = 0 )
+        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+
+        # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
+        
+        # junc_points = misc.print_junction(world,waypoint)
+
+        # loc = carla.Location(x = -270, y = 6,z = 0 )
+        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+
+        # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
+        
+        # print(junc_points)
+
+        # lines = get_line(junc_points)
+        # # draw_hex(world,lines)
+        # inter_junc_points = solve_lines(lines)
+
+        # box_points = get_box(world_map,inter_junc_points)
+
+        # for i in range(box_points.shape[0]):
+        #     print(inter_junc_points[i])
+        #     world.world.debug.draw_string(carla.Location(x=box_points[i,0],y = box_points[i,1],z = 1),"A", draw_shadow=False,color=carla.Color(r=255, g=255, b=0), life_time=10000,persistent_lines=True)
+        
+
+
+                    # print(waypoint.lane_type)
+            
+
+
+        # # print()
+
+
+    
+        
+
+        # raise Exception
+        # print(waypoint.get_junction())
         # L = waypoint.get_junction().get_waypoints(carla.LaneType.Driving)
-        # # L = L[:len(L)//2]
+        # L = L[:len(L)//2]
 
-        # # import random
+        # import random
 
         # print(len(L))
         # for i in L:
@@ -731,10 +796,10 @@ def game_loop(args):
         #     # rand_g = random.randint(0,255)
         #     # rand_b = random.randint(0,255)
         #     for j in i:
-        #         print(j.lane_id,j.road_id,j.section_id,j.lane_type)
+        #         # print(j.lane_id,j.road_id,j.section_id,j.lane_type)
         #         world.world.debug.draw_string(j.transform.location,"A", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-        #     # time.sleep(5)
-        #     print("")
+            # time.sleep(5)
+            # print("")
 
         # raise Exception
         # # print(waypoint.lane_type,waypoint.lane_id,waypoint.section_id,waypoint.is_junction)
@@ -774,7 +839,9 @@ def game_loop(args):
         #########        Initializing Behavioural Planner      #########
         ################################################################
 
+
         bp = BehaviouralPlanner(lp,waypoints_np,environment,world.world,HOP_RESOLUTION,world_map,world.player)
+
 
 
 

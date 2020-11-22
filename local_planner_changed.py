@@ -1,3 +1,4 @@
+
 # Author: Yasintha supun
 # Date: July 27, 2020
 
@@ -47,16 +48,19 @@ class LocalPlanner:
         self.prev_goal_t=1000
         self.vals  = [0.0,0.0,0.000001]
         self.LUT = np.load("/home/selfdriving/BP_with_git/LUT.npz")["arr_0"]
-        
+        self.waypoints = None
     ######################################################
     # GOAL STATE COMPUTATION
     # Computes the goal state set from a given goal position. This is done by
     # laterally sampling offsets from the goal location along the direction
     # perpendicular to the goal yaw of the ego vehicle.
     ######################################################
+    def waypoints_update(self,waypoints):
 
-    def get_goal_state_set(self, point_1,point_2, goal_state, ego_state,offset_):
+        self.waypoints = waypoints
 
+    def get_goal_state_set(self,start_point, goal_point, ego_state,offset_,number_sections,resolution):
+        print(goal_point,start_point)
         # wp1_x = (waypoints[goal_index+1][0] - ego_state[0]) * cos(-ego_state[2]) - (waypoints[goal_index+1][1] - ego_state[1]) * sin(-ego_state[2])
         # wp1_y = (waypoints[goal_index+1][0] - ego_state[0]) * sin(-ego_state[2]) + (waypoints[goal_index+1][1] - ego_state[1]) * cos(-ego_state[2])
         # wp0_x = (waypoints[goal_index][0] - ego_state[0]) * cos(-ego_state[2]) - (waypoints[goal_index][1] - ego_state[1]) * sin(-ego_state[2])
@@ -64,8 +68,126 @@ class LocalPlanner:
         # wp_1_x = (waypoints[goal_index-1][0] - ego_state[0]) * cos(-ego_state[2]) - (waypoints[goal_index-1][1] - ego_state[1]) * sin(-ego_state[2])
         # wp_1_y = (waypoints[goal_index-1][0] - ego_state[0]) * sin(-ego_state[2]) + (waypoints[goal_index-1][1] - ego_state[1]) * cos(-ego_state[2])
 
-        delta_x = point_1[0] - point_2[0]
-        delta_y = point_1[1] - point_2[1]
+
+        
+        #print(goal_t)
+        # Compute and apply the offset for each path such that
+        # all of the paths have the same heading of the goal state, 
+        # but are laterally offset with respect to the goal heading.
+
+
+        # ego_state[2] *=-1 
+        goal_state_set = []
+        prev_state = np.array(ego_state)
+        n_ = self.waypoints.shape[0]-1
+        goal_set = np.empty((0,1,4))
+        # print(start_point,resolution)
+        # print(self.waypoints[start_point])
+        for goal in range(start_point+resolution-1,goal_point+1,resolution):
+            # print(prev_state)
+            if(goal < n_):
+                
+                point_1 = self.waypoints[goal+1]
+                point_2 = self.waypoints[goal-1]
+
+            else:
+                point_1 = self.waypoints[goal]
+                point_2 = self.waypoints[goal-2] 
+            # self.waypoints[goal]
+
+
+            delta_x = point_1[0] - point_2[0]
+            delta_y = point_1[1] - point_2[1]
+
+            heading = np.arctan2(delta_y,delta_x)
+            theta = -prev_state[2]
+            # print(self.waypoints[goal])
+            # print(self.waypoints[goal])
+            Rot = np.array([[np.cos(theta),-np.sin(theta)],[np.sin(theta),np.cos(theta)]])
+            goal_ = Rot@(self.waypoints[goal][:2] - prev_state[:2])
+
+            goal_t = heading - prev_state[2]
+            goal_v = self.waypoints[goal][2]
+
+            # print(goal_t)
+            if goal_t > pi:
+                goal_t -= 2*pi
+            elif goal_t < -pi:
+                goal_t += 2*pi
+            # print(goal_t,pi)
+            #####
+            prev_state = np.append(self.waypoints[goal][:2],[heading])
+            goal_set = np.append(goal_set,[[[goal_[0],goal_[1],goal_t,goal_v]]],axis = 0)
+        
+        if((goal_point-start_point-1)%resolution != 0):
+
+            if(goal_point < n_):
+                
+                point_1 = self.waypoints[goal_point+1]
+                point_2 = self.waypoints[goal_point-1]
+
+            else:
+                point_1 = self.waypoints[goal_point]
+                point_2 = self.waypoints[goal_point-2] 
+            delta_x = point_1[0] - point_2[0]
+            delta_y = point_1[1] - point_2[1]
+
+            heading = np.arctan2(delta_y,delta_x)
+            theta = -prev_state[2]
+            # print(self.waypoints[goal])
+            # print(self.waypoints[goal])
+            Rot = np.array([[np.cos(theta),-np.sin(theta)],[np.sin(theta),np.cos(theta)]])
+            goal_ = Rot@(self.waypoints[goal_point][:2] - prev_state[:2])
+
+            goal_t = heading - prev_state[2]
+            goal_v = self.waypoints[goal_point][2]
+
+            # print(goal_t)
+            if goal_t > pi:
+                goal_t -= 2*pi
+            elif goal_t < -pi:
+                goal_t += 2*pi
+            # print(goal_t,pi)
+            #####
+            prev_state = np.append(self.waypoints[goal][:2],[heading])
+            goal_set = np.append(goal_set,[[[goal_[0],goal_[1],goal_t,goal_v]]],axis = 0)
+
+        # print(goal_set.shape)
+        goal_set = np.repeat(goal_set[None,:,:], self._num_paths, axis=2)
+        goal_set = goal_set[0]
+        # print(goal_set)
+        # print(-(self._num_paths//2)*offset_)
+        offsets = np.arange(-(self._num_paths//2)*offset_,((self._num_paths+1)//2)*offset_,offset_)
+        # offsets = offsets.reshape((1,self._num_paths))
+
+        # print(goal_set[:,:,2])
+        offsets_x = np.cos(goal_set[:,:,2]+np.pi/2)*offsets
+        offsets_y = np.sin(goal_set[:,:,2]+np.pi/2)*offsets
+        # print(offsets_x)
+        # print(offsets_y)
+
+        goal_set[:,:,0] += offsets_x
+        goal_set[:,:,1] += offsets_y
+
+        # print(goal_set)
+        # raise Exception
+        # for i in range(self._num_paths):
+
+        #     offset = (i - self._num_paths // 2) * offset_
+
+        #     x_offset = offset * cos(goal_t + pi/2)
+        #     y_offset = offset * sin(goal_t + pi/2)
+
+        #     goal_state_set.append([goal_x + x_offset, 
+        #                            goal_y + y_offset, 
+        #                            goal_t, 
+        #                            goal_v])
+
+
+        self.prev_goal_t=goal_t
+
+
+
 
         # if goal_index < (waypoints.shape[0]-1):
         #     delta_x = waypoints[goal_index+1][0] - waypoints[goal_index][0]
@@ -87,54 +209,11 @@ class LocalPlanner:
         # delta_y = goal_state[1]-waypoints[goal_index-2][1]
 
 
-        heading = np.arctan2(delta_y,delta_x)
-
-        goal_state_local = copy.copy(goal_state)
-
-
-        goal_state_local[0] -= ego_state[0] 
-        goal_state_local[1] -= ego_state[1] 
-
-        theta = -ego_state[2]
-        goal_x = goal_state_local[0] * cos(theta) - goal_state_local[1] * sin(theta)
-        goal_y = goal_state_local[0] * sin(theta) + goal_state_local[1] * cos(theta)
-
-        goal_t = heading - ego_state[2]
-        goal_v = goal_state[2]
-
-
         # goal_t*=0.8
-        if goal_t > pi:
-            goal_t -= 2*pi
-        elif goal_t < -pi:
-            goal_t += 2*pi
-        '''if(self.prev_goal_t!=1000):
-            check_difference_t = abs(goal_t- self.prev_goal_t)
-            if check_difference_t>0.5:
-            	goal_t=self.prev_goal_t
-            	print("corrected")'''
         
-        #print(goal_t)
-        # Compute and apply the offset for each path such that
-        # all of the paths have the same heading of the goal state, 
-        # but are laterally offset with respect to the goal heading.
-        goal_state_set = []
-        for i in range(self._num_paths):
-
-            offset = (i - self._num_paths // 2) * offset_
-
-            x_offset = offset * cos(goal_t + pi/2)
-            y_offset = offset * sin(goal_t + pi/2)
-
-            goal_state_set.append([goal_x + x_offset, 
-                                   goal_y + y_offset, 
-                                   goal_t, 
-                                   goal_v])
-
-
-        self.prev_goal_t=goal_t
-           
-        return goal_state_set
+        # print(goal_set.shape)
+        # print(goal_set)
+        return goal_set
    
     # def get_goal_state_set(self, goal_index, goal_state, waypoints, ego_state):
 
@@ -220,7 +299,11 @@ class LocalPlanner:
 
         paths         = []
         path_validity = []
-        #print(goal_state_set[7][2])
+
+
+        print(goal_state_set)
+
+        # raise Exception
 
         # toc = time.time()
         
@@ -274,10 +357,10 @@ class LocalPlanner:
         #             path_validity.append(True)
         #         # print(vals)
         #         self.vals = vals
-        i = 0
+        i = -1
         mid_len = 0
         for goal_state in goal_state_set:
-            
+            i+=1
             # print(goal_state[0] - min(round(goal_state[0]/0.05),399)*0.05,min(200+ round(goal_state[1]/0.05),400),min(180+round(np.degrees(goal_state[2])),360))
             self.vals = self.LUT[int(min(round(goal_state[0]/0.05),399)),int(min(200+ round(goal_state[1]/0.05),400)),int(min(180+round(np.degrees(goal_state[2])),360))]
             path,vals,goal_state = self._path_optimizer.optimize_spiral(goal_state[0], 
@@ -295,8 +378,9 @@ class LocalPlanner:
                 path_validity.append(True)
             # print(vals)
             self.vals = vals
-
+            # print(vals[2])
             if(i == self._num_paths//2):
+                # print(vals[2])
                 mid_len = vals[2]
         # tic = time.time()
         # print(path_validity)
