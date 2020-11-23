@@ -56,3 +56,35 @@ def solve_lines(lines):
 
 
 # print(solve_lines(get_line(np.array([(1,1),(2,2),(2,3),(5,3)]))))
+def within_polygon(points,location):
+    within = False
+    sign = None
+    for i in range(-1,points.shape[0]-1,1):
+        cross = np.cross(points[i+1]-points[i],location-points[i])
+        # print(cross)
+        if sign == None:
+            if(cross>=0):
+                sign = 1
+            else:
+                sign = -1
+
+        else:
+            if(sign*cross>=0):
+                continue
+            else:
+                break
+    else:
+        within = True
+
+    return(within)
+
+
+print(within_polygon(np.array([[-141,103],[-141,76],[-109,75]]),np.array([-130,105])))
+
+
+# for i in range(5):
+#     print(i)
+#     if(i==None):
+#         break
+# else:
+#     print("LOL")

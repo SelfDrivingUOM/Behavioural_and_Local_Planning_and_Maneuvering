@@ -96,12 +96,15 @@ class LocalPlanner:
         goal_state_local[1] -= ego_state[1] 
 
         theta = -ego_state[2]
+        
         goal_x = goal_state_local[0] * cos(theta) - goal_state_local[1] * sin(theta)
         goal_y = goal_state_local[0] * sin(theta) + goal_state_local[1] * cos(theta)
-
+        
+        
         goal_t = heading - ego_state[2]
         goal_v = goal_state[2]
 
+        # print(goal_x,goal_y,goal_t)
 
         # goal_t*=0.8
         if goal_t > pi:
@@ -252,9 +255,7 @@ class LocalPlanner:
         #         #paths.append(path)
         #     else:
         #         paths.append(path)
-        #         path_validity.append(True)
-        #     # print(vals)
-        #     self.vals = vals
+        #         path_validito
 
         # with concurrent.futures.ProcessPoolExecutor() as executor:
         # self.vals = self.LUT[min(int(goal_state[0]/0.1),99),min(100+ int(goal_state[1]/0.1),200),min(180+int(np.degrees(goal_state[2])),360)]
@@ -277,7 +278,7 @@ class LocalPlanner:
         i = 0
         mid_len = 0
         for goal_state in goal_state_set:
-            
+            # print(goal_state[0],goal_state[1],np.degrees(goal_state[2]))
             # print(goal_state[0] - min(round(goal_state[0]/0.05),399)*0.05,min(200+ round(goal_state[1]/0.05),400),min(180+round(np.degrees(goal_state[2])),360))
             self.vals = self.LUT[int(min(round(goal_state[0]/0.05),399)),int(min(200+ round(goal_state[1]/0.05),400)),int(min(180+round(np.degrees(goal_state[2])),360))]
             path,vals,goal_state = self._path_optimizer.optimize_spiral(goal_state[0], 
@@ -301,6 +302,7 @@ class LocalPlanner:
         # tic = time.time()
         # print(path_validity)
         # print(tic-toc)
+        paths = np.array(paths)
         return paths, path_validity,mid_len
 
     def plan_lane_change(self, goal_state):
@@ -366,7 +368,7 @@ class LocalPlanner:
 def transform_paths(paths, ego_state):
 
     #change to num paths
-    paths_np = np.array(paths)
+    # paths_np = np.array(paths)
 
     transformed_paths_np = np.empty((11,3,49))
 

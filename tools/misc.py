@@ -275,7 +275,29 @@ def get_box(world_map,intersections):
         return(intersections[crit==0])
         # print(var)
 
-    
+def within_polygon(points,location):
+    within = False
+    sign = None
+    for i in range(points.shape[0]-1):
+        cross = np.cross(points[i+1]-points[i],location-points[i])
+        if sign == None:
+            if(cross>0):
+                sign = 1
+            else:
+                sign = -1
+
+        else:
+            if(sign*cross>0):
+                continue
+            else:
+                break
+    else:
+        within = True
+
+    return(within)
+
+
+    return within   
 def print_junction(world,waypoint):
 
     ######CONVERT THIS TO NUMPY

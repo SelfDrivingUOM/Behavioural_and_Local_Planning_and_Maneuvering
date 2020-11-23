@@ -67,6 +67,7 @@ class BehaviouralPlanner:
         self.stop_threshold = 0.01
         self.num_layers = None
         self.first_time = False
+        self.box_points = None
 
 
     def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed):
@@ -94,7 +95,7 @@ class BehaviouralPlanner:
             goal_index = self.get_goal_index(ego_state, closest_len, closest_index)
 
 
-            
+            # print(goal_index)
             self._goal_index = goal_index
             self._goal_state = self._waypoints[goal_index]
             self.num_layers = (goal_index - closest_index)//5
@@ -105,11 +106,11 @@ class BehaviouralPlanner:
 
             if goal_index < (self._waypoints.shape[0]-1):
                 point_1 = self._waypoints[goal_index+1]
-                point_2 = self._waypoints[goal_index]
+                point_2 = self._waypoints[goal_index-1]
 
             else: 
                 point_1 = self._waypoints[goal_index]
-                point_2 = self._waypoints[goal_index-1]
+                point_2 = self._waypoints[goal_index-2]
 
             # Compute the goal state set from the behavioural planner's computed goal state.
             # goal_set, goal_index_set =  self._lp.lattice_layer_stations(self._goal_state , self._waypoints, ego_state)
@@ -119,10 +120,11 @@ class BehaviouralPlanner:
             # print(goal_state_set)
             # Calculate planned paths in the local frame.
             paths, path_validity,mid_path_len = self._lp.plan_paths(goal_state_set)
-
+            
+            print(goal_state_set[5],paths[5][:][-1])
             # Transform those paths back to the global frame.
             paths = local_planner.transform_paths(paths, ego_state)
-
+            
             collision_check_array,min_collision = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world)
             # print(min_collision,closest_vehicle)
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
@@ -141,8 +143,10 @@ class BehaviouralPlanner:
             #     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
             #     self._goal_state[2] = 0
             # print(self._map,walkers,ego_state,closest_index,self._waypoints,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len)
-            walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len)
-            intersection = self.is_approaching_intersection(self._waypoints,closest_index,ego_state)
+            intersection,box_points = self.is_approaching_intersection(self._waypoints,closest_index,ego_state)
+            walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len,intersection,box_points)
+            
+            # print(intersection,box_points)
             # print(walker_collide,col_walker,min_collision )
             if(walker_collide):
                 self._collission_actor = col_walker
@@ -151,7 +155,7 @@ class BehaviouralPlanner:
 
             
             elif(self.lane_paths_blocked(best_index)): ##LANE PATHS BLOCKED
-                print(" ")
+                # print(" ")
                 if(self.can_overtake()):
 
                     ##### FIX GOAL STATE PROPERLY
@@ -208,7 +212,7 @@ class BehaviouralPlanner:
             # print()
             # vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,walkers_y = self._environment.get_actors(max(20,self._lookahead))
             # print(self._collission_index,self.started_decel)
-            self._lookahead = None####update this
+            # self._lookahead = None####update this
             self._goal_state = self.paths[self._lp._num_paths//2,:,max(self._collission_index,1)]
             self._goal_state_next = self.paths[self._lp._num_paths//2,:,max(self._collission_index-1,0)]
             self._goal_state[2] = 0
@@ -224,11 +228,10 @@ class BehaviouralPlanner:
             best_index = self._lp._num_paths//2
 
             debug_print(paths,self._world,best_index)
-            # print("a")
-
-            
+            # print("a")      
             # print(local_waypoints)
-            walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len)
+            intersection,box_points = self.is_approaching_intersection(self._waypoints,max(self._collission_index,1),ego_state)
+            walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len,intersection,box_points)
             local_waypoints = self._lp._velocity_planner.decelerate_profile(paths[best_index],current_speed,min_collision)
             
             
@@ -275,12 +278,8 @@ class BehaviouralPlanner:
                 # print("E")
                 self._state   = FOLLOW_LANE
                 self._collission_index = min_collision
-
-
             # raise Exception
 
-        
-            
             if(not self.started_decel):
 
                 # print(min_collision)
@@ -376,7 +375,28 @@ class BehaviouralPlanner:
         return points
         
         
-    
+    def within_polygon(self,points,location):
+        within = False
+        sign = None
+        for i in range(-1,points.shape[0]-1,1):
+            cross = np.cross(points[i+1]-points[i],location-points[i])
+            # print(cross)
+            if sign == None:
+                if(cross>=0):
+                    sign = 1
+                else:
+                    sign = -1
+
+            else:
+                if(sign*cross>=0):
+                    continue
+                else:
+                    break
+        else:
+            within = True
+
+        return(within)
+
     def get_shape(self,check_wayp_idx,inter_points,ego_state):
 
         idx_heading_check = int(HEADING_CHECK_LOOKAHEAD/self._hop_resolution)
@@ -402,12 +422,15 @@ class BehaviouralPlanner:
 
         # print(check_wayp_idx,idx_heading_check,ego_heading,heading)
         dist = np.sum(np.square(inter_points-ego_state[:2]),axis =1)
-        closest_points = np.argpartition(dist, 2)
+        closest_points = np.sort(np.argpartition(dist, 2)[:2])
 
         if(np.abs(heading_check)<np.radians(JUNCTION_HEADING_CHECK_ANGLE)):
-            
-            set_1 = inter_points[closest_points[:2]]
-            set_2 = inter_points[closest_points[2:]]
+            if(np.all(closest_points==np.array([0,3]))):
+                set_1 = inter_points[np.array([3,0])]
+                set_2 = inter_points[np.array([1,2])]
+            else:
+                set_1 = inter_points[closest_points]
+                set_2 = inter_points[np.array([(closest_points[1]+1)%4,(closest_points[1]+2)%4])]
 
             # print(set_1,set_2)
             set_1 = self.get_offset(set_1)
@@ -419,6 +442,7 @@ class BehaviouralPlanner:
                 # print(inter_junc_points[i])
                 self._world.debug.draw_string(carla.Location(x=set_1[i,0],y = set_1[i,1],z = 1),"A", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
 
+            return set_1
 
             # print("STRAIGHT")
             # pass
@@ -430,6 +454,7 @@ class BehaviouralPlanner:
                 # print(inter_junc_points[i])
                 self._world.debug.draw_string(carla.Location(x=closest_points[i,0],y = closest_points[i,1],z = 1),"A", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
 
+            return closest_points
             # print("LEFT")
             # pass
         else:
@@ -440,6 +465,7 @@ class BehaviouralPlanner:
                 # print(inter_junc_points[i])
                 self._world.debug.draw_string(carla.Location(x=closest_points[i,0],y = closest_points[i,1],z = 1),"A", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
 
+            return closest_points
             # print("RIGHT")
             # pass
     
@@ -502,7 +528,7 @@ class BehaviouralPlanner:
 
             inter_junc_points = misc.solve_lines(lines)
             box_points = misc.get_box(self._map,inter_junc_points)
-            self.get_shape(idx,box_points,ego_state)
+            self.box_points = self.get_shape(idx,box_points,ego_state)
 
 
             # for i in range(box_points.shape[0]):
@@ -514,9 +540,11 @@ class BehaviouralPlanner:
             # raise Exception
             self.first_time = True
 
-            return intersection
+            return intersection,self.box_points
         else:
-            return intersection
+            if(not intersection):
+                self.box_points = None
+            return intersection,self.box_points
 
 
         
@@ -553,7 +581,7 @@ class BehaviouralPlanner:
             return False
 
 
-    def check_walkers(self,world_map,walkers,ego_state,paths,best_index,vec_rd,min_collision,walkers_y,mid_path_len):
+    def check_walkers(self,world_map,walkers,ego_state,paths,best_index,vec_rd,min_collision,walkers_y,mid_path_len,intersection,box_points):
 
             if(best_index == None):
                 print("brrrr")
@@ -583,7 +611,7 @@ class BehaviouralPlanner:
             # vec_rd = vec_rd / (np.sqrt(np.sum(np.square(vec_rd))))
             counter = -1
             if walkers:
-                print(walkers)
+                # print(walkers)
                 for person in walkers:
                     counter+=1
                     walker_loc= person.get_location()
@@ -618,9 +646,9 @@ class BehaviouralPlanner:
 
                     # self._world.debug.draw_string(walker_waypoint.transform.location, 'X', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=10000,persistent_lines=True)
 
-                    
-
-                    if ((dest_waypoint.is_junction) and (walker_waypoint.is_junction)):
+                    # loc = 
+                    # print(box_points,np.array([walker_loc.x,walker_loc.y]))
+                    if (intersection and self.within_polygon(box_points,np.array([walker_loc.x,walker_loc.y]))):
                         print("X")
                         # print(walkers_y[counter],mid_path_len,(mid_path_len/49)*(min_collision+1))
                         if(walkers_y[counter]<(mid_path_len/49)*(min_collision+1)):
