@@ -511,11 +511,11 @@ class VelocityPlanner:
     
     def stop_profile(self,path):
 
-        velo = np.zeros((len(path),1))
+        velo = np.zeros((1,len(path[0])))
         path = np.array(path)
 
-        profile = np.append(path,velo,axis = 1)
-
+        profile = np.append(path[:2],velo,axis = 0)
+        profile = list(profile.T)
         return profile
     
 

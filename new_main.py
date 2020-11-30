@@ -941,7 +941,7 @@ def game_loop(args):
                 ego_state = [current_x, current_y, current_yaw]
 
                 local_waypoints = bp.state_machine(ego_state,current_timestamp,prev_timestamp,current_speed)
-                
+                print(len(local_waypoints),len(local_waypoints[0]))
 
 
 
