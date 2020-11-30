@@ -96,13 +96,20 @@ def compute_magnitude_angle(target_location, current_location, orientation):
     :param orientation: orientation of the reference object
     :return: a tuple composed by the distance to the object and the angle between both objects
     """
+
+    # print(orientation)
     target_vector = np.array([target_location.x - current_location.x, target_location.y - current_location.y])
     norm_target = np.linalg.norm(target_vector)
 
-    forward_vector = np.array([math.cos(math.radians(orientation)), math.sin(math.radians(orientation))])
+    forward_vector = np.array([math.cos(orientation), math.sin(orientation)])
     d_angle = math.degrees(math.acos(np.clip(np.dot(forward_vector, target_vector) / norm_target, -1., 1.)))
 
-    return (norm_target, d_angle)
+    dir_ = np.cross(forward_vector, target_vector) 
+    if(dir_>0):
+        dir_ = +1
+    else:
+        dir_ = -1 
+    return (norm_target, dir_*d_angle)
 
 
 def distance_vehicle(waypoint, vehicle_transform):

@@ -508,6 +508,21 @@ class VelocityPlanner:
         self._prev_trajectory = profile
 
         return profile
+    
+    def stop_profile(self,path):
+
+        velo = np.zeros((len(path),1))
+        path = np.array(path)
+
+        profile = np.append(path,velo,axis = 1)
+
+        return profile
+    
+
+        
+
+
+
 
 ######################################################
 ######################################################

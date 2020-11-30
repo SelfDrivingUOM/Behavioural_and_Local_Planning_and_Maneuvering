@@ -280,11 +280,11 @@ class LocalPlanner:
         for goal_state in goal_state_set:
             # print(goal_state[0],goal_state[1],np.degrees(goal_state[2]))
             # print(goal_state[0] - min(round(goal_state[0]/0.05),399)*0.05,min(200+ round(goal_state[1]/0.05),400),min(180+round(np.degrees(goal_state[2])),360))
-            self.vals = self.LUT[int(min(round(goal_state[0]/0.05),399)),int(min(200+ round(goal_state[1]/0.05),400)),int(min(180+round(np.degrees(goal_state[2])),360))]
+            self.vals = self.LUT[int(min(round(goal_state[0]/0.05),399)),int(min(max(0,200+ round(goal_state[1]/0.05)),400)),int(min(max(180+round(np.degrees(goal_state[2])),0),359))]
             path,vals,goal_state = self._path_optimizer.optimize_spiral(goal_state[0], 
                                                       goal_state[1], 
                                                       goal_state[2],self.vals)
-
+            
             # print(np.linalg.norm([path[0][-1] - goal_state[0], path[1][-1] - goal_state[1], path[2][-1] - goal_state[2]]))
             if np.linalg.norm([path[0][-1] - goal_state[0], 
                                path[1][-1] - goal_state[1], 
@@ -292,6 +292,7 @@ class LocalPlanner:
                 path_validity.append(False)
                 #paths.append(path)
             else:
+
                 paths.append(path)
                 path_validity.append(True)
             # print(vals)
@@ -302,7 +303,10 @@ class LocalPlanner:
         # tic = time.time()
         # print(path_validity)
         # print(tic-toc)
+        # print(int(min(round(goal_state_set[5][0]/0.05),399)),int(min(max(0,200+ round(goal_state_set[5][1]/0.05)),400)),int(min(max(180+round(np.degrees(goal_state_set[5][2])),0),359)))
+
         paths = np.array(paths)
+        # print(paths[5])
         return paths, path_validity,mid_len
 
     def plan_lane_change(self, goal_state):
@@ -365,7 +369,7 @@ class LocalPlanner:
 # Converts the to the global coordinate frame.
 ######################################################
 
-def transform_paths(paths, ego_state):
+def transform_paths(paths_np, ego_state):
 
     #change to num paths
     # paths_np = np.array(paths)

@@ -241,8 +241,8 @@ def add_lane_change_waypoints(waypoints,lp,velocity,world):
             
             transform = waypoints[start_index]
             transform[2] = -theta
-
-            paths = local_planner.transform_paths([path], transform)
+            path = np.array([path])
+            paths = local_planner.transform_paths(path, transform)
             path = paths[0]
             
             path_wp = np.vstack((path[:2],np.full((1,path.shape[1]),velocity)))
@@ -679,7 +679,7 @@ def game_loop(args):
         route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
         waypoints = np.array(route)[:,0]
         waypoints_np = np.empty((0,3))
-        vehicle_speed = 20
+        vehicle_speed = 5
 
         for i in range(waypoints.shape[0]):
             waypoints_np = np.append(waypoints_np, np.array([[waypoints[i].transform.location.x, waypoints[i].transform.location.y, vehicle_speed]]),axis=0)
@@ -719,11 +719,11 @@ def game_loop(args):
         # loc = carla.Location(x = -130, y = 85,z = 0 )
         # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
        
-        blueprint_library = client.get_world().get_blueprint_library()
-        walker_bp = blueprint_library.filter("walker")[0]
+        # blueprint_library = client.get_world().get_blueprint_library()
+        # walker_bp = blueprint_library.filter("walker")[0]
 
-        walker_transform=carla.Transform(carla.Location(x=-130, y=95, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
-        walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
+        # walker_transform=carla.Transform(carla.Location(x=-130, y=95, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
+        # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
         # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
         

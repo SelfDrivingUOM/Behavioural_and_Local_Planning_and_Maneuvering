@@ -9,12 +9,27 @@ class Environment():
         # self.distance = 10**4
         self._map = map_
         self.yaw = np.radians(ego_vehicle.get_transform().rotation.yaw)
+        self.actors = self.world.get_actors()
+        self.lights_list = self.actors.filter("*traffic_light*")
+        self.vehicles = self.actors.filter('vehicle.*')
+        self.walkers = self.actors.filter('walker.*')
+        # self.first_time = True
+        # print(len(self.lights_list),"A")
 
     def get_actors(self,in_radius):
-        actors = self.world.get_actors()
-        vehicles = actors.filter('vehicle.*')
-        walkers = actors.filter('walker.*')
-
+        
+        # if(self.first_time):
+        # 
+        # #### This can be removed by taking the spawn NPC code within the new_main
+        
+        self.actors = self.world.get_actors()
+        self.vehicles = self.actors.filter('vehicle.*')
+        self.walkers = self.actors.filter('walker.*')
+            # self.first_time = False
+        
+        vehicles = self.vehicles
+        walkers  = self.walkers
+        
         in_radius_sqr = np.square(in_radius)
         self.ego_vehicle_loc = self.ego_vehicle.get_location()
         self.yaw = np.radians(self.ego_vehicle.get_transform().rotation.yaw)

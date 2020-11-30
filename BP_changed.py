@@ -7,7 +7,7 @@ import copy
 import local_planner
 from tools.misc import get_speed
 from tools.misc import debug_print
-from tools.misc import draw_bound_box
+from tools.misc import draw_bound_box,compute_magnitude_angle
 import carla
 
 
@@ -652,6 +652,8 @@ class BehaviouralPlanner:
     def can_overtake(self):
 
         return False 
+
+    
 
 
 
