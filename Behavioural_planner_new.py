@@ -505,7 +505,7 @@ class BehaviouralPlanner:
             # print(intersection,box_points)
             # print(walker_collide,col_walker,min_collision )
             if((not intersection) or self.stopped):
-                self._state   = FOLLOW_LANE
+                self._state   = INTERSECTION
 
             elif(walker_collide):
                 # print(col_walker)
