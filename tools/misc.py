@@ -304,7 +304,6 @@ def within_polygon(points,location):
     return(within)
 
 
-    return within   
 def print_junction(world,waypoint):
 
     ######CONVERT THIS TO NUMPY
