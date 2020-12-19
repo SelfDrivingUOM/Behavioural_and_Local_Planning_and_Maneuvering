@@ -77,7 +77,7 @@ import ogm_generator
 from local_planner import get_closest_index
 from environment import Environment
 from Behavioural_planner_new import BehaviouralPlanner
-
+from spawn import spawn
 
 from tools.misc import get_speed
 import argparse
@@ -646,6 +646,7 @@ def game_loop(args):
         end_point = world_map.get_spawn_points()[0]
         # print(start_point)
         #environment = Environment(world.world,world_map,world.player)
+        spawn(0,150)
         environment = Environment(world.world,world.player,world_map)
         ################################################################
         ############        Initializing Local Planner     #############
@@ -658,8 +659,6 @@ def game_loop(args):
         LENGTH = world.player.bounding_box.extent.x*2
         WIDTH = world.player.bounding_box.extent.y*2
 
-        
-		
         ################################################################
 		###  Obtaining Global Route with hop of given resolution     ###
 		################################################################
@@ -716,14 +715,14 @@ def game_loop(args):
         # get_line(np.array([(1,1),(2,2),(2,3),(5,3)]))
 
         # raise Exception
-        # loc = carla.Location(x = -130, y = 85,z = 0 )
-        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+        loc = carla.Location(x = -175, y = 86,z = 0 )
+        world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
        
-        # blueprint_library = client.get_world().get_blueprint_library()
-        # walker_bp = blueprint_library.filter("walker")[0]
+        blueprint_library = client.get_world().get_blueprint_library()
+        walker_bp = blueprint_library.filter("model3")[0]
 
-        # walker_transform=carla.Transform(carla.Location(x=-130, y=95, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
-        # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
+        walker_transform=carla.Transform(carla.Location(x=-175, y=88, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
+        walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
         # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
         
@@ -1061,6 +1060,24 @@ def game_loop(args):
             world.destroy()
 
         pygame.quit()
+
+        # if sync and synchronous_master:
+        #     settings = world.get_settings()
+        #     settings.synchronous_mode = False
+        #     settings.fixed_delta_seconds = None
+        #     world.apply_settings(settings)
+
+        # print('\ndestroying %d vehicles' % len(vehicles_list))
+        # client.apply_batch([carla.command.DestroyActor(x) for x in vehicles_list])
+
+        # # stop walker controllers (list is [controller, actor, controller, actor ...])
+        # for i in range(0, len(all_id), 2):
+        #     all_actors[i].stop()
+        # print('\ndestroying %d walkers' % len(walkers_list))
+        # client.apply_batch([carla.command.DestroyActor(x) for x in all_id])
+
+        # time.sleep(0.5)
+
 
 
 # ==============================================================================

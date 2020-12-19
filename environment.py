@@ -13,6 +13,10 @@ class Environment():
         self.lights_list = self.actors.filter("*traffic_light*")
         self.vehicles = self.actors.filter('vehicle.*')
         self.walkers = self.actors.filter('walker.*')
+
+        # self.actors = self.world.get_actors()
+        # self.vehicles = self.actors.filter('vehicle.*')
+        # self.walkers = self.actors.filter('walker.*')
         # self.first_time = True
         # print(len(self.lights_list),"A")
 
@@ -22,10 +26,8 @@ class Environment():
         # 
         # #### This can be removed by taking the spawn NPC code within the new_main
         
-        self.actors = self.world.get_actors()
-        self.vehicles = self.actors.filter('vehicle.*')
-        self.walkers = self.actors.filter('walker.*')
-            # self.first_time = False
+
+        # self.first_time = False
         
         vehicles = self.vehicles
         walkers  = self.walkers
