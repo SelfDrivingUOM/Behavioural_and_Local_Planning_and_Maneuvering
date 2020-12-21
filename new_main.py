@@ -646,8 +646,19 @@ def game_loop(args):
         end_point = world_map.get_spawn_points()[0]
         # print(start_point)
         #environment = Environment(world.world,world_map,world.player)
+        
+        # loc = carla.Location(x = -175, y = 86,z = 0 )
+        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+       
+        # blueprint_library = client.get_world().get_blueprint_library()
+        # walker_bp = blueprint_library.filter("model3")[0]
+
+        # walker_transform=carla.Transform(carla.Location(x=-175, y=88, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
+        # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
+
         spawn(0,150)
         environment = Environment(world.world,world.player,world_map)
+
         ################################################################
         ############        Initializing Local Planner     #############
         ################################################################
@@ -715,14 +726,6 @@ def game_loop(args):
         # get_line(np.array([(1,1),(2,2),(2,3),(5,3)]))
 
         # raise Exception
-        loc = carla.Location(x = -175, y = 86,z = 0 )
-        world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-       
-        blueprint_library = client.get_world().get_blueprint_library()
-        walker_bp = blueprint_library.filter("model3")[0]
-
-        walker_transform=carla.Transform(carla.Location(x=-175, y=88, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
-        walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
         # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
         

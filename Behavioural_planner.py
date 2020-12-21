@@ -85,10 +85,10 @@ class BehaviouralPlanner:
         vehicles_dynamic = list(vehicles_dynamic)
         walkers = list(walkers)
 
-        print(dict_[self._state])
+        # print(dict_[self._state])
         # print(self.stopped)
         obstacle_actors = vehicles_static + vehicles_dynamic 
-        
+        # print(obstacle_actors)
         # draw_bound_box(obstacle_actors,self._world)
         
         if (self._state   == FOLLOW_LANE):
@@ -437,6 +437,7 @@ class BehaviouralPlanner:
         
         elif(self._state == INTERSECTION):
 
+            
             # First, find the closest index to the ego vehicle.
             closest_len, closest_index = self.get_closest_index(ego_state)
             # Next, find the goal index that lies within the lookahead distance
@@ -475,6 +476,7 @@ class BehaviouralPlanner:
             
             collision_check_array,min_collision = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world)
             # print(min_collision,closest_vehicle)
+            
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
 
             ego_location = carla.Location(x=ego_state[0], y=ego_state[1], z= 1.843102 )
@@ -499,25 +501,41 @@ class BehaviouralPlanner:
             intersection,box_points = self.is_approaching_intersection(self._waypoints,closest_index,ego_state)
             walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len,intersection,box_points)
             red_light = self._is_light_red(self.traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)
-
+            need_to_stop,intersection = self.need_to_stop(closest_vehicle,closest_index,ego_location,ego_waypoint,goal_waypoint,ego_state)
+            
             if(type(red_light) == type("str")):
 
                 red_light = True
             # print(intersection,box_points)
             # print(walker_collide,col_walker,min_collision )
-            if((not intersection) ):
-                self._state   = FOLLOW_LANE
 
-            elif(self.stopped):
-                self._state   = INTERSECTION
 
-            elif(walker_collide):
+            if(walker_collide):
                 # print(col_walker)
                 self._collission_actor = col_walker
                 self._state   = DECELERATE_TO_STOP
                 self._collission_index = min_collision
 
+            elif(self.lane_paths_blocked(best_index)):
+
+                if(need_to_stop):
+                    # print("LOL")
+                    self._collission_actor = closest_vehicle
+                    self._state   = DECELERATE_TO_STOP
+                    self._collission_index = min_collision
+                
+                else:
+                    self._collission_actor = closest_vehicle
+                    self._state   = FOLLOW_LEAD_VEHICLE
+                    self._collission_index = min_collision 
             
+            elif((not intersection) ):
+                
+                self._state   = FOLLOW_LANE
+
+            elif(self.stopped):
+                self._state   = INTERSECTION
+
             elif(red_light ): ##LANE PATHS BLOCKED
                 # print(" ")
                 
@@ -687,7 +705,7 @@ class BehaviouralPlanner:
     def get_goal_index(self, ego_state, closest_len, closest_index):
         """
         Gets the goal index for the vehicle.
-
+dd
         Find the farthest point along the path that is within the lookahead 
         distance of the ego vehicle. Take the distance from the ego vehicle
         to the closest waypoint into consideration.

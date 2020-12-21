@@ -57,7 +57,7 @@ class Environment():
                 # continue
             else:
                 
-
+                # print("a")
                 vehicle_loc = vehicle.get_location()
                 vehicle_vel = vehicle.get_velocity()
                 vehicle_lane = self._map.get_waypoint(vehicle_loc,project_to_road=True,lane_type=carla.LaneType.Driving).lane_id
@@ -71,6 +71,7 @@ class Environment():
                     return_dynamic_vehicles.append([10000,10000])
                     return_static_vehicles.append([vehicle_loc.x,vehicle_loc.y])
                 else:
+                    # print()
                     return_dynamic_vehicles.append([vehicle_loc.x,vehicle_loc.y])
                     return_static_vehicles.append([10000,10000])
 
@@ -92,7 +93,7 @@ class Environment():
                 #         return_static_vehicles.append(vehicle)
                 #     else:
                 #         return_dynamic_vehicles.append(vehicle)
-
+        # print(return_dynamic_vehicles,return_static_vehicles)
         for walker in walkers:
             walker_loc = walker.get_location()
 
@@ -121,13 +122,13 @@ class Environment():
             
             return_dynamic_vehicles = np.array(return_dynamic_vehicles)
             dist_dynamic = np.sum(np.square(return_dynamic_vehicles-loc),axis =1 )
-
+            # print(dist_dynamic,"b")
             # print(dist_dynamic<(in_radius**2))
             return_dynamic_vehicles = vehicles[dist_dynamic<(in_radius**2)]
 
             temp_ = np.amin(dist_dynamic[vehicle_lanes == ego_lane])
             dyn_idx = np.where(dist_dynamic == temp_)
-            dist_dynamic = temp_
+            dist_dynamic = temp_ #closest dynamic distance squared
             
         
         if(return_static_vehicles!=[]):
@@ -135,12 +136,16 @@ class Environment():
             return_static_vehicles = np.array(return_static_vehicles)
             # print(return_static_vehicles.shape,loc.shape,return_static_vehicles[0])
             dist_static = np.sum(np.square(return_static_vehicles-loc),axis = 1)
+
+            #print(dist_static,"a")
             return_static_vehicles = vehicles[dist_static<in_radius**2]
 
             temp_ = np.amin(dist_static[vehicle_lanes == ego_lane])
             stat_idx = np.where(dist_static ==temp_)
-            dist_static = temp_
+            dist_static = temp_  #closest static distance squared
 
+            
+        # print(dist_dynamic,dist_static)
         if(return_walkers!=[]):
             """
             Here we are sorting according to the y magnitude on the car frame, this could be implemented on the collission checker as wel to decrease the complexity
@@ -167,6 +172,8 @@ class Environment():
             return_walkers = car_frame[2]
             walkers_y = car_frame[1]
         
+        # print(dist_dynamic,dist_static)
+
         if(dist_dynamic!=None and dist_static!=None):
 
             if(dist_dynamic<dist_static):
@@ -204,6 +211,7 @@ class Environment():
         # closest_vehicle = min(dist_dynamic,dist_static)
 
         # print(closest_vehicle)
+        # print(dist_dynamic,)
         return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,walkers_y
 
 
