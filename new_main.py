@@ -76,7 +76,7 @@ import local_planner
 import ogm_generator
 from local_planner import get_closest_index
 from environment import Environment
-from Behavioural_planner_new import BehaviouralPlanner
+from Behavioural_planner import BehaviouralPlanner
 from spawn import spawn
 
 from tools.misc import get_speed
@@ -656,7 +656,7 @@ def game_loop(args):
         # walker_transform=carla.Transform(carla.Location(x=-175, y=88, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
         # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
-        spawn(0,150)
+        spawn(500,0)
         environment = Environment(world.world,world.player,world_map)
 
         ################################################################

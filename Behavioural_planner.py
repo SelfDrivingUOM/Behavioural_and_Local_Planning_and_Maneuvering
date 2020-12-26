@@ -76,7 +76,7 @@ class BehaviouralPlanner:
 
 
     def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed):
-        # print(dict_[self._state])
+        print(dict_[self._state])
         open_loop_speed = self._lp._velocity_planner.get_open_loop_speed(current_timestamp - prev_timestamp)
         self._lookahead= BP_LOOKAHEAD_BASE + BP_LOOKAHEAD_TIME * open_loop_speed 
         vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,walkers_y = self._environment.get_actors(max(40,self._lookahead))
@@ -186,13 +186,17 @@ class BehaviouralPlanner:
                     self._collission_index = min_collision
                     
 
-                else:
-
+                elif(closest_vehicle!=None):
+                    self._collission_actor = closest_vehicle
                     self._state   = FOLLOW_LEAD_VEHICLE
                     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
                     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
                     self._goal_state[2] = 0
-
+                else:
+                    self._collission_actor = closest_vehicle
+                    self._state   = DECELERATE_TO_STOP
+                    self._collission_index = min_collision
+                    
             elif(intersection):
 
                 self._state   = INTERSECTION
@@ -212,9 +216,10 @@ class BehaviouralPlanner:
             local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
 
             self.paths = paths
+            # print(intersection)
             # self._collission_index = min_collision
             return local_waypoints
-
+    
         elif (self._state == DECELERATE_TO_STOP):
             
             # print()
@@ -280,6 +285,7 @@ class BehaviouralPlanner:
 
                 else:
                     # print("D")
+                    self._collission_actor = closest_vehicle
                     self._state   = FOLLOW_LEAD_VEHICLE
                     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
                     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
@@ -407,7 +413,7 @@ class BehaviouralPlanner:
                     
 
                 else:
-
+                    self._collission_actor = closest_vehicle
                     self._state   = FOLLOW_LEAD_VEHICLE
                     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
                     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
@@ -433,6 +439,7 @@ class BehaviouralPlanner:
 
             self.paths = paths
             # self._collission_index = min_collision
+
             return local_waypoints
         
         elif(self._state == INTERSECTION):
@@ -562,6 +569,7 @@ class BehaviouralPlanner:
 
             self.paths = paths
             # self._collission_index = min_collision
+
             return local_waypoints
 
         elif(self._state == OVERTAKE):
@@ -569,6 +577,7 @@ class BehaviouralPlanner:
         
         elif(self._state == FOLLOW_LEAD_VEHICLE):
             
+            # First, find the closest index to the ego vehicle.
             closest_len, closest_index = self.get_closest_index(ego_state)
             # Next, find the goal index that lies within the lookahead distance
             # along the waypoints.
@@ -682,13 +691,18 @@ class BehaviouralPlanner:
                 best_index = self._lp._num_paths//2
             
             best_path = paths[best_index]
-        
+
+            lead_loc = self._collission_actor.get_location()
+            lead_vehicle_state = [lead_loc.x,lead_loc.y,misc.get_speed(self._collission_actor)]
             debug_print(paths,self._world,best_index)
-            local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
+            local_waypoints = self._lp._velocity_planner.follow_profile(best_path, open_loop_speed, self._goal_state[2],lead_vehicle_state)
 
             self.paths = paths
             # self._collission_index = min_collision
+
             return local_waypoints
+        
+
 
     def get_closest_index(self, ego_state):
         """
@@ -1165,7 +1179,7 @@ dd
     def need_to_stop(self,lead_vehicle,closest_index,ego_location, ego_vehicle_waypoint,goal_waypoint,ego_state):
         # print(lead_vehicle,closest_index)
         # stop = False
-        is_intersection = self.is_approaching_intersection(self._waypoints,closest_index,ego_state)       
+        is_intersection, box_points = self.is_approaching_intersection(self._waypoints,closest_index,ego_state)       
         # distance_lead = get_road_dist(collission_idx)
         
         if(is_intersection):
@@ -1188,9 +1202,17 @@ dd
             if(lead_vehicle!=None):
                 #lead_vehicle = lane_vehicles[0]
                 lead_velocity = lead_vehicle.get_velocity()
-                val_ = np.linalg.norm([lead_velocity.x,lead_velocity.y,lead_velocity.z])
+                ego_velocity  = self.ego_vehicle.get_velocity()
+
+                ego_velocity = np.array([ego_velocity.x,ego_velocity.y,ego_velocity.z])
+                lead_velocity = np.array([lead_velocity.x,lead_velocity.y,lead_velocity.z])
+                val_ = np.linalg.norm(lead_velocity)
+                
+                angle = np.arccos(np.dot(ego_velocity,lead_velocity)/(np.linalg.norm(ego_velocity)*np.linalg.norm(lead_velocity)))
 
                 if(val_ <0.5):
+                    return True,is_intersection 
+                elif(angle>np.pi/2):
                     return True,is_intersection 
                 else:
                     return False, is_intersection
