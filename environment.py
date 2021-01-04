@@ -19,6 +19,31 @@ class Environment():
         # self.walkers = self.actors.filter('walker.*')
         # self.first_time = True
         # print(len(self.lights_list),"A")
+    def in_front(self,rot,ego_loc,actors,actors_loc):
+
+        # print(rot.shape,actors.shape,ego_loc.shape,actors_loc.shape)
+
+        car_frame = rot@((actors_loc - ego_loc).T)
+        # return_walkers = walkers[crit]
+
+        crit = car_frame[1] - self.ego_vehicle.bounding_box.extent.y >= 0
+        car_frame = car_frame[:,crit]
+        
+
+        car_frame = np.append(car_frame,[actors[crit]],axis = 0)
+        car_frame = car_frame[:, car_frame[1].argsort(kind = "mergesort")]
+
+        # print(car_frame.shape,"HUUUU")
+        return_actors = car_frame[2]
+        actors_y = car_frame[1]
+
+        # print(return_actors,actors_y)
+        if(car_frame.shape[1] == 0):
+            return None,None
+        else:
+            return actors_y[0],return_actors[0]
+
+
 
     def get_actors(self,in_radius):
         
@@ -107,6 +132,9 @@ class Environment():
         dist_dynamic = None
         dist_static = None
 
+        dynamic_closest = None
+        static_closest = None
+
         vehicles = np.array(vehicles)
         walkers = np.array(walkers)
         walkers_y = None
@@ -117,18 +145,33 @@ class Environment():
 
         if(vehicle_lanes!=[]):
             vehicle_lanes = np.array(vehicle_lanes)
-
+        
         if(return_dynamic_vehicles !=[]):
             
             return_dynamic_vehicles = np.array(return_dynamic_vehicles)
+
+
             dist_dynamic = np.sum(np.square(return_dynamic_vehicles-loc),axis =1 )
+            dist_temp = dist_dynamic
             # print(dist_dynamic,"b")
             # print(dist_dynamic<(in_radius**2))
-            return_dynamic_vehicles = vehicles[dist_dynamic<(in_radius**2)]
 
-            temp_ = np.amin(dist_dynamic[vehicle_lanes == ego_lane])
-            dyn_idx = np.where(dist_dynamic == temp_)
-            dist_dynamic = temp_ #closest dynamic distance squared
+            dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
+            # print(dyns.shape,(ego_lane==vehicle_lane).shape)
+            # dyns = dyns[ego_lane == vehicle_lanes]
+            # print(dyns.shape)
+            # print()
+            return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
+            # return_dynamic_vehicles = return_dynamic_vehicles[ego_lane == vehicle_lanes]
+            # print(return_dynamic_vehicles.shape)
+            
+            dist_dynamic,dynamic_closest = self.in_front(rot,loc,dyns,return_dynamic_vehicles)
+            return_dynamic_vehicles = dyns
+            # temp_ = np.amin(dist_dynamic[vehicle_lanes == ego_lane])
+            # dyn_idx = np.where(dist_dynamic == temp_)
+            # dist_dynamic = temp_ #closest dynamic distance squared
+            return_dynamic_vehicles = vehicles[dist_temp<in_radius**2]
+
             
         
         if(return_static_vehicles!=[]):
@@ -136,13 +179,19 @@ class Environment():
             return_static_vehicles = np.array(return_static_vehicles)
             # print(return_static_vehicles.shape,loc.shape,return_static_vehicles[0])
             dist_static = np.sum(np.square(return_static_vehicles-loc),axis = 1)
+            stat_temp = dist_static
 
+            stats = vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
+            
             #print(dist_static,"a")
-            return_static_vehicles = vehicles[dist_static<in_radius**2]
+            return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
+            # return_static_vehicles = return_static_vehicles[]
 
-            temp_ = np.amin(dist_static[vehicle_lanes == ego_lane])
-            stat_idx = np.where(dist_static ==temp_)
-            dist_static = temp_  #closest static distance squared
+            dist_static,static_closest = self.in_front(rot,loc,stats,return_static_vehicles)
+            return_static_vehicles = vehicles[stat_temp<in_radius**2]
+            # temp_ = np.amin(dist_static[vehicle_lanes == ego_lane])
+            # stat_idx = np.where(dist_static ==temp_)
+            # dist_static = temp_  #closest static distance squared
 
             
         # print(dist_dynamic,dist_static)
@@ -178,34 +227,41 @@ class Environment():
 
             if(dist_dynamic<dist_static):
                 
-                temp_ = vehicles[dyn_idx][0]
+                # temp_ = vehicles[dyn_idx][0]
+                temp_ = dynamic_closest
 
                 if(temp_.id ==self.ego_vehicle.id):
                     closest_vehicle = None
                 else:
-                    closest_vehicle = vehicles[dyn_idx][0]
+                    closest_vehicle = temp_
 
             else:
-                temp_ = vehicles[dyn_idx][0]
+
+                # temp_ = vehicles[dyn_idx][0]
+                temp_ = static_closest
                 if(temp_.id ==self.ego_vehicle.id):
                     closest_vehicle = None
                 else:
                     # closest_vehicle = vehicles[dyn_idx][0]
-                    closest_vehicle = vehicles[stat_idx][0]
+                    closest_vehicle = temp_
 
         elif(dist_dynamic!=None):
-            temp_ = vehicles[dyn_idx][0]
-            if(temp_.id ==self.ego_vehicle.id):
-                closest_vehicle = None
-            else:
-                closest_vehicle = vehicles[dyn_idx][0]
-        elif(dist_static!=None):
-            temp_ = vehicles[dyn_idx][0]
+            # temp_ = vehicles[dyn_idx][0]
+            temp_ = dynamic_closest
             if(temp_.id ==self.ego_vehicle.id):
                 closest_vehicle = None
             else:
                 # closest_vehicle = vehicles[dyn_idx][0]
-                closest_vehicle = vehicles[stat_idx][0]
+                closest_vehicle = temp_
+        elif(dist_static!=None):
+            # temp_ = vehicles[dyn_idx][0]
+            temp_ = static_closest
+            if(temp_.id ==self.ego_vehicle.id):
+                closest_vehicle = None
+            else:
+                # closest_vehicle = vehicles[dyn_idx][0]
+                # closest_vehicle = vehicles[stat_idx][0]
+                closest_vehicle = temp_
 
 
         # closest_vehicle = min(dist_dynamic,dist_static)

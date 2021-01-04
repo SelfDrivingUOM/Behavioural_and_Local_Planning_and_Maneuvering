@@ -91,6 +91,14 @@ class BehaviouralPlanner:
         # print(obstacle_actors)
         # draw_bound_box(obstacle_actors,self._world)
         
+        if(closest_vehicle!=None):
+
+            transform = closest_vehicle.get_transform()
+            bounding_box = closest_vehicle.bounding_box
+            bounding_box.location += transform.location
+            #world.debug.draw_box(bounding_box, transform.rotation,life_time=-1.0000, persistent_lines=True)
+            self._world.debug.draw_box(bounding_box,transform.rotation,1, carla.Color(255,0,0,0),0.001)
+
         if (self._state   == FOLLOW_LANE):
         
             # First, find the closest index to the ego vehicle.
@@ -283,14 +291,16 @@ class BehaviouralPlanner:
                     self._collission_index = min_collision
                     
 
-                else:
-                    # print("D")
+                elif(closest_vehicle!=None):
                     self._collission_actor = closest_vehicle
                     self._state   = FOLLOW_LEAD_VEHICLE
                     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
                     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
-                    self._collission_index = min_collision
                     self._goal_state[2] = 0
+                else:
+                    self._collission_actor = closest_vehicle
+                    self._state   = DECELERATE_TO_STOP
+                    self._collission_index = min_collision
 
             elif(intersection and red_light):
 
@@ -404,7 +414,7 @@ class BehaviouralPlanner:
                 # print(" ")
 
                 need_to_stop,intersection = self.need_to_stop(closest_vehicle,closest_index,ego_location,ego_waypoint,goal_waypoint,ego_state)
-                
+
                 if(need_to_stop):
                     # print("LOL")
                     self._collission_actor = closest_vehicle
@@ -412,15 +422,22 @@ class BehaviouralPlanner:
                     self._collission_index = min_collision
                     
 
-                else:
+                elif(closest_vehicle!=None):
+                    
                     self._collission_actor = closest_vehicle
                     self._state   = FOLLOW_LEAD_VEHICLE
                     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
                     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
                     self._goal_state[2] = 0
 
-            elif(self.is_approaching_intersection(self._waypoints,closest_index,ego_state)):
+                else:
+                    
+                    self._collission_actor = closest_vehicle
+                    self._state   = DECELERATE_TO_STOP
+                    self._collission_index = min_collision
 
+            elif(self.is_approaching_intersection(self._waypoints,closest_index,ego_state)):
+        
                 self._state   = INTERSECTION
 
             else:
@@ -531,10 +548,16 @@ class BehaviouralPlanner:
                     self._state   = DECELERATE_TO_STOP
                     self._collission_index = min_collision
                 
-                else:
+                elif(closest_vehicle!=None):
                     self._collission_actor = closest_vehicle
                     self._state   = FOLLOW_LEAD_VEHICLE
-                    self._collission_index = min_collision 
+                    self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+                    self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+                    self._goal_state[2] = 0
+                else:
+                    self._collission_actor = closest_vehicle
+                    self._state   = DECELERATE_TO_STOP
+                    self._collission_index = min_collision
             
             elif((not intersection) ):
                 
@@ -670,12 +693,18 @@ class BehaviouralPlanner:
                     self._collission_index = min_collision
                     
 
-                else:
-
+                elif(closest_vehicle!=None):
+                    
+                    self._collission_actor = closest_vehicle
                     self._state   = FOLLOW_LEAD_VEHICLE
                     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
                     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
                     self._goal_state[2] = 0
+                
+                else:
+                    self._collission_actor = closest_vehicle
+                    self._state   = DECELERATE_TO_STOP
+                    self._collission_index = min_collision
 
             elif(intersection):
 
@@ -687,20 +716,32 @@ class BehaviouralPlanner:
 
             # best_index = 5
 
-            if(best_index == None):
-                best_index = self._lp._num_paths//2
+            if(self._collission_actor == None):
+                    
+                if(best_index == None):
+                    best_index = self._lp._num_paths//2
+                
+                best_path = paths[best_index]
             
-            best_path = paths[best_index]
+                debug_print(paths,self._world,best_index)
+                local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
 
-            lead_loc = self._collission_actor.get_location()
-            lead_vehicle_state = [lead_loc.x,lead_loc.y,misc.get_speed(self._collission_actor)]
-            debug_print(paths,self._world,best_index)
-            local_waypoints = self._lp._velocity_planner.follow_profile(best_path, open_loop_speed, self._goal_state[2],lead_vehicle_state)
 
-            self.paths = paths
-            # self._collission_index = min_collision
+            else:
+                if(best_index == None):
+                    best_index = self._lp._num_paths//2
+                
+                best_path = paths[best_index]
 
-            return local_waypoints
+                lead_loc = self._collission_actor.get_location()
+                lead_vehicle_state = [lead_loc.x,lead_loc.y,misc.get_speed(self._collission_actor)]
+                debug_print(paths,self._world,best_index)
+                local_waypoints = self._lp._velocity_planner.follow_profile(best_path, open_loop_speed, self._goal_state[2],lead_vehicle_state)
+
+                self.paths = paths
+                # self._collission_index = min_collision
+
+                return local_waypoints
         
 
 
@@ -1182,7 +1223,27 @@ dd
         is_intersection, box_points = self.is_approaching_intersection(self._waypoints,closest_index,ego_state)       
         # distance_lead = get_road_dist(collission_idx)
         
-        if(is_intersection):
+
+
+        if(lead_vehicle!=None):
+            #lead_vehicle = lane_vehicles[0]
+            lead_velocity = lead_vehicle.get_velocity()
+            ego_velocity  = self.ego_vehicle.get_velocity()
+
+            ego_velocity = np.array([ego_velocity.x,ego_velocity.y,ego_velocity.z])
+            lead_velocity = np.array([lead_velocity.x,lead_velocity.y,lead_velocity.z])
+            val_ = np.linalg.norm(lead_velocity)
+            
+            angle = np.arccos(np.dot(ego_velocity,lead_velocity)/(np.linalg.norm(ego_velocity)*np.linalg.norm(lead_velocity)))
+            # print(val_)
+            if(val_ <0.5):
+                return True,is_intersection 
+            elif(angle>np.pi/2):
+                return True,is_intersection 
+            else:
+                return False, is_intersection
+
+        elif(is_intersection):
             green_light = not self._is_light_red(self.traffic_lights,ego_location, ego_vehicle_waypoint,goal_waypoint ,ego_state)
 
             if(type(green_light)!= type("str")):
@@ -1198,27 +1259,11 @@ dd
                 else:
                     return True,is_intersection
         else:
+        
+            return True,is_intersection
 
-            if(lead_vehicle!=None):
-                #lead_vehicle = lane_vehicles[0]
-                lead_velocity = lead_vehicle.get_velocity()
-                ego_velocity  = self.ego_vehicle.get_velocity()
 
-                ego_velocity = np.array([ego_velocity.x,ego_velocity.y,ego_velocity.z])
-                lead_velocity = np.array([lead_velocity.x,lead_velocity.y,lead_velocity.z])
-                val_ = np.linalg.norm(lead_velocity)
-                
-                angle = np.arccos(np.dot(ego_velocity,lead_velocity)/(np.linalg.norm(ego_velocity)*np.linalg.norm(lead_velocity)))
 
-                if(val_ <0.5):
-                    return True,is_intersection 
-                elif(angle>np.pi/2):
-                    return True,is_intersection 
-                else:
-                    return False, is_intersection
-            else:
-            
-                return True,is_intersection
 
     """
     This function returns distance to the lead vehicle

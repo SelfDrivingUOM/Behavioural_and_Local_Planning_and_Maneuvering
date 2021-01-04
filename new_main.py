@@ -52,14 +52,14 @@ import copy
 # -- Find CARLA module ---------------------------------------------------------
 # ==============================================================================
 try:
-    sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    sys.path.append(glob.glob('/home/gershom/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
 except IndexError:
     pass
 
-try:
-    sys.path.append('/home/selfdriving/yasintha/Path_planner_6/')
-except IndexError:
-    pass
+# try:
+#     sys.path.append('/home/selfdriving/yasintha/Path_planner_6/')
+# except IndexError:
+#     pass
 
 
 # ==============================================================================
@@ -73,7 +73,7 @@ from global_route_planner_dao import GlobalRoutePlannerDAO
 from carla import ColorConverter as cc
 import controller2d
 import local_planner
-import ogm_generator
+# import ogm_generator
 from local_planner import get_closest_index
 from environment import Environment
 from Behavioural_planner import BehaviouralPlanner
@@ -618,7 +618,7 @@ def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
-    spawn_point = 40  ##20/40-best
+    spawn_point = 14  ##20/40-best
     try:
         
         client = carla.Client(args.host, args.port)
@@ -656,7 +656,7 @@ def game_loop(args):
         # walker_transform=carla.Transform(carla.Location(x=-175, y=88, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
         # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
-        spawn(500,0)
+        spawn(60,0)
         environment = Environment(world.world,world.player,world_map)
 
         ################################################################
