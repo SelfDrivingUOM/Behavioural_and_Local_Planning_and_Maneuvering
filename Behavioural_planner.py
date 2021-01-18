@@ -20,6 +20,7 @@ BP_LOOKAHEAD_TIME              = 1.0        # s
 INTERSECTION_APPROACH_DISTANCE = 5
 WALKER_THRESHOLD = 0.1
 HEADING_CHECK_LOOKAHEAD = 10
+TRAFFIC_LIGHT_CHECK_DISTANCE =40
 
 #states
 FOLLOW_LANE            = 0
@@ -74,6 +75,8 @@ class BehaviouralPlanner:
         self._last_traffic_light =None
         self._proximity_threshold = 10.0 
         self.stopped = None
+        self._color_light_state = None
+        self._intersection_state = None  # this is to print intersection state. check only
 
 
     def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed):
@@ -82,7 +85,7 @@ class BehaviouralPlanner:
         self._lookahead= BP_LOOKAHEAD_BASE + BP_LOOKAHEAD_TIME * open_loop_speed 
         vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,walkers_y = self._environment.get_actors(max(40,self._lookahead))
         
-        print(dict_[self._state],self._lookahead)
+        print(dict_[self._state],self._color_light_state ,self._intersection_state)
         vehicles_static = list(vehicles_static)
         vehicles_dynamic = list(vehicles_dynamic)
         walkers = list(walkers)
@@ -165,7 +168,8 @@ class BehaviouralPlanner:
             intersection,box_points = self.is_approaching_intersection(self._waypoints,closest_index,ego_state)
             walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len,intersection,box_points)
             
-
+            
+            self._intersection_state = intersection
             # print(intersection,box_points)
             # print(walker_collide,col_walker,min_collision )
             if(walker_collide):
@@ -266,8 +270,12 @@ class BehaviouralPlanner:
             intersection,box_points = self.is_approaching_intersection(self._waypoints,max(self._collission_index,1),ego_state)
             walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len,intersection,box_points)
             local_waypoints = self._lp._velocity_planner.decelerate_profile(paths[best_index],current_speed,min_collision)
-            
+            self._intersection_state = intersection
+
             red_light = self._is_light_red(self.traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)
+            
+            self._color_light_state = red_light
+
             if(type(red_light) == type("str")):
                 red_light = True
             if(self.is_ego_less()):
@@ -395,7 +403,8 @@ class BehaviouralPlanner:
             intersection,box_points = self.is_approaching_intersection(self._waypoints,closest_index,ego_state)
             walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len,intersection,box_points)
             red_light = self._is_light_red(self.traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)
-
+            self._color_light_state = red_light
+            self._intersection_state = intersection
             # print(intersection,box_points)
             # print(walker_collide,col_walker,min_collision )
             if(walker_collide):
@@ -406,7 +415,7 @@ class BehaviouralPlanner:
             elif(red_light == "NTL"):
                 time.sleep(2.0)
                 self.stopped = True
-                self._state   = FOLLOW_LANE
+                self._state   = INTERSECTION
                 
             elif((intersection and red_light)):
                 
@@ -530,7 +539,8 @@ class BehaviouralPlanner:
             walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len,intersection,box_points)
             red_light = self._is_light_red(self.traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)
             need_to_stop,intersection = self.need_to_stop(closest_vehicle,closest_index,ego_location,ego_waypoint,goal_waypoint,ego_state)
-            
+            self._color_light_state = red_light
+            self._intersection_state = intersection
             if(type(red_light) == type("str")):
 
                 red_light = True
@@ -670,7 +680,7 @@ class BehaviouralPlanner:
             intersection,box_points = self.is_approaching_intersection(self._waypoints,closest_index,ego_state)
             walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len,intersection,box_points)
             
-
+            self._intersection_state = intersection
             # print(intersection,box_points)
             # print(walker_collide,col_walker,min_collision )
             if(walker_collide):
@@ -1379,7 +1389,7 @@ dd
                                                                ego_location,
                                                                ego_state[2])
                     
-                    if((magnitude < 30 + self._lookahead ) and angle<min_angle and angle>0):
+                    if((magnitude < TRAFFIC_LIGHT_CHECK_DISTANCE + self._lookahead ) and angle<min_angle and angle>0):
 
                        
 
@@ -1390,11 +1400,18 @@ dd
                         sel_traffic_light = traffic_light
                         min_angle = angle
                 # print(angles,mags)
-                # if(sel_traffic_light!= None):
-                #     self._world.debug.draw_line(ego_location, sel_traffic_light.get_location(), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=0.01)
+                if(sel_traffic_light!= None):
+                    self._world.debug.draw_line(ego_location, sel_traffic_light.get_location(), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=0.01)
 
                 # print("PANIK")
+                #if (sel_traffic_light.type_id == 'traffic.traffic_light'):
                 if sel_traffic_light is not None:
+                    # self._world.debug.draw_box(carla.BoundingBox(sel_traffic_light.get_location(),carla.Vector3D(0.5,0.5,2)),sel_traffic_light.get_transform().rotation, 0.05, carla.Color(255,0,0,0),0)
+
+
+                    # traffic_transform = sel_traffic_light.get_transform()
+                    # bounding_box = sel_traffic_light.bounding_box
+                    # self._world.debug.draw_box(bounding_box,traffic_transform.rotation,0.05, carla.Color(255,0,0,0),0.001)
 
                     # print(min_angle)
                     if debug:
