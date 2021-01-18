@@ -358,25 +358,37 @@ class VelocityPlanner:
         # Find the closest point to the lead vehicle on our planned path.
         min_index = len(path[0]) - 1
         min_dist = float('Inf')
-        for i in range(len(path)):
-            dist = np.linalg.norm([path[0][i] - lead_car_state[0], 
-                                   path[1][i] - lead_car_state[1]])
-            if dist < min_dist:
-                min_dist = dist
-                min_index = i
+        # for i in range(len(path)):
+        #     dist = np.linalg.norm([path[0][i] - lead_car_state[0], 
+        #                            path[1][i] - lead_car_state[1]])
+        #     if dist < min_dist:
+        #         min_dist = dist
+        #         min_index = i
+        path = np.array(path)
+        lead_car_state = np.array(lead_car_state).reshape((3,1))
+
+        dist = np.sqrt(np.sum(np.square(path[:2,:] - lead_car_state[:2,:]),axis = 0))
+        # print(dist,path[:2,:])
+        min_dist = np.amin(dist)
+        min_index = np.where(dist==min_dist)[0][0]
 
         # Compute the time gap point, assuming our velocity is held constant at
         # the minimum of the desired speed and the ego vehicle's velocity, from
         # the closest point to the lead vehicle on our planned path.
-        desired_speed = min(lead_car_state[2], desired_speed)
+        desired_speed = min(lead_car_state[2,0], desired_speed)
         ramp_end_index = min_index
         distance = min_dist
-        distance_gap = desired_speed * self._time_gap
+        distance_gap = desired_speed *(self._time_gap)*0.5
+
+        # print(lead_car_state[2,0],start_speed)
+
         while (ramp_end_index > 0) and (distance > distance_gap):
             distance += np.linalg.norm([path[0][ramp_end_index] - path[0][ramp_end_index-1], 
                                         path[1][ramp_end_index] - path[1][ramp_end_index-1]])
             ramp_end_index -= 1
 
+            # print(distance,ramp_end_index)
+        # print(min_index,ramp_end_index,distance_gap,min_dist)
         # We now need to reach the ego vehicle's speed by the time we reach the
         # time gap point, ramp_end_index, which therefore is the end of our ramp
         # velocity profile.

@@ -26,6 +26,7 @@ PATH_SELECT_WEIGHT     = 10               #
 A_MAX                  = 5              # m/s^2
 SLOW_SPEED             = 0              # m/s
 STOP_LINE_BUFFER       = 1.5              # m
+LEAD_VEHICLE_SPEED     = 1
 LEAD_VEHICLE_LOOKAHEAD = 20.0             # m
 LP_FREQUENCY_DIVISOR   = 1                # Frequency divisor to make the 
                                           # local planner operate at a lower
@@ -52,7 +53,7 @@ import copy
 # -- Find CARLA module ---------------------------------------------------------
 # ==============================================================================
 try:
-    sys.path.append(glob.glob('/home/gershom/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
 except IndexError:
     pass
 
@@ -61,18 +62,21 @@ except IndexError:
 # except IndexError:
 #     pass
 
-
 # ==============================================================================
 # -- imports -------------------------------------------------------------------
 # ==============================================================================
 
 
 import carla
+
+
+
 from global_route_planner import GlobalRoutePlanner
 from global_route_planner_dao import GlobalRoutePlannerDAO
 from carla import ColorConverter as cc
 import controller2d
 import local_planner
+from basic_agent.basic_agent import BasicAgent
 # import ogm_generator
 from local_planner import get_closest_index
 from environment import Environment
@@ -90,6 +94,8 @@ import re
 import weakref
 from math import sin, cos, pi, sqrt
 import hull
+
+# from  import BasicAgent
 
 try:
     import pygame
@@ -618,7 +624,7 @@ def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
-    spawn_point = 14  ##20/40-best
+    spawn_point = 40  ##20/40-best
     try:
         
         client = carla.Client(args.host, args.port)
@@ -647,16 +653,36 @@ def game_loop(args):
         # print(start_point)
         #environment = Environment(world.world,world_map,world.player)
         
-        # loc = carla.Location(x = -175, y = 86,z = 0 )
-        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-       
+
         # blueprint_library = client.get_world().get_blueprint_library()
         # walker_bp = blueprint_library.filter("model3")[0]
 
         # walker_transform=carla.Transform(carla.Location(x=-175, y=88, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
         # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
-        spawn(60,0)
+        # spawn(70,250)
+        route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
+        waypoints = np.array(route)[:,0]
+        waypoints_np = np.empty((0,3))
+        vehicle_speed = 5
+
+        #spwaning a leading vehicle
+        x_lead=waypoints[10].transform.location.x
+        y_lead=waypoints[10].transform.location.y
+        z_lead=1.843102
+        #1.4203450679814286772
+
+        blueprint_library = client.get_world().get_blueprint_library()
+        my_car_bp = blueprint_library.filter("model3")[0]
+
+        lead_vehicle_tansform=carla.Transform(carla.Location(x=x_lead, y=y_lead, z=z_lead),carla.Rotation(yaw= waypoints[10].transform.rotation.yaw,pitch=waypoints[10].transform.rotation.pitch))
+        leading_vehicle=world.world.spawn_actor(my_car_bp, lead_vehicle_tansform)
+        actor_list.append(leading_vehicle)
+        Agent=BasicAgent(leading_vehicle)
+        Agent.set_path(route[10:])
+        start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())
+
+
         environment = Environment(world.world,world.player,world_map)
 
         ################################################################
@@ -686,10 +712,10 @@ def game_loop(args):
                         NUMBER_OF_LAYERS)
 
 
-        route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
-        waypoints = np.array(route)[:,0]
-        waypoints_np = np.empty((0,3))
-        vehicle_speed = 5
+        # route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
+        # waypoints = np.array(route)[:,0]
+        # waypoints_np = np.empty((0,3))
+        # vehicle_speed = 5
 
         for i in range(waypoints.shape[0]):
             waypoints_np = np.append(waypoints_np, np.array([[waypoints[i].transform.location.x, waypoints[i].transform.location.y, vehicle_speed]]),axis=0)
@@ -723,6 +749,10 @@ def game_loop(args):
         # x = -70 - 5 junction
         #3 junction x = -70, y =150
 
+        # loc = carla.Location(x = -50, y = -90,z = 0 )
+        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+       
+        # raise Exception
         # get_line(np.array([(1,1),(2,2),(2,3),(5,3)]))
 
         # raise Exception
@@ -731,13 +761,9 @@ def game_loop(args):
         
         # junc_points = misc.print_junction(world,waypoint)
 
-
         # loc = carla.Location(x = 22, y = 140,z = 0 )
         # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-
         # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
-        # junc_points = misc.print_junction(world,waypoint)
-
 
         # loc = carla.Location(x = 27, y = 190,z = 0 )
         # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
@@ -768,18 +794,18 @@ def game_loop(args):
         
         # print(junc_points)
 
-        # lines = get_line(junc_points)
-        # # draw_hex(world,lines)
-        # inter_junc_points = solve_lines(lines)
+        # lines = misc.get_line(junc_points)
+        # misc.draw_hex(world,lines)
+        # inter_junc_points = misc.solve_lines(lines)
 
-        # box_points = get_box(world_map,inter_junc_points)
+        # box_points = misc.get_box(world_map,inter_junc_points)
 
         # for i in range(box_points.shape[0]):
         #     print(inter_junc_points[i])
         #     world.world.debug.draw_string(carla.Location(x=box_points[i,0],y = box_points[i,1],z = 1),"A", draw_shadow=False,color=carla.Color(r=255, g=255, b=0), life_time=10000,persistent_lines=True)
         
 
-
+        # raise Exception
                     # print(waypoint.lane_type)
             
 
@@ -891,7 +917,8 @@ def game_loop(args):
         #                        [ LENGTH/(2*(2**0.5)),-WIDTH*(7**0.5)/(4)]])
         
         while True:
-
+            cmd=Agent.run_step(False)
+            send_control_command(leading_vehicle,cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return 

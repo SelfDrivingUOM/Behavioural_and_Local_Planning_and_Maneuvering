@@ -56,6 +56,7 @@ class BehaviouralPlanner:
         self._world         = world
         self._state         = FOLLOW_LANE
         self._lookahead     = BP_LOOKAHEAD_BASE
+        self._prev_lookahead = BP_LOOKAHEAD_BASE
         self.paths = None
         self._goal_state_next =None
         self.min_collision = None
@@ -76,11 +77,12 @@ class BehaviouralPlanner:
 
 
     def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed):
-        print(dict_[self._state])
+        
         open_loop_speed = self._lp._velocity_planner.get_open_loop_speed(current_timestamp - prev_timestamp)
         self._lookahead= BP_LOOKAHEAD_BASE + BP_LOOKAHEAD_TIME * open_loop_speed 
         vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,walkers_y = self._environment.get_actors(max(40,self._lookahead))
         
+        print(dict_[self._state],self._lookahead)
         vehicles_static = list(vehicles_static)
         vehicles_dynamic = list(vehicles_dynamic)
         walkers = list(walkers)
@@ -173,7 +175,7 @@ class BehaviouralPlanner:
                 self._collission_index = min_collision
 
             
-            elif(self.lane_paths_blocked(best_index)): ##LANE PATHS BLOCKED
+            elif(self.lane_paths_blocked(best_index,)): ##LANE PATHS BLOCKED
                 # print(" ")
 
                 need_to_stop,intersection = self.need_to_stop(closest_vehicle,closest_index,ego_location,ego_waypoint,goal_waypoint,ego_state)
@@ -189,6 +191,7 @@ class BehaviouralPlanner:
                 
                 elif(need_to_stop):
                     # print("LOL")
+                    self._prev_lookahead = self._lookahead
                     self._collission_actor = closest_vehicle
                     self._state   = DECELERATE_TO_STOP
                     self._collission_index = min_collision
@@ -283,9 +286,10 @@ class BehaviouralPlanner:
             elif(self.lane_paths_blocked(best_index)): ##LANE PATHS BLOCKED
 
                 # print(" ")
-                need_to_stop,intersection = self.need_to_stop(closest_vehicle,self._collission_index,ego_state,ego_location,ego_waypoint,goal_location,goal_waypoint,ego_state)
+                need_to_stop,intersection = self.need_to_stop(closest_vehicle,self._collission_index,ego_location,ego_waypoint,goal_waypoint,ego_state)
                 if(need_to_stop):
                     # print("C")
+                    self._prev_lookahead = self._lookahead
                     self._collission_actor = closest_vehicle
                     self._state   = DECELERATE_TO_STOP
                     self._collission_index = min_collision
@@ -303,7 +307,7 @@ class BehaviouralPlanner:
                     self._collission_index = min_collision
 
             elif(intersection and red_light):
-
+                self._prev_lookahead = self._lookahead
                 self._state   = DECELERATE_TO_STOP
                 self._collission_index = min_collision
                 self._collission_actor = closest_vehicle
@@ -431,7 +435,7 @@ class BehaviouralPlanner:
                     self._goal_state[2] = 0
 
                 else:
-                    
+                    self._prev_lookahead = self._lookahead
                     self._collission_actor = closest_vehicle
                     self._state   = DECELERATE_TO_STOP
                     self._collission_index = min_collision
@@ -536,6 +540,8 @@ class BehaviouralPlanner:
 
             if(walker_collide):
                 # print(col_walker)
+                self._prev_lookahead = self._lookahead
+
                 self._collission_actor = col_walker
                 self._state   = DECELERATE_TO_STOP
                 self._collission_index = min_collision
@@ -544,6 +550,7 @@ class BehaviouralPlanner:
 
                 if(need_to_stop):
                     # print("LOL")
+                    self._prev_lookahead = self._lookahead
                     self._collission_actor = closest_vehicle
                     self._state   = DECELERATE_TO_STOP
                     self._collission_index = min_collision
@@ -568,7 +575,7 @@ class BehaviouralPlanner:
 
             elif(red_light ): ##LANE PATHS BLOCKED
                 # print(" ")
-                
+                self._prev_lookahead = self._lookahead
                 ###change the goal point
                 self._state   = DECELERATE_TO_STOP
                 self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
@@ -605,6 +612,7 @@ class BehaviouralPlanner:
             # Next, find the goal index that lies within the lookahead distance
             # along the waypoints.
             goal_index = self.get_goal_index(ego_state, closest_len, closest_index)
+            # print(closest_len, "P")
 
 
             # print(goal_index)
@@ -667,6 +675,7 @@ class BehaviouralPlanner:
             # print(walker_collide,col_walker,min_collision )
             if(walker_collide):
                 # print(col_walker)
+                self._prev_lookahead = self._lookahead
                 self._collission_actor = col_walker
                 self._state   = DECELERATE_TO_STOP
                 self._collission_index = min_collision
@@ -688,6 +697,7 @@ class BehaviouralPlanner:
                 
                 elif(need_to_stop):
                     # print("LOL")
+                    self._prev_lookahead = self._lookahead
                     self._collission_actor = closest_vehicle
                     self._state   = DECELERATE_TO_STOP
                     self._collission_index = min_collision
@@ -702,6 +712,7 @@ class BehaviouralPlanner:
                     self._goal_state[2] = 0
                 
                 else:
+                    self._prev_lookahead = self._lookahead
                     self._collission_actor = closest_vehicle
                     self._state   = DECELERATE_TO_STOP
                     self._collission_index = min_collision
@@ -868,9 +879,12 @@ dd
 
         # print(check_wayp_idx,idx_heading_check,ego_heading,heading)
         dist = np.sum(np.square(inter_points-ego_state[:2]),axis =1)
+        #argpartition gives the indices when sorted
         closest_points = np.sort(np.argpartition(dist, 2)[:2])
 
         if(np.abs(heading_check)<np.radians(JUNCTION_HEADING_CHECK_ANGLE)):
+
+            # print("A")
             if(np.all(closest_points==np.array([0,3]))):
                 set_1 = inter_points[np.array([3,0])]
                 set_2 = inter_points[np.array([1,2])]
@@ -894,18 +908,29 @@ dd
             # pass
         elif(heading_check>0):
             
-            closest_points = inter_points[np.append(closest_points[:2],[(closest_points[1]+1)%4])]
+            # print("B",closest_points)
+            
+            if(closest_points[0] ==0 and closest_points[1] ==3 ):
+                closest_points = inter_points[np.append(closest_points[:2],[(closest_points[0]+1)%4])]
+
+            else:
+                closest_points = inter_points[np.append(closest_points[:2],[(closest_points[1]+1)%4])]
 
             for i in range(closest_points.shape[0]):
                 # print(inter_junc_points[i])
                 self._world.debug.draw_string(carla.Location(x=closest_points[i,0],y = closest_points[i,1],z = 1),"A", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-
+            # print(closest_points,inter_points,dist)
             return closest_points
             # print("LEFT")
             # pass
         else:
             
-            closest_points = inter_points[np.append(closest_points[:2],[closest_points[0]-1])]
+            # print("C")
+
+            if(closest_points[0] ==0 and closest_points[1] ==3 ):
+                closest_points = inter_points[np.append(closest_points[:2],[(closest_points[1]-1)])]
+            else:
+                closest_points = inter_points[np.append(closest_points[:2],[closest_points[0]-1])]
 
             for i in range(closest_points.shape[0]):
                 # print(inter_junc_points[i])
@@ -1000,9 +1025,9 @@ dd
 
         # elif()
         elif(self._collission_actor != None):
-            dist_closest = np.sum(np.square(np.array([self._collission_actor.get_location().x,self._collission_actor.get_location().y]) \
-                             - np.array([self.ego_vehicle.get_location().x,self.ego_vehicle.get_location().y])))
-            if(dist_closest< self._lookahead):
+            dist_closest = np.sqrt(np.sum(np.square(np.array([self._collission_actor.get_location().x,self._collission_actor.get_location().y]) \
+                             - np.array([self.ego_vehicle.get_location().x,self.ego_vehicle.get_location().y]))))
+            if(dist_closest< self._prev_lookahead):
                 return True
 
             else:

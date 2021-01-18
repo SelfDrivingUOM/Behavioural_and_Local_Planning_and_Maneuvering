@@ -19,7 +19,7 @@ import sys
 import time
 
 try:
-    sys.path.append(glob.glob('/home/gershom/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
 except IndexError:
     pass
 
