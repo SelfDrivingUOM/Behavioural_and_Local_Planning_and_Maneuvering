@@ -408,14 +408,17 @@ class VelocityPlanner:
             else:
                 vf = calc_final_speed(vi, self._a_max, dist)
 
-            profile.append([path[0][i], path[1][i], vi])
+            # profile.append([path[0][i], path[1][i], vi])
+            profile.append([path[0][i], path[1][i], lead_car_state[2,0]])
             vi = vf
 
         # Once we hit the time gap point, we need to be at the desired speed.
         # If we can't get there using a_max, do an abrupt change in the profile
         # to use the controller to decelerate more quickly.
         for i in range(ramp_end_index + 1, len(path[0])):
-            profile.append([path[0][i], path[1][i], desired_speed])
+            # profile.append([path[0][i], path[1][i], desired_speed])
+            profile.append([path[0][i], path[1][i], lead_car_state[2,0]])
+           
 
         # Interpolate between the zeroth state and the first state.
         # This prevents the myopic controller from getting stuck at the zeroth

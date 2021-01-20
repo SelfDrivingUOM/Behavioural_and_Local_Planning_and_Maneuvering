@@ -102,7 +102,7 @@ class BehaviouralPlanner:
             bounding_box = closest_vehicle.bounding_box
             bounding_box.location += transform.location
             #world.debug.draw_box(bounding_box, transform.rotation,life_time=-1.0000, persistent_lines=True)
-            self._world.debug.draw_box(bounding_box,transform.rotation,1, carla.Color(255,0,0,0),0.001)
+            #self._world.debug.draw_box(bounding_box,transform.rotation,1, carla.Color(255,0,0,0),0.001)
 
         if (self._state   == FOLLOW_LANE):
         
