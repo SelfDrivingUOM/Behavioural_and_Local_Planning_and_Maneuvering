@@ -660,7 +660,7 @@ def game_loop(args):
         # walker_transform=carla.Transform(carla.Location(x=-175, y=88, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
         # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
-        # spawn(70,250)
+        spawn(0,0)
         route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
         waypoints = np.array(route)[:,0]
         waypoints_np = np.empty((0,3))
@@ -919,6 +919,15 @@ def game_loop(args):
         while True:
             cmd=Agent.run_step(False)
             send_control_command(leading_vehicle,cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+
+            # lead_waypoint = world_map.get_waypoint(leading_vehicle.get_transform().location,project_to_road=True)
+            # lead_lane = lead_waypoint.lane_id   
+            # print("lead",lead_lane)   
+
+            # ego_waypoint = world_map.get_waypoint(world.player.get_transform().location,project_to_road=True)
+            # ego_lane = ego_waypoint.lane_id   
+            # print("ego",ego_lane)   
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return 
@@ -977,6 +986,7 @@ def game_loop(args):
 
                 # --------------------------------------------------------------
                 if local_waypoints != None:
+
                     # Update the controller waypoint path with the best local path.
                     # This controller is similar to that developed in Course 1 of this
                     # specialization.  Linear interpolation computation on the waypoints
@@ -1015,6 +1025,8 @@ def game_loop(args):
                     # Update the other controller values and controls
                     controller.update_waypoints(wp_interp)
                     pass
+                else:
+                    print("Local waypoints NONE returned there is an error in behaviour planner")
                 
                 # tt5 = time.time()
                 
