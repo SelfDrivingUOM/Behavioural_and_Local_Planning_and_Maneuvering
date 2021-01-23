@@ -401,8 +401,8 @@ class VelocityPlanner:
         # end of the ramp.
         vi = start_speed
         for i in range(ramp_end_index + 1):
-            dist = np.linalg.norm([path[0][i+1] - path[0][i], 
-                                   path[1][i+1] - path[1][i]])
+            dist = np.linalg.norm([path[0][i] - path[0][i-1], 
+                                   path[1][i] - path[1][i-1]])
             if desired_speed < start_speed:
                 vf = calc_final_speed(vi, -self._a_max, dist)
             else:

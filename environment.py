@@ -28,7 +28,6 @@ class Environment():
 
         crit = car_frame[1] - self.ego_vehicle.bounding_box.extent.y >= 0
         car_frame = car_frame[:,crit]
-        
 
         car_frame = np.append(car_frame,[actors[crit]],axis = 0)
         car_frame = car_frame[:, car_frame[1].argsort(kind = "mergesort")]
@@ -45,7 +44,7 @@ class Environment():
 
 
 
-    def get_actors(self,in_radius):
+    def get_actors(self,in_radius,paths,middle_path_idx):
         
         # if(self.first_time):
         # 
@@ -53,7 +52,7 @@ class Environment():
         
 
         # self.first_time = False
-        
+        #print(np.shape(paths))
         vehicles = self.vehicles
         walkers  = self.walkers
         
@@ -68,7 +67,16 @@ class Environment():
 
         ego_waypoint=self._map.get_waypoint(self.ego_vehicle_loc,project_to_road=True,lane_type=carla.LaneType.Driving)
         ego_lane = ego_waypoint.lane_id
+
+        if (type(paths) == type(None)):
+            pass
+        else:
+            goal_location = carla.Location(x=paths[middle_path_idx,0,-1], y=paths[middle_path_idx,1,-1], z= 1.843102 )
+            goal_waypoint=self._map.get_waypoint(goal_location,project_to_road=True,lane_type=carla.LaneType.Driving)
+            goal_lane = goal_waypoint.lane_id
+            
         
+            
         distance = 10**4
         closest_vehicle = None
 
@@ -161,7 +169,14 @@ class Environment():
             # dyns = dyns[ego_lane == vehicle_lanes]
             # print(dyns.shape)
             # print()
+            # if (type(paths) == type(None)):
             return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
+            # else:
+            #     #print(np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes),np.logical_and(dist_dynamic<in_radius**2, goal_lane == vehicle_lanes))
+            #     temp_1 = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
+            #     temp_2 = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, goal_lane == vehicle_lanes)]
+            #     return_dynamic_vehicles = temp_1 + temp_2
+        
             # return_dynamic_vehicles = return_dynamic_vehicles[ego_lane == vehicle_lanes]
             # print(return_dynamic_vehicles.shape)
             

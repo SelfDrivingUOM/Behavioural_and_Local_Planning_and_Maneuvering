@@ -10,7 +10,7 @@ SIMULATION_TIME_STEP   = 0.034
 # --  Planning Constants -------------------------------------------------------aaaaaaaaaaaaaaaaa
 # ==============================================================================
 
-HOP_RESOLUTION=1
+HOP_RESOLUTION = 1
 DIST_THRESHOLD_TO_LAST_WAYPOINT = 2.0  # some distance from last position before
                                        # simulation ends
 
@@ -28,7 +28,7 @@ SLOW_SPEED             = 0              # m/s
 STOP_LINE_BUFFER       = 1.5              # m
 LEAD_VEHICLE_SPEED     = 1
 LEAD_VEHICLE_LOOKAHEAD = 20.0             # m
-LP_FREQUENCY_DIVISOR   = 1                # Frequency divisor to make the 
+LP_FREQUENCY_DIVISOR   = 1                # Frequency divisor tdo make the 
                                           # local planner operate at a lower
                                           # frequency than the controller
                                           # (which operates at the simulation
