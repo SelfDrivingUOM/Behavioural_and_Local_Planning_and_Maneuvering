@@ -155,7 +155,7 @@ class Environment():
             vehicle_lanes = np.array(vehicle_lanes)
         
         if(return_dynamic_vehicles !=[]):
-            
+
             return_dynamic_vehicles = np.array(return_dynamic_vehicles)
 
 
@@ -164,14 +164,33 @@ class Environment():
             # print(dist_dynamic,"b")
             # print(dist_dynamic<(in_radius**2))
 
-            dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
-            # print(dyns.shape,(ego_lane==vehicle_lane).shape)
-            # dyns = dyns[ego_lane == vehicle_lanes]
-            # print(dyns.shape)
-            # print()
-            # if (type(paths) == type(None)):
-            return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
-            # else:
+            # dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
+            # # print(dyns.shape,(ego_lane==vehicle_lane).shape)
+            # # dyns = dyns[ego_lane == vehicle_lanes]
+            # # print(dyns.shape)
+            # # print()
+            # # if (type(paths) == type(None)):
+            # return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
+
+            # return_dynamic_vehicles = np.array(return_dynamic_vehicles)
+
+
+            # dist_dynamic = np.sum(np.square(return_dynamic_vehicles-loc),axis =1 )
+            # dist_temp = dist_dynamic
+            # # print(dist_dynamic,"b")
+            # # print(dist_dynamic<(in_radius**2))
+
+            if (type(paths) == type(None)):
+                dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]                
+                return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
+
+                # print("paths = None ",return_dynamic_vehicles)
+            else:
+                dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2,np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
+                return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2,np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
+
+                # dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
+                # return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
             #     #print(np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes),np.logical_and(dist_dynamic<in_radius**2, goal_lane == vehicle_lanes))
             #     temp_1 = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
             #     temp_2 = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, goal_lane == vehicle_lanes)]
@@ -179,7 +198,8 @@ class Environment():
         
             # return_dynamic_vehicles = return_dynamic_vehicles[ego_lane == vehicle_lanes]
             # print(return_dynamic_vehicles.shape)
-            
+            #print("dyns", dyns)
+
             dist_dynamic,dynamic_closest = self.in_front(rot,loc,dyns,return_dynamic_vehicles)
             return_dynamic_vehicles = dyns
             # temp_ = np.amin(dist_dynamic[vehicle_lanes == ego_lane])
@@ -196,12 +216,32 @@ class Environment():
             dist_static = np.sum(np.square(return_static_vehicles-loc),axis = 1)
             stat_temp = dist_static
 
-            stats = vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
+            # stats = vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
             
-            #print(dist_static,"a")
-            return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
+            # #print(dist_static,"a")
+            # return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
             # return_static_vehicles = return_static_vehicles[]
 
+            # temp_ = np.amin(dist_static[vehicle_lanes == ego_lane])
+            # stat_idx = np.where(dist_static ==temp_)
+            # dist_static = temp_  #closest static distance squared
+            if (type(paths) == type(None)):
+                stats = vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
+                return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
+                # print("paths = None ",return_static_vehicles)
+            else:
+                # print(np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes),np.logical_and(dist_static<in_radius**2, goal_lane == vehicle_lanes))
+                # stats = vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
+                # return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
+                # stats = vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
+                # return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
+
+                # stats = vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
+                # return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
+                stats = vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
+                return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
+
+            #print("stats", stats)
             dist_static,static_closest = self.in_front(rot,loc,stats,return_static_vehicles)
             return_static_vehicles = vehicles[stat_temp<in_radius**2]
             # temp_ = np.amin(dist_static[vehicle_lanes == ego_lane])
@@ -288,7 +328,6 @@ class Environment():
 
 
 '''import numpy as np
-
 class Environment():
     def __init__(self, world,world_map, ego_vehicle):
         self.world = world
@@ -299,22 +338,18 @@ class Environment():
         self._static_vehicles = []
         self._walkers = []
         
-
     def get_actors(self,in_radius):
         actors = self.world.get_actors()
         vehicles = actors.filter('vehicle.*')
         walkers = actors.filter('walker.*')
-
         in_radius_sqr = np.square(in_radius)
         self.ego_vehicle_loc = self.ego_vehicle.get_location()
-
         return_dynamic_vehicles = []
         return_static_vehicles = []
         return_walkers = []
         static_vehicle_waypoints  = []
         dynamic_vehicle_waypoints = []
         walkers_waypoints         = []  
-
         for vehicle in vehicles:
             if self.ego_vehicle.id == vehicle.id:
                 continue
@@ -332,7 +367,6 @@ class Environment():
                     else:
                         dynamic_vehicle_waypoints.append(self._world_map.get_waypoint(self.vehicle_loc))
                         return_dynamic_vehicles.append(vehicle)
-
         for walker in walkers:
             walker_loc = walker.get_location()
             walker_dist_sqr =  (np.square(walker_loc.x - self.ego_vehicle_loc.x) + \
@@ -341,23 +375,12 @@ class Environment():
             if walker_dist_sqr < in_radius_sqr:
                 walkers_waypoints.append(self._world_map.get_waypoint(walker_loc))
                 return_walkers.append(walker)
-
         self._static_vehicles = return_static_vehicles
         self._dynamic_vehicles = return_dynamic_vehicles
         self._walkers = return_walkers
-
         return return_static_vehicles, return_dynamic_vehicles, return_walkers
-
     def lane_front_obstacles():
-
         ego_waypoint=self._world_map.get_waypoint(self.ego_vehicle_loc)
-
-
         for static_vehicle in self._static_vehicles:
             if (static_waypoint.lane_id== ego_waypoint.lane_id):
-
-
 '''          
-
-    
-
