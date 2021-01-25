@@ -44,7 +44,7 @@ class Environment():
 
 
 
-    def get_actors(self,in_radius,paths,middle_path_idx):
+    def get_actors(self,in_radius,paths,middle_path_idx, intersection_state):
         
         # if(self.first_time):
         # 
@@ -64,9 +64,11 @@ class Environment():
         return_static_vehicles = []
         return_walkers = []
         vehicle_lanes = []
+        vehicle_sections = []
 
         ego_waypoint=self._map.get_waypoint(self.ego_vehicle_loc,project_to_road=True,lane_type=carla.LaneType.Driving)
         ego_lane = ego_waypoint.lane_id
+        ego_section = ego_waypoint.section_id
 
         if (type(paths) == type(None)):
             pass
@@ -74,7 +76,7 @@ class Environment():
             goal_location = carla.Location(x=paths[middle_path_idx,0,-1], y=paths[middle_path_idx,1,-1], z= 1.843102 )
             goal_waypoint=self._map.get_waypoint(goal_location,project_to_road=True,lane_type=carla.LaneType.Driving)
             goal_lane = goal_waypoint.lane_id
-            
+            goal_section = goal_waypoint.section_id
         
             
         distance = 10**4
@@ -87,15 +89,20 @@ class Environment():
                 return_dynamic_vehicles.append([10000,10000])
                 return_static_vehicles.append([10000,10000])
                 vehicle_lanes.append(ego_lane)
+                vehicle_sections.append(ego_section)
                 # continue
             else:
                 
                 # print("a")
                 vehicle_loc = vehicle.get_location()
                 vehicle_vel = vehicle.get_velocity()
-                vehicle_lane = self._map.get_waypoint(vehicle_loc,project_to_road=True,lane_type=carla.LaneType.Driving).lane_id
+                vehicle_waypoint = self._map.get_waypoint(vehicle_loc,project_to_road=True,lane_type=carla.LaneType.Driving)
+
+                vehicle_lane = vehicle_waypoint.lane_id
+                vehicle_section = vehicle_waypoint.section_id
 
                 vehicle_lanes.append(vehicle_lane)
+                vehicle_sections.append(vehicle_section)
 
                 locs = [vehicle_loc.x,vehicle_loc.y]
                 vels = np.array([vehicle_vel.x,vehicle_vel.y,vehicle_vel.z])
@@ -153,7 +160,10 @@ class Environment():
 
         if(vehicle_lanes!=[]):
             vehicle_lanes = np.array(vehicle_lanes)
+            vehicle_sections = np.array(vehicle_sections)
+
         
+
         if(return_dynamic_vehicles !=[]):
 
             return_dynamic_vehicles = np.array(return_dynamic_vehicles)
@@ -180,14 +190,40 @@ class Environment():
             # # print(dist_dynamic,"b")
             # # print(dist_dynamic<(in_radius**2))
 
+            # if (intersection_state):
+            #     dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_section == vehicle_sections)]                
+            #     return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_section == vehicle_sections)]
+
+
+                # if (type(paths) == type(None)):
+                #     dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_section == vehicle_sections)]                
+                #     return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_section == vehicle_sections)]
+
+                #     # print("paths = None ",return_dynamic_vehicles)
+                # else:
+                #     dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2,np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
+                #     return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2,np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
+            # else:
+
             if (type(paths) == type(None)):
                 dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]                
                 return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
 
+                # dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, np.logical_and(ego_lane == vehicle_lanes,ego_section == vehicle_sections))]                
+                # return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, np.logical_and(ego_lane == vehicle_lanes,ego_section == vehicle_sections))]
+
                 # print("paths = None ",return_dynamic_vehicles)
             else:
+                
                 dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2,np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
                 return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2,np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
+                
+                # vehicles_in_ego = np.logical_and(ego_lane == vehicle_lanes,ego_section==vehicle_sections)
+                # vehicles_in_goal = np.logical_and(goal_lane == vehicle_lanes,goal_section == vehicle_sections)
+
+                # dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2,np.logical_or(vehicles_in_ego,vehicles_in_goal))]
+                # return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2,np.logical_or(vehicles_in_ego,vehicles_in_goal))]
+
 
                 # dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
                 # return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
@@ -225,9 +261,19 @@ class Environment():
             # temp_ = np.amin(dist_static[vehicle_lanes == ego_lane])
             # stat_idx = np.where(dist_static ==temp_)
             # dist_static = temp_  #closest static distance squared
+            # if (intersection_state):
+            #     stats = vehicles[np.logical_and(dist_static<in_radius**2, ego_section == vehicle_sections)]
+            #     return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, ego_section == vehicle_sections)]
+
+            # else:
+
             if (type(paths) == type(None)):
                 stats = vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
                 return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
+
+                # stats = vehicles[np.logical_and(dist_static<in_radius**2, np.logical_and(ego_lane == vehicle_lanes,ego_section == vehicle_sections))]
+                # return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, np.logical_and(ego_lane == vehicle_lanes,ego_section == vehicle_sections))]
+
                 # print("paths = None ",return_static_vehicles)
             else:
                 # print(np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes),np.logical_and(dist_static<in_radius**2, goal_lane == vehicle_lanes))
@@ -238,7 +284,12 @@ class Environment():
 
                 # stats = vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
                 # return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
-                
+                # vehicles_in_ego = np.logical_and(ego_lane == vehicle_lanes,ego_section==vehicle_sections)
+                # vehicles_in_goal = np.logical_and(goal_lane == vehicle_lanes,goal_section == vehicle_sections)
+
+                # stats = vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(vehicles_in_ego,vehicles_in_goal))]
+                # return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(vehicles_in_ego,vehicles_in_goal))]
+
                 stats = vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
                 return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
 

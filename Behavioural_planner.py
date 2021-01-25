@@ -93,7 +93,7 @@ class BehaviouralPlanner:
         open_loop_speed = self._lp._velocity_planner.get_open_loop_speed(current_timestamp - prev_timestamp)
         self._lookahead= BP_LOOKAHEAD_BASE + BP_LOOKAHEAD_TIME * open_loop_speed 
         
-        vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,walkers_y = self._environment.get_actors(max(40,self._lookahead),self.paths,self._lp._num_paths//2)
+        vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,walkers_y = self._environment.get_actors(max(40,self._lookahead),self.paths,self._lp._num_paths//2,  self._intersection_state)
         
                      
         
@@ -1682,7 +1682,7 @@ class BehaviouralPlanner:
                         min_angle = angle
                 # print(angles,mags)
                 if(sel_traffic_light!= None):
-                    self._world.debug.draw_line(ego_location, sel_traffic_light.get_location(), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=0.01)
+                    self._world.debug.draw_line(ego_location, sel_traffic_light.get_location(), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=0.05)
 
                 # print("PANIK")
                 #if (sel_traffic_light.type_id == 'traffic.traffic_light'):
