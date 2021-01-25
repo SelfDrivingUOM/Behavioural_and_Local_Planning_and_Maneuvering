@@ -238,6 +238,7 @@ class Environment():
 
                 # stats = vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
                 # return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
+                
                 stats = vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
                 return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
 

@@ -44,6 +44,9 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
 INTERP_DISTANCE_RES       = 0.1 # distance between interpolated points
 
+NO_VEHICLES = 300
+NO_WALKERS = 0
+
 import glob
 import os
 import sys
@@ -624,7 +627,7 @@ def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
-    spawn_point = 40  ##20/40-best
+    spawn_point = 26  ##20/40-best
     try:
         
         client = carla.Client(args.host, args.port)
@@ -660,27 +663,27 @@ def game_loop(args):
         # walker_transform=carla.Transform(carla.Location(x=-175, y=88, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
         # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
-        spawn(100,0)
+        spawn(NO_VEHICLES,NO_WALKERS)
         route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
         waypoints = np.array(route)[:,0]
         waypoints_np = np.empty((0,3))
         vehicle_speed = 5
 
-        #spwaning a leading vehicle
-        x_lead=waypoints[10].transform.location.x
-        y_lead=waypoints[10].transform.location.y
-        z_lead=1.843102
-        #1.4203450679814286772
+        # #spwaning a leading vehicle
+        # x_lead=waypoints[10].transform.location.x
+        # y_lead=waypoints[10].transform.location.y
+        # z_lead=1.843102
+        # #1.4203450679814286772
 
-        blueprint_library = client.get_world().get_blueprint_library()
-        my_car_bp = blueprint_library.filter("model3")[0]
+        # blueprint_library = client.get_world().get_blueprint_library()
+        # my_car_bp = blueprint_library.filter("model3")[0]
 
-        lead_vehicle_tansform=carla.Transform(carla.Location(x=x_lead, y=y_lead, z=z_lead),carla.Rotation(yaw= waypoints[10].transform.rotation.yaw,pitch=waypoints[10].transform.rotation.pitch))
-        leading_vehicle=world.world.spawn_actor(my_car_bp, lead_vehicle_tansform)
-        actor_list.append(leading_vehicle)
-        Agent=BasicAgent(leading_vehicle)
-        Agent.set_path(route[10:])
-        start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())
+        # lead_vehicle_tansform=carla.Transform(carla.Location(x=x_lead, y=y_lead, z=z_lead),carla.Rotation(yaw= waypoints[10].transform.rotation.yaw,pitch=waypoints[10].transform.rotation.pitch))
+        # leading_vehicle=world.world.spawn_actor(my_car_bp, lead_vehicle_tansform)
+        # actor_list.append(leading_vehicle)
+        # Agent=BasicAgent(leading_vehicle)
+        # Agent.set_path(route[10:])
+        # start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())
 
 
         environment = Environment(world.world,world.player,world_map)
@@ -917,8 +920,8 @@ def game_loop(args):
         #                        [ LENGTH/(2*(2**0.5)),-WIDTH*(7**0.5)/(4)]])
         
         while True:
-            cmd=Agent.run_step(False)
-            send_control_command(leading_vehicle,cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+            # cmd=Agent.run_step(False)
+            # send_control_command(leading_vehicle,cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
 
             # lead_waypoint = world_map.get_waypoint(leading_vehicle.get_transform().location,project_to_road=True)
             # lead_lane = lead_waypoint.lane_id   

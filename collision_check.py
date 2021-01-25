@@ -42,66 +42,145 @@ class CollisionChecker:
         ###!!!###
 
     def get_points(self,obstacle_actors, dict_obs,world):
-        # points are in global frame 
+        """
+            Inputs
+                obstacle_actors -   Numpy array containing the filtered obstacle actors colliding with considereed local path
+                                        numpy.ndarray[obs0, obs1, .., obsN]
 
+                dict_obs        -   Dictionary containing indices of obstacle actor in obstacle_actor input(as keys) and the
+                                    corrosponding collision risk local planner path point indices for the considered local path(as values)
+                                        { 0 : List of indexes of points with risk of colliding with obs0, 
+                                          1 : List of indexes of points with risk of colliding with obs1,
+                                          :       :
+                                          :       :
+                                          N : List of indexes of points with risk of colliding with obsN }
+
+                world           -   world object of the CARLA world in the simulator
+
+            Outputs
+                obstacle_pts    -   Numpy array containing 8 boundary points of each obstances repeated by the number of local path points 
+                                    with collision risk with the corresponding obstacle.
+                                        numpy.ndarray[ [obs0_X1,obs0_Y1],  =
+                                                        [obs0_X2,obs0_Y2],  |
+                                                            :      :        |
+                                                        [obs0_X8,obs0_Y8],  |
+                                                                :           |  Repeated by number of point
+                                                                :           |  in local path considered with 
+                                                                :           |  risk of collision with obs0
+                                                        [obs0_X1,obs0_Y1],  |
+                                                        [obs0_X2,obs0_Y2],  |
+                                                            .      .        |
+                                                        [obs0_X8,obs0_Y8],  =
+                                                                :           
+                                                                :
+                                                                :
+                                                                :
+                                                        [obsN_X1,obsN_Y1],  =
+                                                        [obsN_X2,obsN_Y2],  |
+                                                            :      :        |
+                                                        [obsN_X8,obsN_Y8],  |
+                                                                :           |  Repeated by number of point
+                                                                :           |  in local path considered with 
+                                                                :           |  risk of collision with obsN
+                                                        [obsN_X1,obsN_Y1],  |
+                                                        [obsN_X2,obsN_Y2],  |
+                                                            :      :        |
+                                                        [obsN_X8,obsN_Y8] ] =
+        """                         
         obstacle_pts = np.empty((0,2))
-        # print(dict_obs)
-
-        # print(obstacle_actors)
         for i in range(obstacle_actors.shape[0]):
-            temp =np.array([[obstacle_actors[i].bounding_box.extent.x,obstacle_actors[i].bounding_box.extent.y,obstacle_actors[i].bounding_box.location.z],
-                            [-obstacle_actors[i].bounding_box.extent.x,obstacle_actors[i].bounding_box.extent.y,obstacle_actors[i].bounding_box.location.z],
-                            [-obstacle_actors[i].bounding_box.extent.x,-obstacle_actors[i].bounding_box.extent.y,obstacle_actors[i].bounding_box.location.z],
-                            [obstacle_actors[i].bounding_box.extent.x,-obstacle_actors[i].bounding_box.extent.y,obstacle_actors[i].bounding_box.location.z],
-                            [0,obstacle_actors[i].bounding_box.extent.y,obstacle_actors[i].bounding_box.location.z],
-                            [-obstacle_actors[i].bounding_box.extent.x,0,obstacle_actors[i].bounding_box.location.z],
-                            [0,-obstacle_actors[i].bounding_box.extent.y,obstacle_actors[i].bounding_box.location.z],
-                            [obstacle_actors[i].bounding_box.extent.x,0,obstacle_actors[i].bounding_box.location.z]] )
+            # Find the 8 obstacle boundary points (4 vertices + midpoints of 4 sides) wrt to obstacle frame
+            temp =np.array([[ obstacle_actors[i].bounding_box.extent.x, obstacle_actors[i].bounding_box.extent.y, obstacle_actors[i].bounding_box.location.z],
+                            [-obstacle_actors[i].bounding_box.extent.x, obstacle_actors[i].bounding_box.extent.y, obstacle_actors[i].bounding_box.location.z],
+                            [-obstacle_actors[i].bounding_box.extent.x,-obstacle_actors[i].bounding_box.extent.y, obstacle_actors[i].bounding_box.location.z],
+                            [ obstacle_actors[i].bounding_box.extent.x,-obstacle_actors[i].bounding_box.extent.y, obstacle_actors[i].bounding_box.location.z],
+                            [                                        0, obstacle_actors[i].bounding_box.extent.y, obstacle_actors[i].bounding_box.location.z],
+                            [-obstacle_actors[i].bounding_box.extent.x,                                        0, obstacle_actors[i].bounding_box.location.z],
+                            [                                        0,-obstacle_actors[i].bounding_box.extent.y, obstacle_actors[i].bounding_box.location.z],
+                            [ obstacle_actors[i].bounding_box.extent.x,                                        0, obstacle_actors[i].bounding_box.location.z]])
             
-            yaw = -np.radians(obstacle_actors[i].get_transform().rotation.yaw)     #z
-            pitch = np.radians(obstacle_actors[i].get_transform().rotation.pitch) #y
-            roll = np.radians(obstacle_actors[i].get_transform().rotation.roll)   #x
+            # Get roll, pitch, yaw of obstacle and calculate rotational transformation of obstacle bounding box wrt to World 
+            # (Obstacle bounding box has same orientaion wrt to obstacle frame)
+            yaw   = -np.radians(obstacle_actors[i].get_transform().rotation.yaw)      # about -z (CARLA uses Left Handed system (axes))
+            pitch =  np.radians(obstacle_actors[i].get_transform().rotation.pitch)    # about +y
+            roll  =  np.radians(obstacle_actors[i].get_transform().rotation.roll)     # about +x
 
-            Rot_mat = np.array([[np.cos(pitch)*np.cos(yaw),np.sin(roll)*np.sin(pitch)*np.cos(yaw)-np.cos(roll)*np.sin(yaw),np.cos(roll)*np.sin(pitch)*np.cos(yaw)+np.sin(roll)*np.sin(yaw)],
-                                [np.cos(pitch)*np.sin(yaw),np.sin(roll)*np.sin(pitch)*np.sin(yaw)+np.cos(roll)*np.cos(yaw),np.cos(roll)*np.sin(pitch)*np.sin(yaw)-np.sin(roll)*np.cos(yaw)],
-                                [-np.sin(pitch),np.sin(roll)*np.cos(pitch),np.cos(roll)*np.cos(pitch)]])
+            Rot_mat = np.array([[np.cos(pitch)*np.cos(yaw), np.sin(roll)*np.sin(pitch)*np.cos(yaw)-np.cos(roll)*np.sin(yaw), np.cos(roll)*np.sin(pitch)*np.cos(yaw)+np.sin(roll)*np.sin(yaw)],
+                                [np.cos(pitch)*np.sin(yaw), np.sin(roll)*np.sin(pitch)*np.sin(yaw)+np.cos(roll)*np.cos(yaw), np.cos(roll)*np.sin(pitch)*np.sin(yaw)-np.sin(roll)*np.cos(yaw)],
+                                [-np.sin(pitch), np.sin(roll)*np.cos(pitch), np.cos(roll)*np.cos(pitch)]])
 
-            temp = np.linalg.inv(Rot_mat)@temp.T
-            trans = np.array([[obstacle_actors[i].bounding_box.location.x+obstacle_actors[i].get_location().x],
-                              [obstacle_actors[i].bounding_box.location.y+obstacle_actors[i].get_location().y],
-                              [obstacle_actors[i].bounding_box.location.z+obstacle_actors[i].get_location().z]])
+            # Consider both location of obstacle and also the offset of bounding box center from location of obstacle for 
+            # translational transormation of obastacle bounding box wrt to world
+            trans = np.array([[obstacle_actors[i].bounding_box.location.x + obstacle_actors[i].get_location().x],
+                              [obstacle_actors[i].bounding_box.location.y + obstacle_actors[i].get_location().y],
+                              [obstacle_actors[i].bounding_box.location.z + obstacle_actors[i].get_location().z]])
 
-            temp += trans
+            # Tranform Obstacle boundary points to world frame
+            temp = np.linalg.inv(Rot_mat)@temp.T + trans
             temp = temp[:2,:].T.reshape(8,2)
-            # print(list(dict_obs.keys())[i])
             for ll in range(8):
                 loc = carla.Location(x=temp[ll,0],y=temp[ll,1],z=0)
                 world.debug.draw_string(loc, 'Z', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=0.1,persistent_lines=True)
+            
+            # vertically stack set of obstacle boundary point by number of points in local path considered that has risk of colliding with the obstacle
             temp = np.vstack((temp,)*len(dict_obs[list(dict_obs.keys())[i]]))
             obstacle_pts = np.append(obstacle_pts, temp, axis = 0)
 
         return obstacle_pts
 
 
-    def collision_check_static(self, paths, obstacle_actors,world):
-        
-        # collision_check_array = [False]*len(paths)
-        # i = 0
-        # for path in paths:
+    def collision_check_static(self, paths, obstacle_actors, world):
+        """
+            Inputs
+                paths           -   Numpy array containing the paths provide by the local planner.
+                                        numpy.ndarray[[ [path1_x1,path1_x2,.....,path1_xn],    (x)
+                                                        [path1_y1,path1_y2,.....,path1_yn],    (y)    Path1
+                                                        [path1_h1,path1_h2,.....,path1_hn] ]  (teta)    :
+                                                                        :                                :
+                                                                        :                                :
+                                                        [ [pathN_x1,pathN_x2,.....,pathN_xn],    (x)      :
+                                                        [pathN_y1,pathN_y2,.....,pathN_yn],    (y)    PathN
+                                                        [pathN_h1,pathN_h2,.....,pathN_hn] ]] (teta)
+                                    
+                obstacle_actors -   Numpy array containing the filtered obstacle actors colliding with considereed local path
+                                        numpy.ndarray[obs0, obs1, .., obsN]
+
+                world           -   world object of the CARLA world in the simulator
+
+            Outputs
+                collision_check_array - Numpy array of boolean type with each element coorsponding to the obstacle collision free status of each local path.
+                                            'True'  =>  local path collison free
+                                            'False' =>  local path collison detected
+
+                closest_colln_index   - minimum index of path point considering all local paths at which collision witha an obstacle takes place.
+                                        If no collions the index of the last point(furthest point) of a local path is returned.
+        """
+        ##############################################################################
+            #   TODO:
+            #       min_ set for 48 should be extarcted from paths shape
+            #       14 used for number of paths should be extracted from paths shape
+        ##############################################################################
+
         obstacle_num = len(obstacle_actors)
-        collission_check_array = np.array([True]*paths.shape[0])
-        # print(obstacle_num)
+        # Initially set all paths are considered as collision free ('True' implies coreosponding local path collison free)
+        collision_check_array = np.array([True]*paths.shape[0])
         mins = []
         obstacle_actors = np.array(obstacle_actors)
+
+        # If no obstacles present there is no collision of paths
         if obstacle_num > 0:
-            j=0
-            
+            j = 0
+            # Check Collision of each local path provided by loal planner one by one
             for path in paths:
                 theta = path[2,:].reshape((1,path.shape[1])).T
-                path = path[:2,:]
-                path_len = path.shape[1]
-                path = path.T
+                path = path[:2,:].T
+                path_len = path.shape[0]
 
+                # Consider the distance (DisPtObs) between each path point and each obstacle center to evaluate collision risk
+                # Both obstacle and Ego are considerd as circle boundaries
+                # Radius of Ego Boundary (R_ego)      = (length of Ego * (2**0.5))
+                # Radius of Obstacle Boundary (R_obs) = ((obs_len/2)**2 + obs_wdt/2)**2)**0.5 {length of extent vector projected to XY plane of obstacle bounding box}
+                # (DisPtObs - R_ego - R_obs) >= 0  implies no collision risk of Ego when at considered local path point with considered obstacle
                 dist = np.zeros((obstacle_num*path_len,1))
                 for i in range(obstacle_num):
                     dist[path_len*i:path_len*(i+1),:] = np.sum(np.square(path -np.array([obstacle_actors[i].get_location().x,obstacle_actors[i].get_location().y])),axis=1).reshape(path_len,1) - \
@@ -110,9 +189,25 @@ class CollisionChecker:
                     # for z in range(49):
                     # world.debug.draw_line(carla.Location(x=path[0,0] , y=path[0,1],z=0),obstacle_actors[i].get_location(), thickness=0.1, color=carla.Color(r=0, g=255, b=0), life_time=-1.)
 
-            
+
                 if(np.any(dist<0)):
-                    
+
+                    # Get details of path points with collision risk
+                    # dict_obs -  Dictionary sorted by keys containing indices of obstacle actor in obstacle_actor variable(as keys) and the
+                    #             corrosponding collision risk local planner path point indices for the considered local path(as values)
+                    #                   { 0 : List of indexes of points with risk of colliding with obs0, 
+                    #                     1 : List of indexes of points with risk of colliding with obs1,
+                    #                     :       :
+                    #                     :       :
+                    #                     N : List of indexes of points with risk of colliding with obsN }
+                    # count_obs - Dictionary sorted by keys containing indices of obstacle actor in obstacle_actor variable(as keys) and the
+                    #             number of collision risk local planner path points with the corrosponding obstacle(as values)
+                    #                   { 0 : len(List of indexes of points with risk of colliding with obs0), 
+                    #                     1 : len(List of indexes of points with risk of colliding with obs1),
+                    #                     :       :
+                    #                     :       :
+                    #                     N : len(List of indexes of points with risk of colliding with obsN) }
+
                     temp = np.where(dist<0)[0]
 
                     check_wayp = temp%path_len
@@ -122,16 +217,16 @@ class CollisionChecker:
                     for i in range(check_wayp.shape[0]):
                         dict_obs[obst_what[i]].append(check_wayp[i])
                         count_obs[obst_what[i]]+=1
-
+                    dict_obs = {k: v for k, v in sorted(dict_obs.items(), key=lambda item: item[0])}
+                    count_obs = {k: v for k, v in sorted(count_obs.items(), key=lambda item: item[0])}
 
                     obst_ind  = np.sort(np.array(list(set(obst_what))))
 
+                    # Get obstacle boundary points to check collision with 
                     obs_points  = self.get_points(obstacle_actors[obst_ind], dict_obs,world)
                     
                     path_points = path[np.vstack((np.hstack(np.array(list(dict_obs.values()))),)*8)]
                     path_points = path_points.reshape(int(path_points.size/2),2)
-
-                  #  print(np.array(list(dict_obs.values())).shape,"shape")
 
                     theta_points = theta[np.vstack((np.hstack(np.array(list(dict_obs.values()))),)*8)]
                     theta_points = theta_points.reshape(int(theta_points.size),1)
@@ -141,60 +236,40 @@ class CollisionChecker:
 
 
                     if(np.any(ellipse_check<0)):
-                        collission_check_array[j] = False
+                        collision_check_array[j] = False
 
                         collide_points = np.where(ellipse_check<0)[0]//8
-                        temp_dict = {k: v for k, v in sorted(count_obs.items(), key=lambda item: item[1])}
-                        collision_vals = list(temp_dict.values())
-                        obst_indices = list(temp_dict.keys())
+                        collision_vals = list(count_obs.values())
+                        obst_indices = list(count_obs.keys())
                         
-                        # print(collision_vals)
-                        # print(collide_points)
-                        temp_ = collision_vals.pop(0)
-                        obst_ind = obst_indices.pop(0)
                         min_ = 49
-                        start = 0
-                        
-                        for i in collide_points:
-                            if(i-start<temp_):
-                                if(dict_obs[obst_ind][i-start]<min_):
-                                    min_ = dict_obs[obst_ind][i-start]
+                        sum_obs = [0]
+                        for i in collision_vals:
+                            sum_obs.append(sum_obs[-1]+i)
 
-                            else:
-                                
-                                while(True):
-                                    start += temp_
-                                    temp_ = collision_vals.pop()
-                                    obst_ind = obst_indices.pop(0)
-
-                                    if(i-start<temp_):
-                                        if(dict_obs[obst_ind][i-start]<min_):
-                                            min_ = dict_obs[obst_ind][i-start]
-                                        break
+                        for i in np.sort(collide_points):
+                            for thresh in range(1,len(sum_obs)):
+                                if i>=sum_obs[thresh]:
+                                    continue
+                                else:
+                                    break
+                            pt_ind = i - sum_obs[thresh-1]
+                            pt = dict_obs[obst_indices[thresh-1]][pt_ind]
+                            if pt<min_:
+                                min_=pt
 
                         mins.append(min_)
-
-                        # print(count_obs)
-                        # print(lol)
-
-
-                      #  print(np.where(ellipse_check<0)[0],lol)
                     else:
                         mins.append(48)
-                        pass
                 else:
                     mins.append(48)
-                    pass
                 j += 1
         else:
             mins = [48]*14
-        # print(mins)
-        return collission_check_array,min(mins)
-        #no collision
-        """get the obstacle radii and obtain the points which of he path which may intersect with the vehicle """
 
-    
-    # def collision_check_dynamic(self,state):
+        closest_colln_index = min(mins)
+
+        return collision_check_array, closest_colln_index
 
 
     def select_best_path_index(self, paths, collision_check_array, goal_state,waypoints,ego_state):
@@ -352,19 +427,6 @@ def get_closest_index(waypoints, ego_state):
     """
     Gets closest index a given list of waypoints to the vehicle position.
     """
-    closest_len = float('Inf')
-    closest_index = 0
-    # TODO: INSERT YOUR CODE BETWEEN THE DASHED LINES
-    # ------------------------------------------------------------------
-    # for i in range(len(waypoints)):
-    #   ...
-    # for i in range(len(waypoints)):
-    #     temp = (waypoints[i][0] - ego_state[0])**2 + (waypoints[i][1] - ego_state[1])**2
-    #     if temp < closest_len:
-    #         closest_len = temp
-    #         closest_index = i
-    # closest_len = np.sqrt(closest_len)
-    # # ------------------------------------------------------------------
 
     waypoint_dists = np.sqrt(np.square(waypoints[:,0] - ego_state[0]) + np.square(waypoints[:,1] - ego_state[1]))
     closest_len = np.amin(waypoint_dists)
