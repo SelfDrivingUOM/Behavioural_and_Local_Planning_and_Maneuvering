@@ -15,7 +15,7 @@ import carla
 
 
 JUNCTION_HEADING_CHECK_ANGLE = 30
-BP_LOOKAHEAD_BASE              = 10.0       # m
+BP_LOOKAHEAD_BASE              = 8.0       # m
 BP_LOOKAHEAD_TIME              = 1.0        # s
 INTERSECTION_APPROACH_DISTANCE = 5
 WALKER_THRESHOLD = 0.1
@@ -23,10 +23,12 @@ HEADING_CHECK_LOOKAHEAD = 10
 TRAFFIC_LIGHT_CHECK_DISTANCE =40
 SPEED=5
 
-FOLLOW_LEAD_RANGE = 15
 
-DEBUG_STATE_MACHINE = True
-ONLY_STATE_DEBUG    = False
+FOLLOW_LEAD_RANGE = 15
+DIST_WALKER_INTERSECTION = 12
+
+DEBUG_STATE_MACHINE = False
+ONLY_STATE_DEBUG    = True
 
 #states
 FOLLOW_LANE            = 0
@@ -343,6 +345,7 @@ class BehaviouralPlanner:
             self._intersection_state = intersection
 
             red_light = self._is_light_red(self.traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)
+            # print("before",red_light)
             
             self._color_light_state = red_light
             need_to_stop,self._intersection_state = self.need_to_stop(closest_vehicle,self._collission_index,ego_location,ego_waypoint,goal_waypoint,ego_state)
@@ -350,7 +353,8 @@ class BehaviouralPlanner:
 
             if(type(red_light) == type("str")):
                 red_light = True
-            #print(red_light)
+            # print("After",red_light)
+
             lane_path_blcked = self.lane_paths_blocked(self._best_index_from_decelerate)
             # print("Pedestrian = ",walker_collide,"lane path blocked = ",self.lane_paths_blocked(best_index), "  If ego speed less = ",self.is_ego_less()," Do we need to stop = ",self._need_to_stop," Is at intersection and no sig = ",(self._intersection_state and red_light),dict_[self._previous_state])
             if (DEBUG_STATE_MACHINE):
@@ -1228,7 +1232,7 @@ class BehaviouralPlanner:
         exwp = self._map.get_waypoint(loc)
         ego_wayp =  self._map.get_waypoint(carla.Location(x=ego_state[0] , y=ego_state[1],z= 1.843102))
         check_waypoint = self._map.get_waypoint(loc)
-        self._world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=1,persistent_lines=True)
+        #self._world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=1,persistent_lines=True)
         #####
 
         out=exwp.is_junction
@@ -1291,7 +1295,7 @@ class BehaviouralPlanner:
     def lane_paths_blocked(self,best_index):
         
         # print("colision actorrrrrrrrrrrrrrrrrrrrrrrrrrrrr = ",self._collission_actor)
-        print (best_index)
+        # print (best_index)
         
         # elif()
         
@@ -1319,6 +1323,7 @@ class BehaviouralPlanner:
                 return True
 
             else:
+                # print("from 1")
                 return False
 
         elif(best_index == None):
@@ -1326,7 +1331,7 @@ class BehaviouralPlanner:
             #print(" from Noneeeeeeeeeeeeeeeeeeeeee")
             return True
         else:
-            #print("from 3")
+            # print("from 2")
             return False
 
     def is_ego_less(self):
@@ -1372,6 +1377,10 @@ class BehaviouralPlanner:
             for person in walkers:
                 counter+=1
                 walker_loc= person.get_location()
+
+                # Get distance to walkers
+                dist_walker = np.sqrt(np.sum(np.square(np.array([walker_loc.x,walker_loc.y]) - np.array([ego_state[0],ego_state[1]]))))
+
                 walker_waypoint=world_map.get_waypoint(carla.Location(x=walker_loc.x, y=walker_loc.y, z= walker_loc.z ),project_to_road=True,lane_type = ( carla.LaneType.Driving | carla.LaneType.Sidewalk ))
                 # print(walker_waypoint.lane_type)
                 w_lane = walker_waypoint.lane_id
@@ -1406,7 +1415,7 @@ class BehaviouralPlanner:
                 # loc = 
                 # print(box_points,np.array([walker_loc.x,walker_loc.y]))
                 # print(intersection)
-                if (intersection and self.within_polygon(box_points,np.array([walker_loc.x,walker_loc.y])) and walker_waypoint.lane_type == carla.LaneType.Driving):
+                if (intersection and self.within_polygon(box_points,np.array([walker_loc.x,walker_loc.y])) and walker_waypoint.lane_type == carla.LaneType.Driving and dist_walker<DIST_WALKER_INTERSECTION):
                     
                     transform = person.get_transform()
                     bounding_box = person.bounding_box
@@ -1654,10 +1663,17 @@ class BehaviouralPlanner:
         
         if ego_vehicle_waypoint.is_junction:
             # It is too late. Do not block the intersection! Keep going!
+            # print("In Junction")
             return False
-
+        # print("Goal waypoint",goal_waypoint)
+        
         if goal_waypoint is not None:
-            if goal_waypoint.is_junction:
+            # self.within_polygon(box_points,np.array([walker_loc.x,walker_loc.y]))):
+            
+            # print("is junction",goal_waypoint.is_junction)
+            # print("intersection",self._intersection_state)
+            if (self._intersection_state):
+            # if goal_waypoint.is_junction:
                 min_angle = 180.0
                 # min_dist = 30 + self._lookahead
                 sel_magnitude = 0.0
@@ -1718,7 +1734,7 @@ class BehaviouralPlanner:
                     # self._last_traffic_light = None
                     # print("a")
                     return "NTL" 
-
+        # print("Falseeeeeeeeeeeeeeeeeeeeee")
         return False
 
 
