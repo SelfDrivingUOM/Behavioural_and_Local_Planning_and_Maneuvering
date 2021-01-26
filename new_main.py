@@ -45,7 +45,7 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
 INTERP_DISTANCE_RES       = 0.1 # distance between interpolated points
 
 NO_VEHICLES = 300
-NO_WALKERS = 0
+NO_WALKERS = 200
 
 import glob
 import os

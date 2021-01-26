@@ -25,8 +25,8 @@ SPEED=5
 
 FOLLOW_LEAD_RANGE = 15
 
-DEBUG_STATE_MACHINE = False
-ONLY_STATE_DEBUG    = True
+DEBUG_STATE_MACHINE = True
+ONLY_STATE_DEBUG    = False
 
 #states
 FOLLOW_LANE            = 0
@@ -350,7 +350,7 @@ class BehaviouralPlanner:
 
             if(type(red_light) == type("str")):
                 red_light = True
-            print(red_light)
+            #print(red_light)
             lane_path_blcked = self.lane_paths_blocked(self._best_index_from_decelerate)
             # print("Pedestrian = ",walker_collide,"lane path blocked = ",self.lane_paths_blocked(best_index), "  If ego speed less = ",self.is_ego_less()," Do we need to stop = ",self._need_to_stop," Is at intersection and no sig = ",(self._intersection_state and red_light),dict_[self._previous_state])
             if (DEBUG_STATE_MACHINE):
@@ -1030,6 +1030,7 @@ class BehaviouralPlanner:
         waypoint_dists = np.sqrt(np.square(self._waypoints[:,0] - ego_state[0]) + np.square(self._waypoints[:,1] - ego_state[1]))
         closest_len = np.amin(waypoint_dists)
         closest_index = np.where((waypoint_dists==closest_len))[0][0]
+        #print(closest_len,closest_index)
         return closest_len, closest_index
 
     def get_goal_index(self, ego_state, closest_len, closest_index):
@@ -1206,9 +1207,14 @@ class BehaviouralPlanner:
 
     def is_approaching_intersection(self, waypoints, closest_index,ego_state):
         
-        INTERSECTION_APPROACH_DISTANCE = 12 #self._lookahead
+        INTERSECTION_APPROACH_DISTANCE = self._lookahead
         #print(INTERSECTION_APPROACH_DISTANCE)
         index_length_for_approaching = int(INTERSECTION_APPROACH_DISTANCE/self._hop_resolution)
+        #print(closest_index)
+        
+        
+        A,closest_index = self.get_closest_index(ego_state)
+        #print(closest_index)
 
         if(index_length_for_approaching+closest_index>self._waypoints.shape[0]-1):
             checking_waypoint = waypoints[self._waypoints.shape[0]-1]
@@ -1222,10 +1228,11 @@ class BehaviouralPlanner:
         exwp = self._map.get_waypoint(loc)
         ego_wayp =  self._map.get_waypoint(carla.Location(x=ego_state[0] , y=ego_state[1],z= 1.843102))
         check_waypoint = self._map.get_waypoint(loc)
-
+        self._world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=1,persistent_lines=True)
         #####
 
         out=exwp.is_junction
+        #print("exwp",exwp, out)
         intersection = False
         
         if(out):
@@ -1264,10 +1271,10 @@ class BehaviouralPlanner:
             self.box_points = self.get_shape(idx,box_points,ego_state)
 
 
-            # for i in range(box_points.shape[0]):
-            #     # print(inter_junc_points[i])
-            #     self._world.debug.draw_string(carla.Location(x=box_points[i,0],y = box_points[i,1],z = 1),"A", draw_shadow=False,color=carla.Color(r=255, g=255, b=0), life_time=10000,persistent_lines=True)
-            #     # time.sleep(1)
+            for i in range(box_points.shape[0]):
+                # print(inter_junc_points[i])
+                self._world.debug.draw_string(carla.Location(x=box_points[i,0],y = box_points[i,1],z = 1),"A", draw_shadow=False,color=carla.Color(r=255, g=255, b=0), life_time=10000,persistent_lines=True)
+                # time.sleep(1)
 
 
             # raise Exception
@@ -1284,9 +1291,10 @@ class BehaviouralPlanner:
     def lane_paths_blocked(self,best_index):
         
         # print("colision actorrrrrrrrrrrrrrrrrrrrrrrrrrrrr = ",self._collission_actor)
-        #print (best_index)
+        print (best_index)
         
         # elif()
+        
         if(self._collission_actor!=None):
             transform = self._collission_actor.get_transform()
             bounding_box = self._collission_actor.bounding_box
