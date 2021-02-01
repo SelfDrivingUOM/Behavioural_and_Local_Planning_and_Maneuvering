@@ -44,12 +44,14 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
-NO_VEHICLES = 300
+NO_VEHICLES = 0
 NO_WALKERS  =  0
 
 SPAWN_POINT = 26    #36 ##20/40-best
 END_POINT   = 0     #119
+
 LEAD_SPAWN  = True
+NAVIGATION_SPAWN = False
 
 import glob
 import os
@@ -64,24 +66,19 @@ try:
 except IndexError:
     pass
 
+if (NAVIGATION_SPAWN):
 
-try:
-    sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/')
+    try:
+        sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/')
 
-except IndexError:
-    pass
+    except IndexError:
+        pass
 
-try:
-    sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/agents/navigation')
+    try:
+        sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/agents/navigation')
 
-except IndexError:
-    pass
-
-
-# try:
-#     sys.path.append('/home/selfdriving/yasintha/Path_planner_6/')
-# except IndexError:
-#     pass
+    except IndexError:
+        pass
 
 
 # ==============================================================================
@@ -98,7 +95,8 @@ from global_route_planner_dao import GlobalRoutePlannerDAO
 from carla import ColorConverter as cc
 import controller2d
 import local_planner
-#from basic_agent.basic_agent import BasicAgent
+if (LEAD_SPAWN):
+    from basic_agent.basic_agent import BasicAgent
 # import ogm_generator
 from local_planner import get_closest_index
 from environment import Environment
@@ -108,9 +106,10 @@ from spawn import spawn
 # from spawn_new import spawn_new
 from global_route_planner import GlobalRoutePlanner
 from global_route_planner_dao import GlobalRoutePlannerDAO
-from controller import VehiclePIDController
-from basic_agent import BasicAgent
-from carla import VehicleControl
+if (NAVIGATION_SPAWN):
+    from controller import VehiclePIDController
+    from basic_agent import BasicAgent
+    from carla import VehicleControl
 
 from tools.misc import get_speed
 import argparse
@@ -707,7 +706,7 @@ def game_loop(args):
         waypoints_np = np.empty((0,3))
         vehicle_speed = 5
 
-        if (LEAD_SPAWN):
+        if (NAVIGATION_SPAWN):
             spawn_pts=world_map.get_spawn_points()
             # print(spawn_pts)
             # for i in range (len(spawn_pts)):
@@ -744,8 +743,8 @@ def game_loop(args):
             
             
             
-            
-            '''#spwaning a leading vehicle
+        if (LEAD_SPAWN):    
+            #spwaning a leading vehicle
             x_lead=waypoints[10].transform.location.x
             y_lead=waypoints[10].transform.location.y
             z_lead=1.843102
@@ -758,9 +757,9 @@ def game_loop(args):
             leading_vehicle=world.world.spawn_actor(my_car_bp, lead_vehicle_tansform)
             actor_list.append(leading_vehicle)
             Agent=BasicAgent(leading_vehicle)
-            Agent.set_destination(world.world,world_map.get_spawn_points()[50])
-            # Agent.set_path(route[10:])
-            start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())'''
+            # Agent.set_destination(world.world,world_map.get_spawn_points()[50])
+            Agent.set_path(route[10:])
+            start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())
 
 
         environment = Environment(world.world,world.player,world_map)
@@ -997,14 +996,15 @@ def game_loop(args):
         #                        [ LENGTH/(2*(2**0.5)),-WIDTH*(7**0.5)/(4)]])
         
         while True:
-            # if (LEAD_SPAWN):
+            if (LEAD_SPAWN):
 
-            #     for j in range (len(actor_list)):
-            #         cmd=agent_list[j].run_step(False)
-            #         send_control_command(actor_list[j],cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+                cmd=Agent.run_step(False)
+                send_control_command(leading_vehicle,cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
 
-                # cmd=Agent.run_step(True)
-                # send_control_command(leading_vehicle,cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+            if (NAVIGATION_SPAWN):
+                for j in range (len(actor_list)):
+                    cmd=agent_list[j].run_step(False)
+                    send_control_command(actor_list[j],cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
 
             # lead_waypoint = world_map.get_waypoint(leading_vehicle.get_transform().location,project_to_road=True)
             # lead_lane = lead_waypoint.lane_id   
