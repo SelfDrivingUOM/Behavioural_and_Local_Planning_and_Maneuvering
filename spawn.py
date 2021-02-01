@@ -131,7 +131,7 @@ def spawn(num_vehicles=0,num_walkers=0,host='127.0.0.1',port=2000,tm_port= 8000,
     world = client.get_world()
 
     traffic_manager = client.get_trafficmanager(tm_port)
-    traffic_manager.set_global_distance_to_leading_vehicle(2.0)
+    
     if hybrid:
         traffic_manager.set_hybrid_physics_mode(True)
 
@@ -188,9 +188,19 @@ def spawn(num_vehicles=0,num_walkers=0,host='127.0.0.1',port=2000,tm_port= 8000,
         if blueprint.has_attribute('driver_id'):
             driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
             blueprint.set_attribute('driver_id', driver_id)
-        blueprint.set_attribute('role_name', 'autopilot')
-        batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True, traffic_manager.get_port())))
 
+        #if blueprint.has_attribute('speed'):
+            #print("lol")
+            #driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
+            #blueprint.set_attribute('driver_id', driver_id)
+
+        blueprint.set_attribute('role_name', 'autopilot')
+        
+        batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True, traffic_manager.get_port())))
+    traffic_manager.set_global_distance_to_leading_vehicle(5.0)
+    traffic_manager.global_percentage_speed_difference(10.0)
+    
+    
     for response in client.apply_batch_sync(batch, synchronous_master):
         if response.error:
             logging.error(response.error)

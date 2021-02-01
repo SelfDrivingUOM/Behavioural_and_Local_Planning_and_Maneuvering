@@ -37,9 +37,10 @@ STAY_STOPPED           = 2
 INTERSECTION           = 3
 FOLLOW_LEAD_VEHICLE    = 4
 OVERTAKE               = 5
+EMERGENCY_STOP         = 6
 
 
-dict_ = ["FOLLOW_LANE","DECELERATE_TO_STOP","STAY_STOPPED","INTERSECTION","FOLLOW_LEAD_VEHICLE","OVERTAKE"]
+dict_ = ["FOLLOW_LANE","DECELERATE_TO_STOP","STAY_STOPPED","INTERSECTION","FOLLOW_LEAD_VEHICLE","OVERTAKE","EMERGENCY_STOP"]
 ##initial state
 
 """
@@ -95,8 +96,17 @@ class BehaviouralPlanner:
         open_loop_speed = self._lp._velocity_planner.get_open_loop_speed(current_timestamp - prev_timestamp)
         self._lookahead= BP_LOOKAHEAD_BASE + BP_LOOKAHEAD_TIME * open_loop_speed 
         
-        vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,walkers_y = self._environment.get_actors(max(40,self._lookahead),self.paths,self._lp._num_paths//2,  self._intersection_state)
-        
+        vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,y_vec,walkers_y = self._environment.get_actors(max(40,self._lookahead),self.paths,self._lp._num_paths//2,  self._intersection_state)
+        emergency_loc = 1* y_vec
+        #print(emergency_loc)
+        # loc=carla.Location(x=emergency_loc[0]+ego_state[0] , y=emergency_loc[1]+ego_state[1],z=0)
+        # self._world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=0.1,persistent_lines=True)
+        # emergency_array= np.array([[[0,],[emergency_loc[1],emergency_loc[1]],[0,0]]])
+        emergency_array= np.array([[[emergency_loc[0]+ego_state[0],emergency_loc[0]+ego_state[0]],
+                                    [emergency_loc[1]+ego_state[1],emergency_loc[1]+ego_state[1]],
+                                    [0+ego_state[2],0+ego_state[2]]]])
+        # print(emergency_array)
+
                      
         
         #,self._color_light_state ,self._intersection_state)
@@ -109,6 +119,7 @@ class BehaviouralPlanner:
             print(dict_[self._state])
         # print(self.stopped)
         obstacle_actors = vehicles_static + vehicles_dynamic 
+        all_obstacle_actors = vehicles_static + vehicles_dynamic + walkers 
         # print(obstacle_actors)
         # draw_bound_box(obstacle_actors,self._world)
 
@@ -173,6 +184,10 @@ class BehaviouralPlanner:
             paths = local_planner.transform_paths(paths, ego_state)
             
             collision_check_array,min_collision = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world)
+
+            emergency_collision_check_array,emergency_min_collision = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world)
+            #print(emergency_min_collision)
+
             # print(min_collision,closest_vehicle)
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
 
@@ -214,7 +229,14 @@ class BehaviouralPlanner:
                                                                                                     "{}".format('-'*20), \
                                                                                                     "{}".format('-'*20), \
                                                                                                     "{}".format(dict_[self._previous_state])  ))
-            if(walker_collide):
+           
+            if (emergency_min_collision!=1):
+                self._state   = EMERGENCY_STOP
+                
+
+
+           
+            elif(walker_collide):
                 # print(col_walker)
                 self._collission_actor = col_walker
                 self._state   = DECELERATE_TO_STOP
@@ -330,6 +352,8 @@ class BehaviouralPlanner:
             paths = local_planner.transform_paths(paths, ego_state)
 
             collision_check_array,min_collision = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world)   
+            emergency_collision_check_array,emergency_min_collision = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world)
+
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
             self._best_index_from_decelerate = best_index
             #print("best index error",best_index)
@@ -367,8 +391,10 @@ class BehaviouralPlanner:
                                                                                                     "{}".format('-'*20), \
                                                                                                     "{}".format(dict_[self._previous_state])  ))
 
+            if (emergency_min_collision!=1):
+                self._state   = EMERGENCY_STOP
             
-            if(self.is_ego_less()):
+            elif(self.is_ego_less()):
                 # print("A")
                 self._state = STAY_STOPPED
 
@@ -489,6 +515,7 @@ class BehaviouralPlanner:
             paths = local_planner.transform_paths(paths, ego_state)
             
             collision_check_array,min_collision = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world)
+            
             # print(min_collision,closest_vehicle)
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
 
@@ -531,7 +558,9 @@ class BehaviouralPlanner:
                                                                                                     "LanePathBlocked={}".format(lane_path_blcked), \
                                                                                                     "{}".format('-'*20), \
                                                                                                     "{}".format(dict_[self._previous_state])  ))
-
+            
+            # if (emergency_min_collision!=1):
+            #     self._state   = EMERGENCY_STOP
             if(walker_collide):
                 self._collission_actor = col_walker
                 self._state   = STAY_STOPPED
@@ -665,6 +694,8 @@ class BehaviouralPlanner:
             paths = local_planner.transform_paths(paths, ego_state)
             
             collision_check_array,min_collision = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world)
+            emergency_collision_check_array,emergency_min_collision = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world)
+
             # print(min_collision,closest_vehicle)
             
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
@@ -714,8 +745,11 @@ class BehaviouralPlanner:
                                                                                                     "ColorLight={}".format(red_light), \
                                                                                                     "{}".format('-'*20), \
                                                                                                     "{}".format(dict_[self._previous_state])  ))
-            
-            if(walker_collide):
+            #print(emergency_min_collision)
+
+            if (emergency_min_collision!=1):
+                self._state   = EMERGENCY_STOP
+            elif(walker_collide):
                 # print(col_walker)
                 self._prev_lookahead = self._lookahead
 
@@ -861,6 +895,8 @@ class BehaviouralPlanner:
             paths = local_planner.transform_paths(paths, ego_state)
             
             collision_check_array,min_collision = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world)
+            emergency_collision_check_array,emergency_min_collision = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world)
+
             # print(min_collision,closest_vehicle)
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
 
@@ -904,8 +940,9 @@ class BehaviouralPlanner:
                                                                                                     "{}".format('-'*20), \
                                                                                                     "{}".format(dict_[self._previous_state])  ))
             # Pedestrian,LanePathBlocked,CanOvertake,DoWeNeedToStop,IsIntersection,IfEgoSpeedLess,IsAtIntersectionAndNoSig,IntersectionAndSignal,TraficLight,Stopped,ColorLight
-
-            if(walker_collide):
+            if (emergency_min_collision!=1):
+                self._state   = EMERGENCY_STOP
+            elif(walker_collide):
                 # print(col_walker)
                 self._prev_lookahead = self._lookahead
                 self._collission_actor = col_walker
@@ -1021,6 +1058,11 @@ class BehaviouralPlanner:
                 self.paths = paths
                 # self._collission_index = min_collision
             return local_waypoints
+        
+        elif(self._state == EMERGENCY_STOP):
+            self._state = STAY_STOPPED
+
+
         
 
 

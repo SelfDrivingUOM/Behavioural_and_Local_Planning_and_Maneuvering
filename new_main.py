@@ -23,8 +23,8 @@ CIRCLE_OFFSETS         = [-1.0, 1.0, 3.0] # m
 CIRCLE_RADII           = [1.8, 1.8, 1.8]  # m
 TIME_GAP               = 1.0              # s
 PATH_SELECT_WEIGHT     = 10               #
-A_MAX                  = 2              # m/s^2
-SLOW_SPEED             = 0              # m/s
+A_MAX                  = 2                # m/s^2
+SLOW_SPEED             = 0                # m/s
 STOP_LINE_BUFFER       = 1.5              # m
 LEAD_VEHICLE_SPEED     = 1
 LEAD_VEHICLE_LOOKAHEAD = 20.0             # m
@@ -42,14 +42,14 @@ C4_PARKED_CAR_FILE       = 'parked_vehicle_params.txt'
 # Path interpolation parameters
 INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
-INTERP_DISTANCE_RES       = 0.1 # distance between interpolated points
+INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
 NO_VEHICLES = 300
-NO_WALKERS = 0
+NO_WALKERS  =  0
 
-SPAWN_POINT = 26#36 ##20/40-best
-END_POINT = 0#119
-LEAD_SPAWN = False
+SPAWN_POINT = 26    #36 ##20/40-best
+END_POINT   = 0     #119
+LEAD_SPAWN  = True
 
 import glob
 import os
@@ -64,10 +64,25 @@ try:
 except IndexError:
     pass
 
+
+try:
+    sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/')
+
+except IndexError:
+    pass
+
+try:
+    sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/agents/navigation')
+
+except IndexError:
+    pass
+
+
 # try:
 #     sys.path.append('/home/selfdriving/yasintha/Path_planner_6/')
 # except IndexError:
 #     pass
+
 
 # ==============================================================================
 # -- imports -------------------------------------------------------------------
@@ -83,12 +98,19 @@ from global_route_planner_dao import GlobalRoutePlannerDAO
 from carla import ColorConverter as cc
 import controller2d
 import local_planner
-from basic_agent.basic_agent import BasicAgent
+#from basic_agent.basic_agent import BasicAgent
 # import ogm_generator
 from local_planner import get_closest_index
 from environment import Environment
 from Behavioural_planner import BehaviouralPlanner
 from spawn import spawn
+
+# from spawn_new import spawn_new
+from global_route_planner import GlobalRoutePlanner
+from global_route_planner_dao import GlobalRoutePlannerDAO
+from controller import VehiclePIDController
+from basic_agent import BasicAgent
+from carla import VehicleControl
 
 from tools.misc import get_speed
 import argparse
@@ -118,11 +140,16 @@ except ImportError:
     raise RuntimeError('cannot import numpy, make sure numpy package is installed')
 
 actor_list=[]
+agent_list=[]
 stopsign_fences = []
 
 # ==============================================================================
 # -- Global functions ----------------------------------------------------------
 # ==============================================================================
+def get_transform(vehicle_location, angle, d=6.4):
+    a = math.radians(angle)
+    location = carla.Location(d * math.cos(a), d * math.sin(a), 2.0) + vehicle_location
+    return carla.Transform(location, carla.Rotation(yaw=180 + angle, pitch=-15))
 
 def get_current_pose(transform):
     x = transform.location.x
@@ -673,14 +700,52 @@ def game_loop(args):
         # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
         spawn(NO_VEHICLES,NO_WALKERS)
+        # spawn_new(world.world,NO_VEHICLES)
+
         route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
         waypoints = np.array(route)[:,0]
         waypoints_np = np.empty((0,3))
         vehicle_speed = 5
 
         if (LEAD_SPAWN):
+            spawn_pts=world_map.get_spawn_points()
+            # print(spawn_pts)
+            # for i in range (len(spawn_pts)):
+            #     p = world_map.get_spawn_points()[i]
+            #     world.world.debug.draw_string(p.location, str(i), draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+            
+            '''spawn_pts.remove(start_point)
+            for i in range (len(spawn_pts)):
+                #print(i,len(spawn_pts)-1-i)
+                if(i==SPAWN_POINT):
+                    continue
+                if (i >= NO_VEHICLES):
+                    break 
+                else:
+                    blueprint_library = world.world.get_blueprint_library()
+                    vehicle_bp=blueprint_library.filter("model3")[0]
+                    start_point=world_map.get_spawn_points()[i]
+                    end_point = world_map.get_spawn_points()[len(spawn_pts)-1-i]
+                    end = [end_point.location.x,end_point.location.y,end_point.location.z]
+                    vehicle = world.world.spawn_actor(vehicle_bp, start_point)
+                    actor_list.append(vehicle)
+                    Agent=BasicAgent(vehicle,20)
+                    Agent.set_destination(end)
+                    agent_list.append(Agent)
 
-            #spwaning a leading vehicle
+                    #debug=world.debug
+
+                    #all_actor_list = world.get_actors()
+                    #vehicle_list = all_actor_list.filter("*vehicle*")'''
+                    
+            
+            
+            
+            
+            
+            
+            
+            '''#spwaning a leading vehicle
             x_lead=waypoints[10].transform.location.x
             y_lead=waypoints[10].transform.location.y
             z_lead=1.843102
@@ -693,8 +758,9 @@ def game_loop(args):
             leading_vehicle=world.world.spawn_actor(my_car_bp, lead_vehicle_tansform)
             actor_list.append(leading_vehicle)
             Agent=BasicAgent(leading_vehicle)
-            Agent.set_path(route[10:])
-            start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())
+            Agent.set_destination(world.world,world_map.get_spawn_points()[50])
+            # Agent.set_path(route[10:])
+            start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())'''
 
 
         environment = Environment(world.world,world.player,world_map)
@@ -931,9 +997,14 @@ def game_loop(args):
         #                        [ LENGTH/(2*(2**0.5)),-WIDTH*(7**0.5)/(4)]])
         
         while True:
-            if (LEAD_SPAWN):
-                cmd=Agent.run_step(False)
-                send_control_command(leading_vehicle,cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+            # if (LEAD_SPAWN):
+
+            #     for j in range (len(actor_list)):
+            #         cmd=agent_list[j].run_step(False)
+            #         send_control_command(actor_list[j],cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+
+                # cmd=Agent.run_step(True)
+                # send_control_command(leading_vehicle,cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
 
             # lead_waypoint = world_map.get_waypoint(leading_vehicle.get_transform().location,project_to_road=True)
             # lead_lane = lead_waypoint.lane_id   

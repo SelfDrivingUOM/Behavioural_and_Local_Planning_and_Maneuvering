@@ -242,7 +242,7 @@ class CollisionChecker:
                         collision_vals = list(count_obs.values())
                         obst_indices = list(count_obs.keys())
                         
-                        min_ = 49
+                        min_ = paths.shape[2]
                         sum_obs = [0]
                         for i in collision_vals:
                             sum_obs.append(sum_obs[-1]+i)
@@ -260,12 +260,12 @@ class CollisionChecker:
 
                         mins.append(min_)
                     else:
-                        mins.append(48)
+                        mins.append(paths.shape[2]-1)
                 else:
-                    mins.append(48)
+                    mins.append(paths.shape[2]-1)
                 j += 1
         else:
-            mins = [48]*14
+            mins = [paths.shape[2]-1]*paths.shape[0]
 
         closest_colln_index = min(mins)
 

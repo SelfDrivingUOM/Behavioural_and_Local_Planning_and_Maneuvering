@@ -159,6 +159,9 @@ class Environment():
         x_vec = rot.T@np.array([[1],[0]])
         x_vec = x_vec.reshape((2,))
 
+        y_vec = rot.T@np.array([[0],[1]])
+        y_vec = y_vec.reshape((2,))
+
         if(vehicle_lanes!=[]):
             vehicle_lanes = np.array(vehicle_lanes)
             vehicle_sections = np.array(vehicle_sections)
@@ -382,7 +385,7 @@ class Environment():
 
         # print(closest_vehicle)
         # print(dist_dynamic,)
-        return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,walkers_y
+        return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,y_vec,walkers_y
 
 
 
