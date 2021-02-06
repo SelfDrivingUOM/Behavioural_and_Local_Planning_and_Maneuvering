@@ -171,8 +171,7 @@ def draw_bound_box_actor(obstacle_actor,world, r, g, b):
         transform = obstacle_actor.get_transform()
         bounding_box = obstacle_actor.bounding_box
         bounding_box.location += transform.location
-        #world.debug.draw_box(bounding_box, transform.rotation,life_time=-1.0000, persistent_lines=True)
-        world.debug.draw_box(bounding_box,transform.rotation,0.1, carla.Color(r=r, g=g,b=b),0.001)
+        world.debug.draw_box(bounding_box,transform.rotation,0.1, carla.Color(r=r, g=g,b=b),0.01)
 
 
 

@@ -216,9 +216,9 @@ class VelocityPlanner:
 
             profile = np.append(path[:2],np.array([-100*np.ones(path.shape[1])]),axis = 0)
 
-        elif(a_path >self._a_max):
-                ### this should be implemented seprately in the EMERGENCY STOP STATE
-            profile = np.append(path[:2],np.array([-100*np.ones(path.shape[1])]),axis = 0)
+        # elif(a_path >self._a_max):
+        #         ### this should be implemented seprately in the EMERGENCY STOP STATE
+        #     profile = np.append(path[:2],np.array([-100*np.ones(path.shape[1])]),axis = 0)
 
         else:
 

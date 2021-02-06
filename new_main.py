@@ -23,7 +23,7 @@ CIRCLE_OFFSETS         = [-1.0, 1.0, 3.0] # m
 CIRCLE_RADII           = [1.8, 1.8, 1.8]  # m
 TIME_GAP               = 1.0              # s
 PATH_SELECT_WEIGHT     = 10               #
-A_MAX                  = 2                # m/s^2
+A_MAX                  = 8                # m/s^2
 SLOW_SPEED             = 0                # m/s
 STOP_LINE_BUFFER       = 1.5              # m
 LEAD_VEHICLE_SPEED     = 1
@@ -44,9 +44,12 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
-NO_VEHICLES = 300
+NO_VEHICLES =  0
 NO_WALKERS  =  0
-NUMBER_OF_STUDENTS = 10
+
+
+NUMBER_OF_STUDENT_IN_ROWS    = 10
+NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
 SPAWN_POINT = 26    #36 ##20/40-best
 END_POINT   = 0     #119
@@ -112,7 +115,7 @@ if (NAVIGATION_SPAWN):
     from basic_agent import BasicAgent
     from carla import VehicleControl
 
-from tools.misc import get_speed
+from tools.misc import get_speed,draw_bound_box_actor
 import argparse
 import collections
 import datetime
@@ -675,7 +678,7 @@ def game_loop(args):
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args,SPAWN_POINT)
 
-        spawn(NO_VEHICLES,NO_WALKERS,client,SPAWN_POINT)
+        #spawn(NO_VEHICLES,NO_WALKERS,client,SPAWN_POINT)
         # world = client.load_world('Town02')
         
         clock = pygame.time.Clock()
@@ -743,7 +746,9 @@ def game_loop(args):
                     
             
             
-            
+        #################################################
+        #############  Lead spawn  ####################
+        #################################################
             
             
             
@@ -765,7 +770,38 @@ def game_loop(args):
             Agent.set_path(route[10:])
             start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())
 
-        time.sleep(70)
+
+
+        #################################################
+        #############  Walker spawn  ####################
+        #################################################
+        NUMBER_OF_STUDENT_IN_ROWS    = 10
+        NUMBER_OF_STUDENT_IN_COLUMNS = 6
+
+        blueprint_library = client.get_world().get_blueprint_library()
+        blueprintsWalkers = world.world.get_blueprint_library().filter("walker.pedestrian.*")
+        #walker_bp = blueprint_library.filter("walker")[0]
+
+        for i in range(NUMBER_OF_STUDENT_IN_ROWS):
+            for j in range(i):
+                walker_bp = random.choice(blueprintsWalkers)
+                walker_transform=carla.Transform(carla.Location(x=20-j, y=45+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+                walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
+
+                if(walker!=None):
+
+                    walker_control = carla.WalkerControl()
+                    walker_control.speed = 0.2
+
+                    walker_heading = 0+(i+j)*2*((-1)**i)
+                    walker_rotation = carla.Rotation(0,walker_heading,0)
+                    walker_control.direction = walker_rotation.get_forward_vector()
+                    walker.apply_control(walker_control)
+        
+        time.sleep(5)
+    
+        
+        #time.sleep(70)
         environment = Environment(world.world,world.player,world_map)
 
         ################################################################
@@ -815,21 +851,7 @@ def game_loop(args):
         #################################################
 
         # lp.waypoints_update(waypoints_np)
-        # blueprint_library = client.get_world().get_blueprint_library()
-        # walker_bp = blueprint_library.filter("walker")[0]
-
-
-        # for i in range(30):
-
-        #     walker_transform=carla.Transform(carla.Location(x=20, y=45, z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
-        #     walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
-        #     walker_control = carla.WalkerControl()
-        #     walker_control.speed = 0.3
-
-        #     walker_heading = 0
-        #     walker_rotation = carla.Rotation(0,walker_heading,0)
-        #     walker_control.direction = walker_rotation.get_forward_vector()
-        #     walker.apply_control(walker_control)
+        
      
    
         #     actor_list.append(walker)

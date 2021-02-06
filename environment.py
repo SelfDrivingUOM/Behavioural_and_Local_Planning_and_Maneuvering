@@ -1,5 +1,6 @@
 import numpy as np
 import carla
+from tools.misc import draw_bound_box_actor
 
 class Environment():
     def __init__(self, world, ego_vehicle,map_):
@@ -12,7 +13,9 @@ class Environment():
         self.actors = self.world.get_actors()
         self.lights_list = self.actors.filter("*traffic_light*")
         self.vehicles = self.actors.filter('vehicle.*')
-        self.walkers = self.actors.filter('walker.*')
+        self.walkers = self.actors.filter('walker.*.*')
+        # for w in (self.walkers ):
+        #         draw_bound_box_actor(w,self.world,0,255,0)
 
         # self.actors = self.world.get_actors()
         # self.vehicles = self.actors.filter('vehicle.*')
@@ -55,6 +58,8 @@ class Environment():
         #print(np.shape(paths))
         vehicles = self.vehicles
         walkers  = self.walkers
+        # for w in (walkers ):
+        #         draw_bound_box_actor(w,self.world,0,255,0)
         
         in_radius_sqr = np.square(in_radius)
         self.ego_vehicle_loc = self.ego_vehicle.get_location()
@@ -321,6 +326,7 @@ class Environment():
 
             # return_walkers = walkers[crit]
             walks = walkers[crit]
+            
 
 
 
