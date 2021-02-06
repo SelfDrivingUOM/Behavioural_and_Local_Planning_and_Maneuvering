@@ -44,13 +44,14 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
-NO_VEHICLES = 0
+NO_VEHICLES = 300
 NO_WALKERS  =  0
+NUMBER_OF_STUDENTS = 10
 
 SPAWN_POINT = 26    #36 ##20/40-best
 END_POINT   = 0     #119
 
-LEAD_SPAWN  = True
+LEAD_SPAWN  =False
 NAVIGATION_SPAWN = False
 
 import glob
@@ -377,6 +378,7 @@ class World(object):
             spawn_point = self.map.get_spawn_points()[spawn_point]
             # spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
+            # self.player = spawned_player
         # Set up the sensors.
         self.camera_manager = CameraManager(self.player, self.hud, self._gamma)
         self.camera_manager.transform_index = cam_pos_index
@@ -672,6 +674,8 @@ def game_loop(args):
 
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args,SPAWN_POINT)
+
+        spawn(NO_VEHICLES,NO_WALKERS,client,SPAWN_POINT)
         # world = client.load_world('Town02')
         
         clock = pygame.time.Clock()
@@ -698,7 +702,7 @@ def game_loop(args):
         # walker_transform=carla.Transform(carla.Location(x=-175, y=88, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
         # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
-        spawn(NO_VEHICLES,NO_WALKERS)
+        
         # spawn_new(world.world,NO_VEHICLES)
 
         route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
@@ -761,7 +765,7 @@ def game_loop(args):
             Agent.set_path(route[10:])
             start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())
 
-
+        #time.sleep(60)
         environment = Environment(world.world,world.player,world_map)
 
         ################################################################
@@ -805,31 +809,39 @@ def game_loop(args):
 
         waypoints_np = remove_dup_wp(waypoints_np)
 
+
+        #################################################
+        #############  Walker spawn  ####################
+        #################################################
+
         # lp.waypoints_update(waypoints_np)
         # blueprint_library = client.get_world().get_blueprint_library()
         # walker_bp = blueprint_library.filter("walker")[0]
 
-        # walker_transform=carla.Transform(carla.Location(x=8.5, y=-145.49017333984375, z= 0 ),carla.Rotation(yaw= 1.4203450679814286772))
-        # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
+        # for i in range(30):
 
-        # if walker!=None:
-        #     ##!!!###
+        #     walker_transform=carla.Transform(carla.Location(x=20, y=45, z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+        #     walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
         #     walker_control = carla.WalkerControl()
-        #     walker_control.speed = 0.16
+        #     walker_control.speed = 0.3
 
-        #     walker_heading = -90
+        #     walker_heading = 0
         #     walker_rotation = carla.Rotation(0,walker_heading,0)
         #     walker_control.direction = walker_rotation.get_forward_vector()
         #     walker.apply_control(walker_control)
-        #     ##!!!###
-
+     
+   
         #     actor_list.append(walker)
         # x = -70 - 5 junction
         #3 junction x = -70, y =150
 
-        # loc = carla.Location(x = -50, y = -90,z = 0 )
-        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+        ############
+        ### School = (x = 20, y = 45, z = 0)
+        ############
+
+        #loc = carla.Location(x = 20, y = 45, z = 0)
+        #world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
        
         # raise Exception
         # get_line(np.array([(1,1),(2,2),(2,3),(5,3)]))

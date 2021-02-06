@@ -62,7 +62,7 @@ class Environment():
 
         return return_vehicles, return_walkers
 
-def spawn(num_vehicles=0,num_walkers=0,host='127.0.0.1',port=2000,tm_port= 8000,hybrid =True,sync = False,safe=True,filterv='vehicle.*',filterw="walker.pedestrian.*"):
+def spawn(num_vehicles=0,num_walkers=0,client=None,SPAWN_POINT=0,host='127.0.0.1',port=2000,tm_port= 8000,hybrid =True,sync = False,safe=True,filterv='vehicle.*',filterw="walker.pedestrian.*"):
     # argparser = argparse.ArgumentParser(
     #     description=__doc__)
     # argparser.add_argument(
@@ -123,13 +123,13 @@ def spawn(num_vehicles=0,num_walkers=0,host='127.0.0.1',port=2000,tm_port= 8000,
     vehicles_list = []
     walkers_list = []
     all_id = []
-    client = carla.Client(host, port)
+    # client = carla.Client(host, port)
     client.set_timeout(10.0)
     synchronous_master = False
 
     # try:
     world = client.get_world()
-
+    # blueprint_player = world.get_blueprint_library().filter("model3")[0]
     traffic_manager = client.get_trafficmanager(tm_port)
     
     if hybrid:
@@ -157,7 +157,8 @@ def spawn(num_vehicles=0,num_walkers=0,host='127.0.0.1',port=2000,tm_port= 8000,
         blueprints = [x for x in blueprints if not x.id.endswith('t2')]
 
     spawn_points = world.get_map().get_spawn_points()
-    spawn_points.pop(50)
+    # player_spawn = spawn_points[SPAWN_POINT]
+    spawn_points.pop(SPAWN_POINT)
     number_of_spawn_points = len(spawn_points)
 
     if num_vehicles < number_of_spawn_points:
@@ -197,8 +198,11 @@ def spawn(num_vehicles=0,num_walkers=0,host='127.0.0.1',port=2000,tm_port= 8000,
         blueprint.set_attribute('role_name', 'autopilot')
         
         batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True, traffic_manager.get_port())))
-    traffic_manager.set_global_distance_to_leading_vehicle(5.0)
-    traffic_manager.global_percentage_speed_difference(10.0)
+    
+    # batch.append(SpawnActor(blueprint_player, player_spawn))
+    
+    # traffic_manager.set_global_distance_to_leading_vehicle(10.0)
+    # traffic_manager.global_percentage_speed_difference(5.0)
     
     
     for response in client.apply_batch_sync(batch, synchronous_master):
@@ -207,6 +211,12 @@ def spawn(num_vehicles=0,num_walkers=0,host='127.0.0.1',port=2000,tm_port= 8000,
         else:
             vehicles_list.append(response.actor_id)
             x= response
+    # player_actor = world.get_actor(vehicles_list[-1])
+
+    for vehi in vehicles_list:
+        # traffic_manager.collision_detection(player_actor,world.get_actor(vehi),True)
+        traffic_manager.distance_to_leading_vehicle(world.get_actor(vehi),10)
+    print(vehicles_list)
     
     # -------------
     # Spawn Walkers
@@ -290,6 +300,7 @@ def spawn(num_vehicles=0,num_walkers=0,host='127.0.0.1',port=2000,tm_port= 8000,
     # example of how to use parameters
     traffic_manager.global_percentage_speed_difference(30.0)
 
+    # return player_actor
         
         # while True:
         #     if sync and synchronous_master:

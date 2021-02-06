@@ -158,13 +158,22 @@ def debug_print(paths,world,best_index,life = 0.1):
 				#print(loc)
 				world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=life,persistent_lines=True)
 
-def draw_bound_box(obstacle_actors,world):
+def draw_bound_box(obstacle_actors,world,r,g,b):
     for vehi in obstacle_actors:
         transform = vehi.get_transform()
         bounding_box = vehi.bounding_box
         bounding_box.location += transform.location
         #world.debug.draw_box(bounding_box, transform.rotation,life_time=-1.0000, persistent_lines=True)
         world.debug.draw_box(bounding_box,transform.rotation,0.05, carla.Color(255,0,0,0),0.001)
+
+def draw_bound_box_actor(obstacle_actor,world, r, g, b):
+    if (obstacle_actor!=None):
+        transform = obstacle_actor.get_transform()
+        bounding_box = obstacle_actor.bounding_box
+        bounding_box.location += transform.location
+        #world.debug.draw_box(bounding_box, transform.rotation,life_time=-1.0000, persistent_lines=True)
+        world.debug.draw_box(bounding_box,transform.rotation,0.1, carla.Color(r=r, g=g,b=b),0.001)
+
 
 
 # ==============================================================================

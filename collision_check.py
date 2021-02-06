@@ -165,6 +165,7 @@ class CollisionChecker:
         # Initially set all paths are considered as collision free ('True' implies coreosponding local path collison free)
         collision_check_array = np.array([True]*paths.shape[0])
         mins = []
+        min_objs = []
         obstacle_actors = np.array(obstacle_actors)
 
         # If no obstacles present there is no collision of paths
@@ -243,6 +244,7 @@ class CollisionChecker:
                         obst_indices = list(count_obs.keys())
                         
                         min_ = paths.shape[2]
+                        min_obj_ = None
                         sum_obs = [0]
                         for i in collision_vals:
                             sum_obs.append(sum_obs[-1]+i)
@@ -256,20 +258,28 @@ class CollisionChecker:
                             pt_ind = i - sum_obs[thresh-1]
                             pt = dict_obs[obst_indices[thresh-1]][pt_ind]
                             if pt<min_:
-                                min_=pt
+                                min_ = pt
+                                min_obj_ = obstacle_actors[obst_indices[thresh-1]]
 
                         mins.append(min_)
+                        min_objs.append(min_obj_)
                     else:
                         mins.append(paths.shape[2]-1)
+                        min_objs.append(None)
                 else:
                     mins.append(paths.shape[2]-1)
+                    min_objs.append(None)
                 j += 1
         else:
             mins = [paths.shape[2]-1]*paths.shape[0]
+            min_objs = [None]*paths.shape[0]
 
-        closest_colln_index = min(mins)
+        
+        closest_colln_index = np.amin(np.array(mins))
+        closest_min_obj    = min_objs[np.argmin(np.array(mins))]
 
-        return collision_check_array, closest_colln_index
+
+        return collision_check_array, closest_colln_index, closest_min_obj
 
 
     def select_best_path_index(self, paths, collision_check_array, goal_state,waypoints,ego_state):
