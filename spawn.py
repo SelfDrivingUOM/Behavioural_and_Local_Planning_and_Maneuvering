@@ -216,8 +216,7 @@ def spawn(num_vehicles=0,num_walkers=0,client=None,SPAWN_POINT=0,host='127.0.0.1
     for vehi in vehicles_list:
         # traffic_manager.collision_detection(player_actor,world.get_actor(vehi),True)
         traffic_manager.distance_to_leading_vehicle(world.get_actor(vehi),10)
-    print(vehicles_list)
-    
+    # print(vehicles_list)
     # -------------
     # Spawn Walkers
     # -------------

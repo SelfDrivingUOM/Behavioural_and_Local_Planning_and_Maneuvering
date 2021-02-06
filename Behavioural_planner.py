@@ -24,7 +24,7 @@ TRAFFIC_LIGHT_CHECK_DISTANCE =40
 SPEED=5
 
 
-FOLLOW_LEAD_RANGE = 15
+FOLLOW_LEAD_RANGE = 9
 DIST_WALKER_INTERSECTION = 12
 
 DEBUG_STATE_MACHINE = False
@@ -1375,9 +1375,14 @@ class BehaviouralPlanner:
             if(dist_closest < FOLLOW_LEAD_RANGE):# and dist_closest< self._lookahead):
                 return True
 
-            else:
+            
                 # print("from 1")
+            elif (best_index == None):
+                    #print("Lane path debug is working congratulations!!!!!")
+                    return True
+            else:
                 return False
+                
 
         elif(best_index == None):
             #print("from 2")

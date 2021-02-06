@@ -765,7 +765,7 @@ def game_loop(args):
             Agent.set_path(route[10:])
             start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())
 
-        #time.sleep(60)
+        time.sleep(70)
         environment = Environment(world.world,world.player,world_map)
 
         ################################################################
