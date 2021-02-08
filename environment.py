@@ -341,6 +341,7 @@ class Environment():
             car_frame = car_frame[:, car_frame[1].argsort(kind = "mergesort")]
             return_walkers = car_frame[2]
             walkers_y = car_frame[1]
+            walkers_x = car_frame[0]
         
         # print(dist_dynamic,dist_static)
         if (intersection_state):
@@ -391,7 +392,7 @@ class Environment():
 
         # print(closest_vehicle)
         # print(dist_dynamic,)
-        return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,y_vec,walkers_y
+        return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,y_vec,walkers_y,walkers_x
 
 
 
