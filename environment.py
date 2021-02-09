@@ -159,6 +159,7 @@ class Environment():
         vehicles = np.array(vehicles)
         walkers = np.array(walkers)
         walkers_y = None
+        walkers_x = None
         rot = np.array([[np.cos(self.yaw),-np.sin(self.yaw)],[np.cos(self.yaw),np.sin(self.yaw)]])
 
         x_vec = rot.T@np.array([[1],[0]])
