@@ -17,6 +17,7 @@ from collections import defaultdict
 import multiprocessing
 import concurrent.futures
 
+NUMBER_OF_PATHS = 11
 
 
 class RoadOption(Enum):
@@ -37,6 +38,7 @@ class LocalPlanner:
                  path_select_weight, time_gap, a_max, slow_speed, 
                  stop_line_buffer,NUMBER_OF_LAYERS):
         self._num_paths = num_paths
+        NUMBER_OF_PATHS = self._num_paths
         self._path_offset = path_offset
         self._path_optimizer = path_optimizer.PathOptimizer()
         self._collision_checker = collision_check.CollisionChecker(length,
@@ -373,8 +375,8 @@ def transform_paths(paths_np, ego_state):
 
     #change to num paths
     # paths_np = np.array(paths)
-
-    transformed_paths_np = np.empty((11,3,49))
+   
+    transformed_paths_np = np.empty((NUMBER_OF_PATHS,3,49))
 
     transformed_paths_np[:,0,:] = ego_state[0] + (paths_np[:,0,:]*np.cos(ego_state[2])) - (paths_np[:,1,:]*np.sin(ego_state[2]))
     transformed_paths_np[:,1,:] = ego_state[1] + (paths_np[:,0,:]*np.sin(ego_state[2])) + (paths_np[:,1,:]*np.cos(ego_state[2]))
