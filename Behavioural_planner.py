@@ -1,3 +1,23 @@
+######################################################
+######################################################
+##############   BEHAVIOURAL PLANNER  ################
+######################################################
+##  This is the top layer of the code and handle    ## 
+##  all maneuvers in below layers                   ##
+##  2021.02.10                                      ##
+##  Authors - Gershom                               ##
+##          - Saumya                                ##
+##          - Yasintha                              ##
+######################################################
+######################################################
+
+
+
+
+######################################################
+#####                 FILE IMPORTS              ######
+######################################################
+
 import numpy as np
 import glob
 import os
@@ -10,50 +30,43 @@ from tools.misc import debug_print
 from tools.misc import draw_bound_box,draw_bound_box_actor,compute_magnitude_angle,is_within_distance_ahead
 import tools.misc as misc
 import time 
-# import tools.misc
 import carla
 
 
-JUNCTION_HEADING_CHECK_ANGLE   = 30
-BP_LOOKAHEAD_BASE              = 8.0       # m
-BP_LOOKAHEAD_TIME              = 1.0        # s
-INTERSECTION_APPROACH_DISTANCE = 5
-WALKER_THRESHOLD = 0.1
-HEADING_CHECK_LOOKAHEAD = 10
-TRAFFIC_LIGHT_CHECK_DISTANCE =40
-SPEED=5
+######################################################
+#####              GLOBAL VARIABLES             ######
+######################################################
 
+# states
+FOLLOW_LANE                     = 0
+DECELERATE_TO_STOP              = 1
+STAY_STOPPED                    = 2
+INTERSECTION                    = 3
+FOLLOW_LEAD_VEHICLE             = 4
+OVERTAKE                        = 5
+EMERGENCY_STOP                  = 6
 
-FOLLOW_LEAD_RANGE = 9
-DIST_WALKER_INTERSECTION = 9 # Dont decrease this unless you make the velocity planner correct
-WALKER_DIST_RANGE_BASE = 5
+dict_                           = ["FOLLOW_LANE","DECELERATE_TO_STOP","STAY_STOPPED","INTERSECTION","FOLLOW_LEAD_VEHICLE","OVERTAKE","EMERGENCY_STOP"]
 
-DEBUG_STATE_MACHINE = True
-ONLY_STATE_DEBUG    = False
+# important variables
+SPEED                           =  5      # Vehicle speed
+TRAFFIC_LIGHT_CHECK_DISTANCE    = 40      # Distance to detect traffic lights  
+BP_LOOKAHEAD_BASE               = 8.0     # Base distance to create lattice paths
+FOLLOW_LEAD_RANGE               = 9       # Range to follow lead vehicles
+DEBUG_STATE_MACHINE             = True    # Set this to true to see all function outputs in state machine. This is better for full debug
+ONLY_STATE_DEBUG                = False   # Set this to true to see current state of state machine
+FOLLOW_LANE_OFFSET              = 0.1     # Path goal point offset in follow lane 
+DECELERATE_OFFSET               = 0.1     # Path goal point offset in decelerate state 
 
-#states
-FOLLOW_LANE            = 0
-DECELERATE_TO_STOP     = 1
-STAY_STOPPED           = 2
-INTERSECTION           = 3
-FOLLOW_LEAD_VEHICLE    = 4
-OVERTAKE               = 5
-EMERGENCY_STOP         = 6
+# normal variables
+BP_LOOKAHEAD_TIME               = 1.0     # Lookahead creating distance 
+INTERSECTION_APPROACH_DISTANCE  = 10      # This is used to chnage state machine to intersection state
+WALKER_THRESHOLD                = 0.1     # This is used to identify dynamic walkers
+HEADING_CHECK_LOOKAHEAD         = 10      # Lookahead to identify the turning direction in junctions 
+JUNCTION_HEADING_CHECK_ANGLE    = 30      # To identify the turning direction       
+DIST_WALKER_INTERSECTION        = 9       # Dont decrease this unless you make the velocity planner correct
+WALKER_DIST_RANGE_BASE          = 5       # Minimum walker detection distance in unsrtuctured 
 
-
-dict_ = ["FOLLOW_LANE","DECELERATE_TO_STOP","STAY_STOPPED","INTERSECTION","FOLLOW_LEAD_VEHICLE","OVERTAKE","EMERGENCY_STOP"]
-##initial state
-
-"""
-    State Offsets
-
-Follow Lane Offset  - 10cm
-
-
-"""
-
-FOLLOW_LANE_OFFSET = 0.1#3.7/5
-DECELERATE_OFFSET = 0.1#3.7/5
 
 
 class BehaviouralPlanner:
@@ -1289,7 +1302,7 @@ class BehaviouralPlanner:
 
     def is_approaching_intersection(self, waypoints, closest_index,ego_state):
         
-        INTERSECTION_APPROACH_DISTANCE = self._lookahead
+        #INTERSECTION_APPROACH_DISTANCE = self._lookahead
         #print(INTERSECTION_APPROACH_DISTANCE)
         index_length_for_approaching = int(INTERSECTION_APPROACH_DISTANCE/self._hop_resolution)
         #print(closest_index)

@@ -7,7 +7,7 @@ TOTAL_RUN_TIME         = 100.00  # game seconds (total runtime before sim end)
 TOTAL_FRAME_BUFFER     = 300     # number of frames to buffer after total runtime
 SIMULATION_TIME_STEP   = 0.034
 # ==============================================================================
-# --  Planning Constants -------------------------------------------------------aaaaaaaaaaaaaaaaa
+# --  Planning Constants -------------------------------------------------------
 # ==============================================================================
 
 HOP_RESOLUTION = 1
@@ -44,7 +44,7 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
-NO_VEHICLES =  100
+NO_VEHICLES =  0
 NO_WALKERS  =  100
 
 
@@ -800,7 +800,7 @@ def game_loop(args):
                         walker_control = carla.WalkerControl()
                         # walker_control.speed = 0.7+0.1*j
                         # walker_heading = -90+(i+j-3)*2*((-1)**i)
-                        walker_control.speed = 0.21
+                        walker_control.speed = 0.3
                         walker_heading = 0+(i+j-3)*2*((-1)**i)
                         walker_rotation = carla.Rotation(0,walker_heading,0)
                         walker_control.direction = walker_rotation.get_forward_vector()
