@@ -3,9 +3,21 @@
 """
 2D Controller Class to be used for the CARLA waypoint follower demo.
 """
-
+import glob
+import os
+import sys
+import time
+import copy
+# ==============================================================================
+# -- Find CARLA module ---------------------------------------------------------
+# ==============================================================================
+try:
+    sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+except IndexError:
+    pass
 import cutils
 import numpy as np
+import carla
 
 #from mpc import MPC
 from testnmpc import NMPC
@@ -20,10 +32,10 @@ EGO_TS = 0.1
 N_PREDICTION = 35
 N_CONTROL = 15
 MAX_STEER = np.pi/3
-DERIV_STEER = 0.07
+DERIV_STEER = 0.07#*EGO_TS
 
 class Controller2D(object):
-    def __init__(self, waypoints):
+    def __init__(self, waypoints, world):
         self.vars                = cutils.CUtils()
         self._current_x          = 0
         self._current_y          = 0
@@ -36,8 +48,7 @@ class Controller2D(object):
         self._set_throttle       = 0
         self._set_brake          = 0
         self._set_steer          = 0
-        #self._waypoints          = waypoints
-        self._waypoints          = waypoints.tolist()
+        self._waypoints          = waypoints
         self._conv_rad_to_steer  = 180.0 / 60.0 / np.pi
         self._pi                 = np.pi
         self._2pi                = 2.0 * np.pi
@@ -49,7 +60,11 @@ class Controller2D(object):
         self.velocity = None
         self.beta = None
         self.d_shi = None
+        self.world = world
         
+        self.vars.create_var("t_previous",0)
+        self.vars.create_var("last_error",0)
+        self.vars.create_var("tot_error",0)
 
     def update_values(self, x, y, yaw, speed, timestamp, frame,velocity,beta,d_shi):
         self._current_x         = x
@@ -65,35 +80,12 @@ class Controller2D(object):
             self._start_control_loop = True
         
     def update_desired_speed(self):
-        min_idx       = 0
-        min_dist      = float("inf")
-        desired_speed = 0
-        for i in range(len(self._waypoints)):
-            dist = np.linalg.norm(np.array([
-                    self._waypoints[i][0] - self._current_x,
-                    self._waypoints[i][1] - self._current_y]))
-            if dist < min_dist:
-                min_dist = dist
-                min_idx = i
-        if min_idx < len(self._waypoints)-1:
-            desired_speed = self._waypoints[min_idx][2]
-        else:
-            desired_speed = self._waypoints[-1][2]
-        
-
-
-        ######### VELOCITY PROFILES NEED TO BE GENERATED #################
-        self._desired_speed =  desired_speed
-        # if(desired_speed>15):
-
-        #     self._desired_speed = desired_speed*1.2
-        # else:
-        #     self._desired_speed = desired_speed
+        min_idx       = np.argmin(np.sum(np.square(self._waypoints[:,:2]-np.array([self._current_x,self._current_y])),axis=1))
+        self._desired_speed =  self._waypoints[min_idx][2]
 
     def update_waypoints(self, new_waypoints):
-        # self._waypoints = new_waypoints
-        self._waypoints = new_waypoints.tolist()
-
+        self._waypoints = new_waypoints
+        
     def get_commands(self):
         return self._set_throttle, self._set_steer, self._set_brake
 
@@ -103,9 +95,6 @@ class Controller2D(object):
         self._set_throttle = throttle
 
     def set_steer(self, input_steer_in_rad):
-        # Covnert radians to [-1, 1]
-        # input_steer = self._conv_rad_to_steer * input_steer_in_rad
-
         # Clamp the steering command to valid bounds
         steer           = np.fmax(np.fmin(input_steer_in_rad, 1.0), -1.0)
         self._set_steer = steer
@@ -126,38 +115,18 @@ class Controller2D(object):
         self.update_desired_speed()
         v_desired       = self._desired_speed
         t               = self._current_timestamp
-        waypoints       = self._waypoints
+        waypoints       = self.sample_wpts(self.lateral_control.Ts,self._waypoints,v,self.lateral_control.Np)
+
+        # for i in range(waypoints.shape[0]):
+        #     self.world.debug.draw_string(carla.Location(x=waypoints[i,0],y=waypoints[i,1],z=0.1), 'O', draw_shadow=False,
+        #                                            color=carla.Color(r=0, g=0, b=255),life_time=0.03)
+
+
         throttle_output = 0
         steer_output    = 0
         brake_output    = 0
         error_t = 0
-        ######################################################
-        ######################################################
-        # MODULE 7: DECLARE USAGE VARIABLES HERE
-        ######################################################
-        ######################################################
 
-        self.vars.create_var("t_previous",0)
-        self.vars.create_var("last_error",0)
-        self.vars.create_var("tot_error",0)
-
-        """
-            Use 'self.vars.create_var(<variable name>, <default value>)'
-            to create a persistent variable (not destroyed at each iteration).
-            This means that the value can be stored for use in the next
-            iteration of the control loop.
-
-            Example: Creation of 'v_previous', default value to be 0
-            self.vars.create_var('v_previous', 0.0)
-
-            Example: Setting 'v_previous' to be 1.0
-            self.vars.v_previous = 1.0
-
-            Example: Accessing the value from 'v_previous' to be used
-            throttle_output = 0.5 * self.vars.v_previous
-        """
-        self.vars.create_var('v_previous', 0.0)
-        
         # Skip the first frame to store previous values properly
         if self._start_control_loop:
 
@@ -195,229 +164,87 @@ class Controller2D(object):
 
             ######################################################
             ######################################################
-            # MODULE 7: IMPLEMENTATION OF LONGITUDINAL CONTROLLER HERE
+            ##### IMPLEMENTATION OF LONGITUDINAL CONTROLLER ######
             ######################################################
             ######################################################
-            """
-                Implement a longitudinal controller here. Remember that you can
-                access the persistent variables declared above here. For
-                example, can treat self.vars.v_previous like a "global variable".
-            """
-            
-            # Change these outputs with the longitudinal controller. Note that
-            # brake_output is optional and is not required to pass the
-            # assignment, as the car will naturally slow down over time.
            
-            Kp = 1
-            Kd = 2
-            Ki = 0.001
+            Kp = 2
+            Kd = 0.1
+            Ki = 0.02
 
             delta_t = t - self.vars.t_previous
 
             error_t = v_desired - v
-            d_error_t = error_t - self.vars.last_error
-            i_error_t = self.vars.tot_error + error_t
+            # print(v_desired,v)
+            d_error_t = (error_t - self.vars.last_error)
+            self.vars.tot_error = (self.vars.tot_error*0.1) + error_t
 
-            pid_val = Kp*error_t + Kd*d_error_t + Ki*i_error_t
+            pid_val = Kp*error_t + Kd*d_error_t + Ki * self.vars.tot_error
 
             #constrain PID value between -1 and +1 .... change k_ according to the level of acceleration which you notice
-            # print(pid_val)
+
             k_ = 0.5
             val = np.tanh(k_*pid_val)
-
             if(val>=0):
-
                 throttle_output = val
                 brake_output    = 0
-            
             else:
-
                 throttle_output = 0
-                brake_output    = -0.5*val
+                brake_output    = -2*val
 
 
             ######################################################
             ######################################################
-            # MODULE 7: IMPLEMENTATION OF LATERAL CONTROLLER HERE
+            ####### IMPLEMENTATION OF LATERAL CONTROLLER  ########
             ######################################################
             ######################################################
-            # steer_output = 0
 
-            # ke = 10
-            # ks = 8
-
-
-            # yaw_path = np.arctan2(waypoints[-1][1] - waypoints[0][1],waypoints[-1][0]- waypoints[0][0])
-            # # print(yaw_path,yaw)
-            # shi = yaw_path - yaw
-            
-            # if(shi > np.pi):
-            #     shi-=2*np.pi
-            # elif(shi< -np.pi):
-            #     shi+= 2*np.pi
-            # curr_ = np.array([x,y])
-            
-            # ###### taking closest point to the current pos and then taking the crosstrack error.
-
-            # crosstrack_error = np.min(np.sum((curr_ - np.array(waypoints)[:, :2])**2, axis=1))
-
-            # y1 = np.arctan2(y - waypoints[0][1],x- waypoints[0][0])
-
-            # #checking if e(t) is +ve or -ve
-            # temp = yaw_path - y1
-            # if(temp > np.pi):
-            #     temp-=2*np.pi
-            # elif(temp< -np.pi):
-            #     temp+= 2*np.pi
-
-            # if temp > 0:
-            #     crosstrack_error = crosstrack_error
-            # else:
-            #     crosstrack_error = -1*crosstrack_error
-            
-            # cross_error = np.arctan(ke*crosstrack_error/(ks+v))
-
-            # delta = shi + cross_error
-            # if delta > np.pi:
-            #     delta -= 2 * np.pi
-            # if delta < - np.pi:
-            #     delta += 2 * np.pi
-
-  
-            # delta = max(-1.22,delta)
-            # delta = min(1.22,delta)
-
-
-            ###########################################################
-            #                           NMPC                          #
-            ###########################################################
-            
-            # waypoints = (np.array(self._waypoints[:])[:self.lateral_control.Np,:2])
-            # waypoints[:,1] = waypoints[:,1]*-1 
-            # # print(waypoints.shape,self.lateral_control.Np)
-            # waypoints = (np.array(self._waypoints[:])[:self.lateral_control.Np,:2])
-            # waypoints[:,1] = waypoints[:,1]*-1
-            
-            # yaws = []
-            # for i in range(self.lateral_control.Np-1):
-                
-            #     # print(waypoints[i+1][1]-waypoints[i][1],waypoints[i+1][0]-waypoints[i][0])
-
-            #     yaw = np.arctan2(waypoints[i+1][1]-waypoints[i][1],waypoints[i+1][0]-waypoints[i][0])
-
-            #     if(yaw>np.pi):
-            #         yaw-=2*np.pi
-            #     elif(yaw<-np.pi):
-            #         yaw+=2*np.pi
-            #     yaws.append(yaw)
-            
-            # yaws.append(yaw)
-            # yaws = np.array(yaws)
-            # yaws = yaws.reshape((self.lateral_control.Np,1))
-
-            # waypoints = np.append(waypoints,yaws,axis=1)
-            
-        
-            # self.lateral_control.predict(self._current_x,-self._current_y,-self._current_yaw,self.velocity)
-            # control = self.lateral_control.optimize(-self.d_shi,waypoints)
-
-            # # print(control)
-            # # print(Y[1,:],waypoints[0,:])
-            # delta = self.lateral_control.PID(control[0],-self.d_shi)
-            # steer_output    = -delta
-
-            ###################################################################
-            #                        MPC                                      #
-            ###################################################################
-
-            # waypoints = (np.array(self._waypoints[:])[:self.lateral_control.Np,:2]).T
-            
-            # # print(waypoints[:2,:3])
-            
-            # self.lateral_control.predict(self.velocity,0,-self._current_yaw,self.beta,-self.d_shi)
-
-            # Rot_mat = np.array([[np.cos(yaw),np.sin(yaw)],[-np.sin(yaw),np.cos(yaw)]])
-            # trans_mat = np.array([[x],[y]])
-            # # print((Rot_mat@waypoints[:,0]).shape)
-            # # print(-yaw)
-            # trans_waypoints = (Rot_mat@(waypoints-trans_mat)).T
-
-
-            
-            # trans_waypoints = -(trans_waypoints[:,1]).reshape((self.lateral_control.Np,1))
-            # # print(trans_waypoints[:3].reshape(1,3))
-            # delta = self.lateral_control.new_optimize(trans_waypoints)
-            # print(trans_waypoints[:10].reshape(1,10),self._current_timestamp)
-            # print(waypoints[:,:10])
-            
-            # print(yaws[0],-self.d_shi,control[0],delta)
-
-            # Change the steer output with the lateral controller. 
-            # steer_output    = -delta[0]  #make negative
-
-            ##################################################################
-            #                       Lateral NMPC                              #
-            ###################################################################
-
-            waypoints = (np.array(self._waypoints[:])[:self.lateral_control.Np,:2])
-      
+            waypoints = waypoints[:self.lateral_control.Np,:2]
             Rot_mat = np.array([[np.cos(yaw),np.sin(yaw)],[-np.sin(yaw),np.cos(yaw)]])
-            # print(yaw)
-            trans_mat = np.array([[x,y]])
+            trans_mat = np.array([x,y])
             
             trans_waypoints = ((waypoints-trans_mat)@(Rot_mat.T))
-
-            
             trans_waypoints[:,1] = -trans_waypoints[:,1]
 
             yaws = []
-
             for i in range(self.lateral_control.Np-1):
-
-                yaw = np.arctan2(trans_waypoints[i+1][1]-trans_waypoints[i][1],trans_waypoints[i+1][0]-trans_waypoints[i][0])
-
-                if(yaw>np.pi):
-                    yaw-=2*np.pi
-                elif(yaw<-np.pi):
-                    yaw+=2*np.pi
-                yaws.append(yaw)
-            
-            yaws.append(yaw)
+                yaw_wpt = np.arctan2(trans_waypoints[i+1][1]-trans_waypoints[i][1],trans_waypoints[i+1][0]-trans_waypoints[i][0])
+                yaws.append(yaw_wpt)
+            yaws.append(yaw_wpt)
+            # yaws = (((np.array(yaws) + self._current_yaw)+np.pi)%(np.pi*2))-np.pi
             yaws = np.array(yaws)
             yaws = yaws.reshape((self.lateral_control.Np,1))
-
             trans_waypoints = np.append(trans_waypoints,yaws,axis=1)
-            trans_waypoints = trans_waypoints[:,1:]
 
             
-            self.lateral_control.predict(0,0,self.velocity,self.beta)
+            self.lateral_control.predict(0,0,0,self.velocity,self.beta)
             control = self.lateral_control.optimize(-self.d_shi,trans_waypoints)
+            self.lateral_control.update_debug_costs(trans_waypoints)
+
+            opt_states = self.lateral_control.get_Y(0,0,0,self.velocity,self.beta)
+            opt_states[:,1] = -opt_states[:,1]
+            temp = opt_states[:,:2]@Rot_mat + trans_mat
+            # for kk in range(temp.shape[0]):
+            #     self.world.debug.draw_string(carla.Location(x=temp[kk,0],y=temp[kk,1],z=0.1), 'O', draw_shadow=False,
+            #                                        color=carla.Color(r=255, g=0, b=0), life_time=0.03)
 
             delta = control[0]
-            steer_output    = -delta
+            steer_output    = -1*delta
 
-            # print(yaw,steer_output)
-            # print(steer_output)
-            """
-                Implement a lateral controller here. Remember that you can
-                access the persistent variables declared above here. For
-                example, can treat self.vars.v_previous like a "global variable".
-            """
 
 
             ######################################################
-            # SET CONTROLS OUTPUT
+            ################# SET CONTROLS OUTPUT ################
             ######################################################
-            self.set_throttle(throttle_output)  # in percent (0 to 1)
-            self.set_steer(steer_output)        # in rad (-1.22 to 1.22)
-            self.set_brake(brake_output)        # in percent (0 to 1)
-
+            self.set_throttle(throttle_output)  # in percent ( 0 to 1)
+            self.set_steer(steer_output)        # in percent (-1 to )
+            self.set_brake(brake_output)        # in percent ( 0 to 1)
             # return abs(trans_waypoints[0,0])
-            return trans_waypoints[0,0]
+            
             
         ######################################################
         ######################################################
-        # MODULE 7: STORE OLD VALUES HERE (ADD MORE IF NECESSARY)
+        ############# STORE OLD VALUES HERE ##################
         ######################################################
         ######################################################
         """
@@ -425,10 +252,30 @@ class Controller2D(object):
             current x, y, and yaw values here using persistent variables for use
             in the next iteration)
         """
-        self.vars.v_previous = v  # Store forward speed to be used in next step
         self.vars.t_previous = t
         self.vars.last_error = error_t
         self.vars.tot_error +=error_t
+        if self._start_control_loop:
+            return (trans_waypoints[0,1])   #returning y for current y
 
-        return 0
-        
+    def sample_wpts(self, Ts, wpts, v, Np):
+        sample_dist = v*Ts
+        sampled_wpt = np.empty((0,3))
+        sampled_wpt = np.append(sampled_wpt,np.reshape(wpts[0],(1,3)),axis=0)
+        last_wpt = 0
+        for i in range(Np-1):
+            dist = np.linalg.norm(sampled_wpt[-1,:2]-wpts[last_wpt+1,:2])
+            last_count = last_wpt
+            while dist < sample_dist:
+                last_count += 1
+                if last_count >= wpts.shape[0]-1:
+                    ex_pt = wpts[-1] + (sample_dist*((wpts[-1]-wpts[-2])/np.linalg.norm(wpts[-1]-wpts[-2])))
+                    wpts = np.append(wpts,np.reshape(ex_pt,(1,3)),axis=0)
+                dist += np.linalg.norm(wpts[last_count,:2]-wpts[last_count+1,:2])
+            last_wpt = last_count
+            pt = wpts[last_wpt+1] - ((dist-sample_dist)*((wpts[last_wpt+1]-wpts[last_wpt])/np.linalg.norm(wpts[last_wpt+1]-wpts[last_wpt])))
+            sampled_wpt = np.append(sampled_wpt,np.reshape(pt,(1,3)),axis=0)
+        return sampled_wpt
+
+
+

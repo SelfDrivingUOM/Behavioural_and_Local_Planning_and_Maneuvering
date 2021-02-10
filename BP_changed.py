@@ -7,7 +7,7 @@ import copy
 import local_planner
 from tools.misc import get_speed
 from tools.misc import debug_print
-from tools.misc import draw_bound_box
+from tools.misc import draw_bound_box,compute_magnitude_angle
 import carla
 
 
@@ -24,6 +24,8 @@ OVERTAKE               = 3
 FOLLOW_LEAD_VEHICLE    = 4
 INTERSECTION           = 5
 
+
+dict_ = ["FOLLOW_LANE","DECELERATE_TO_STOP","STAY_STOPPED"]
 ##initial state
 
 """
@@ -39,7 +41,7 @@ DECELERATE_OFFSET = 0.1
 
 
 class BehaviouralPlanner:
-    def __init__(self, lp, waypoints,environment, world,HOP_RESOLUTION,world_map,ego_vehicle):
+    def __init__(self, lp, waypoints,environment, world,HOP_RESOLUTION,world_map,ego_vehicle,resolution):
         self._lp            = lp
         self._waypoints     = waypoints
         self._goal_state    = [0.0, 0.0, 0.0]
@@ -52,18 +54,22 @@ class BehaviouralPlanner:
         self.paths = None
         self._goal_state_next =None
         self.min_collision = None
-        self._collission_actor  = None
-
+        self._collission_index = 48
+        self._collission_actor = None
         self._map = world_map
         self._not_passed = False
         self.ego_vehicle = ego_vehicle
+        self.started_decel = False
+        self.stop_threshold = 0.01
+        self.num_layers = None
+        self.resolution = resolution
 
 
     def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed):
-        # print(self._state)
+        # print(dict_[self._state])
         open_loop_speed = self._lp._velocity_planner.get_open_loop_speed(current_timestamp - prev_timestamp)
         self._lookahead= BP_LOOKAHEAD_BASE + BP_LOOKAHEAD_TIME * open_loop_speed 
-        vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,walkers_y = self._environment.get_actors(self._lookahead)
+        vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,walkers_y = self._environment.get_actors(max(20,self._lookahead))
         
         vehicles_static = list(vehicles_static)
         vehicles_dynamic = list(vehicles_dynamic)
@@ -82,25 +88,30 @@ class BehaviouralPlanner:
             # Next, find the goal index that lies within the lookahead distance
             # along the waypoints.
             goal_index = self.get_goal_index(ego_state, closest_len, closest_index)
+
+
+            
             self._goal_index = goal_index
-            self._goal_state = self._waypoints[goal_index]
+            # self._goal_state = self._waypoints[goal_index]
+            self.num_layers = ((goal_index - closest_index)//(self.resolution+1))+1
+
+            # print(self.num_layers)
 
             # print(do_stop,intersection)
 
-            if goal_index < (self._waypoints.shape[0]-1):
-                point_1 = self._waypoints[goal_index+1]
-                point_2 = self._waypoints[goal_index]
+            # if goal_index < (self._waypoints.shape[0]-1):
+            #     point_1 = self._waypoints[goal_index+1]
+            #     point_2 = self._waypoints[goal_index]
 
-            else: 
-                point_1 = self._waypoints[goal_index]
-                point_2 = self._waypoints[goal_index-1]
+            # else: 
+            #     point_1 = self._waypoints[goal_index]
+            #     point_2 = self._waypoints[goal_index-1]
 
             # Compute the goal state set from the behavioural planner's computed goal state.
-            goal_set, goal_index_set =  self._lp.lattice_layer_stations(self._goal_state , self._waypoints, ego_state)
-            goal_state = goal_set[0]
-            gi = goal_index_set[0]
-
-            goal_state_set = self._lp.get_goal_state_set(point_1,point_2,goal_state, ego_state,FOLLOW_LANE_OFFSET)
+            # goal_set, goal_index_set =  self._lp.lattice_layer_stations(self._goal_state , self._waypoints, ego_state)
+            # goal_state = goal_set[0]
+            # goal_state_set = self._lp.get_goal_state_set(0,12,ego_state,FOLLOW_LANE_OFFSET,self.num_layers,self.resolution)
+            goal_state_set = self._lp.get_goal_state_set(closest_index,goal_index,ego_state,FOLLOW_LANE_OFFSET,self.num_layers,self.resolution)
             # print(goal_state_set)
             # Calculate planned paths in the local frame.
             paths, path_validity,mid_path_len = self._lp.plan_paths(goal_state_set)
@@ -109,6 +120,7 @@ class BehaviouralPlanner:
             paths = local_planner.transform_paths(paths, ego_state)
 
             collision_check_array,min_collision = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world)
+            # print(min_collision,closest_vehicle)
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
 
             ego_waypoint = self._map.get_waypoint(carla.Location(x=ego_state[0], y=ego_state[1], z= 1.843102 ),project_to_road=True)
@@ -125,18 +137,16 @@ class BehaviouralPlanner:
             #     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
             #     self._goal_state[2] = 0
             # print(self._map,walkers,ego_state,closest_index,self._waypoints,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len)
-            walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,closest_index,self._waypoints,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len)
-            
+            walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len)
+            # print(walker_collide,col_walker,min_collision )
             if(walker_collide):
-                # self._collission_actor = col_walker
+                self._collission_actor = col_walker
                 self._state   = DECELERATE_TO_STOP
                 self._collission_index = min_collision
-                self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-5,1)]
-                self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision-4,0)]
-                self._goal_state[2] = 0
+
             
-            elif(best_index == None): ##LANE PATHS BLOCKED
-                
+            elif(self.lane_paths_blocked(best_index)): ##LANE PATHS BLOCKED
+                # print(" ")
                 if(self.can_overtake()):
 
                     ##### FIX GOAL STATE PROPERLY
@@ -147,12 +157,11 @@ class BehaviouralPlanner:
                 
                 
                 elif(self.need_to_stop(closest_vehicle,closest_index,ego_state)):
-                    
+                    # print("LOL")
                     self._collission_actor = closest_vehicle
                     self._state   = DECELERATE_TO_STOP
-                    self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-5,1)]
-                    self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision-4,0)]
-                    self._goal_state[2] = 0
+                    self._collission_index = min_collision
+                    
 
                 else:
 
@@ -168,7 +177,7 @@ class BehaviouralPlanner:
             #     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
             #     self._goal_state[2] = 0
             else:
-
+                # print( " ")
                 self._state   = FOLLOW_LANE
 
             # best_index = 5
@@ -181,44 +190,100 @@ class BehaviouralPlanner:
             debug_print(paths,self._world,best_index)
             local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
 
+            self.paths = paths
+            # self._collission_index = min_collision
             return local_waypoints
 
+######################################################################################################################################
+#************************************************************************************************************************************#
+######################################################################################################################################
 
         elif (self._state == DECELERATE_TO_STOP):
-
-
-            # self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
-            # self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
-            # self._goal_state[2] = 0
-
-            # print("lol")
-            # print(self.paths.shape)
             
-            goal_set, goal_index_set =  self._lp.lattice_layer_stations(self._goal_state , self._waypoints, ego_state)
+            # print()
+            # vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,walkers_y = self._environment.get_actors(max(20,self._lookahead))
+            # print(self._collission_index,self.started_decel)
+            self._goal_state = self.paths[self._lp._num_paths//2,:,max(self._collission_index,1)]
+            self._goal_state_next = self.paths[self._lp._num_paths//2,:,max(self._collission_index-1,0)]
+            self._goal_state[2] = 0
             
-            goal_state = goal_set[0]
-            gi = goal_index_set[0]
-
-
-            # print(self._goal_state_next,self._goal_state, self._goal_state, ego_state)
-            goal_state_set = self._lp.get_goal_state_set(self._goal_state_next,self._goal_state, self._goal_state, ego_state,DECELERATE_OFFSET)
+            goal_state_set = self._lp.get_goal_state_set(self._goal_state,self._goal_state_next, self._goal_state, ego_state,DECELERATE_OFFSET)
 
             paths, path_validity,mid_path_len = self._lp.plan_paths(goal_state_set)
-
             # Transform those paths back to the global frame.
             paths = local_planner.transform_paths(paths, ego_state)
-            
+
             collision_check_array,min_collision = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world)   
-            # best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
-            best_index = 7
+            best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
+            best_index = self._lp._num_paths//2
+
             debug_print(paths,self._world,best_index)
             # print("a")
 
-            local_waypoints = self._lp._velocity_planner.decelerate_profile(paths[best_index],current_speed)
+            
             # print(local_waypoints)
+            walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state,paths,best_index,x_vec,min_collision,walkers_y,mid_path_len)
+            local_waypoints = self._lp._velocity_planner.decelerate_profile(paths[best_index],current_speed,min_collision)
+            if(self.is_ego_less()):
+                # print("A")
+                self._state = STAY_STOPPED
+
+
+            elif(walker_collide):
+                # print("B")
+                self._collission_actor = col_walker
+                self._state   = DECELERATE_TO_STOP
+                self._collission_index = min_collision
+
+            
+            
+            elif(self.lane_paths_blocked(best_index)): ##LANE PATHS BLOCKED
+
+                # print(" ")
+                need_to_stop,intersection = self.need_to_stop(closest_vehicle,closest_index,ego_state)
+                if(need_to_stop):
+                    # print("C")
+                    self._collission_actor = closest_vehicle
+                    self._state   = DECELERATE_TO_STOP
+                    self._collission_index = min_collision
+                    
+
+                else:
+                    # print("D")
+                    self._state   = FOLLOW_LEAD_VEHICLE
+                    self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+                    self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+                    self._collission_index = min_collision
+                    self._goal_state[2] = 0
+
+            # elif(self.is_approaching_intersection(self._waypoints,closest_index,ego_state)):
+
+            #     self._state   = INTERSECTION
+            #     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+            #     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+            #     self._goal_state[2] = 0
+            else:
+                # print(" ")
+                # print("E")
+                self._state   = FOLLOW_LANE
+                self._collission_index = min_collision
+
 
             # raise Exception
+
+        
+            
+            if(not self.started_decel):
+
+                # print(min_collision)
+                self.paths = paths
+                self.started_decel = True
+
+                # debug_print(paths,self._world,best_index,life = 1000)
+                # raise Exception
+
             return local_waypoints
+
         elif (self._state   == STAY_STOPPED):
             pass
 
@@ -277,34 +342,69 @@ class BehaviouralPlanner:
         exwp = self._map.get_waypoint(loc)
         ego_wayp =  self._map.get_waypoint(carla.Location(x=ego_state[0] , y=ego_state[1],z= 1.843102))
 
-        out=exwp.is_junction
+        #####
 
+        out=exwp.is_junction
+        intersection = False
+        
         if(out):
             self._not_passed = True
-            return out
+            intersection = True
+            
+            # return out
     
         elif(ego_wayp.is_junction):
             self._not_passed = False
-            return True
+            intersection = True
+            # return True
 
         elif(self._not_passed):
-            return True
+            intersection = True
+            # return True
 
         else:
-            return False
+            intersection = False
+            # return False
                 # return True
                 # self._within_int = False
                 # return True
             # else:
             #     return False
-
-
+        if(intersection):
+            
+        else:
+            return intersection,None
 
         # print(out)
 
+    def lane_paths_blocked(self,best_index):
+        
+        
+        if(best_index == None):
+            return True
+
+        # elif()
+        elif(self._collission_actor != None):
+            dist_closest = np.sum(np.square(np.array([self._collission_actor.get_location().x,self._collission_actor.get_location().y]) \
+                             - np.array([self.ego_vehicle.get_location().x,self.ego_vehicle.get_location().y])))
+            if(dist_closest< self._lookahead):
+                return True
+
+            else:
+                return False
+        else:
+            return False
+
+    def is_ego_less(self):
+        velocity = self.ego_vehicle.get_velocity()
+        if(np.linalg.norm(np.array([velocity.x,velocity.y,velocity.z]))<self.stop_threshold):
+            return True
+
+        else:
+            return False
 
 
-    def check_walkers(self,world_map,walkers,ego_state,closest_index,waypoints,paths,best_index,vec_rd,min_collision,walkers_y,mid_path_len):
+    def check_walkers(self,world_map,walkers,ego_state,paths,best_index,vec_rd,min_collision,walkers_y,mid_path_len):
 
             if(best_index == None):
                 print("brrrr")
@@ -334,10 +434,11 @@ class BehaviouralPlanner:
             # vec_rd = vec_rd / (np.sqrt(np.sum(np.square(vec_rd))))
             counter = -1
             if walkers:
+                print(walkers)
                 for person in walkers:
                     counter+=1
                     walker_loc= person.get_location()
-                    walker_waypoint=world_map.get_waypoint(carla.Location(x=walker_loc.x, y=walker_loc.y, z= 1.843102 ),project_to_road=True,lane_type = ( carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk | carla.LaneType.Parking))
+                    walker_waypoint=world_map.get_waypoint(carla.Location(x=walker_loc.x, y=walker_loc.y, z= walker_loc.z ),project_to_road=True,lane_type = ( carla.LaneType.Driving | carla.LaneType.Sidewalk ))
                     # print(walker_waypoint.lane_type)
                     w_lane = walker_waypoint.lane_id
                     # vec_wx = walker_loc.x  - ego_state[0]
@@ -354,8 +455,8 @@ class BehaviouralPlanner:
 
 
                     # print(walker_pt1.shape,vec_rd)
-                    walker_way_pt1=world_map.get_waypoint(carla.Location(x=walker_pt1[0], y=walker_pt1[1], z= 1.843102 ),project_to_road=True, lane_type = ( carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk | carla.LaneType.Parking))
-                    walker_way_pt2=world_map.get_waypoint(carla.Location(x=walker_pt2[0], y=walker_pt2[1], z= 1.843102 ),project_to_road=True, lane_type = ( carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk | carla.LaneType.Parking))
+                    walker_way_pt1=world_map.get_waypoint(carla.Location(x=walker_pt1[0], y=walker_pt1[1], z= walker_loc.z ),project_to_road=True, lane_type = ( carla.LaneType.Driving | carla.LaneType.Sidewalk ))
+                    walker_way_pt2=world_map.get_waypoint(carla.Location(x=walker_pt2[0], y=walker_pt2[1], z= walker_loc.z),project_to_road=True, lane_type = ( carla.LaneType.Driving | carla.LaneType.Sidewalk ))
                     w_pt1_lane = walker_way_pt1.lane_id
                     w_pt2_lane = walker_way_pt2.lane_id
                     w_speed = person.get_control().speed
@@ -366,22 +467,25 @@ class BehaviouralPlanner:
                     # print(walker_waypoint.lane_type,walker_waypoint.is_junction,dest_waypoint.is_junction)
 
 
-                    self._world.debug.draw_string(walker_waypoint.transform.location, 'X', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=10000,persistent_lines=True)
+                    # self._world.debug.draw_string(walker_waypoint.transform.location, 'X', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=10000,persistent_lines=True)
 
 
 
                     if ((dest_waypoint.is_junction) and (walker_waypoint.is_junction)):
                         print("X")
-
-                        if(walkers_y[counter]<(mid_path_len/49)*min_collision):
-                            min_collision = walkers_y[counter]//49
-
+                        # print(walkers_y[counter],mid_path_len,(mid_path_len/49)*(min_collision+1))
+                        if(walkers_y[counter]<(mid_path_len/49)*(min_collision+1)):
+                            # print("XX")
+                            min_collision = int(walkers_y[counter]//(mid_path_len/49))
+                            # print(min_collision)
+                        # print(min_collision)
                         return True,person,min_collision
+                    
                     elif (ego_section==w_section):
                         if (ego_lane==w_lane):
                             print("A")
-                            if(walkers_y[counter]<(mid_path_len/49)*min_collision):
-                                min_collision = walkers_y[counter]//49
+                            if(walkers_y[counter]<(mid_path_len/49)*(min_collision+1)):
+                                min_collision = int(walkers_y[counter]//(mid_path_len/49))
 
 
                             return True,person,min_collision      # decelarate to stop
@@ -389,8 +493,8 @@ class BehaviouralPlanner:
                         elif (ego_lane-1==0):
                             if ((w_lane==ego_lane-2) or (w_lane==ego_lane-1)or (w_lane==ego_lane+1)):
                                 if (((ego_lane==w_pt1_lane) or (ego_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
-                                    if(walkers_y[counter]<(mid_path_len/49)*min_collision):
-                                        min_collision = walkers_y[counter]//49
+                                    if(walkers_y[counter]<(mid_path_len/49)*(min_collision+1)):
+                                        min_collision = int(walkers_y[counter]//(mid_path_len/49))
 
                                     print("B")
                                     return True,person,min_collision       # check velocity
@@ -404,8 +508,8 @@ class BehaviouralPlanner:
                             if ((w_lane==ego_lane+2) or (w_lane==ego_lane+1) or (w_lane==ego_lane-1)):
                                 if (((ego_lane==w_pt1_lane) or (ego_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
                                     print("C")                        
-                                    if(walkers_y[counter]<(mid_path_len/49)*min_collision):
-                                        min_collision = walkers_y[counter]//49
+                                    if(walkers_y[counter]<(mid_path_len/49)*(min_collision+1)):
+                                        min_collision = int(walkers_y[counter]//(mid_path_len/49))
 
                                     return True,person,min_collision      # check velocity
                                 else:
@@ -416,8 +520,8 @@ class BehaviouralPlanner:
                         elif ((w_lane==ego_lane-1) or (w_lane==ego_lane+1)):
                             if (((ego_lane==w_pt1_lane) or (ego_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
                                     print("D")                        
-                                    if(walkers_y[counter]<(mid_path_len/49)*min_collision):
-                                        min_collision = walkers_y[counter]//49
+                                    if(walkers_y[counter]<(mid_path_len/49)*(min_collision+1)):
+                                        min_collision = int(walkers_y[counter]//(mid_path_len/49))
 
                                     return True,person,min_collision       # check velocity
                             else:
@@ -429,8 +533,8 @@ class BehaviouralPlanner:
                         if (dest_section==w_section) :
                             if (dest_lane==w_lane):
                                 print("E")                        
-                                if(walkers_y[counter]<(mid_path_len/49)*min_collision):
-                                        min_collision = walkers_y[counter]//49
+                                if(walkers_y[counter]<(mid_path_len/49)*(min_collision+1)):
+                                        min_collision = int(walkers_y[counter]//(mid_path_len/49))
 
                                 return True,person,min_collision       # decelarate to stop
 
@@ -438,8 +542,8 @@ class BehaviouralPlanner:
                                 if ((w_lane==dest_lane-2) or (w_lane==dest_lane-1) or (w_lane==dest_lane+1)):
                                     if (((dest_lane==w_pt1_lane) or (dest_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
                                         print("F")                        
-                                        if(walkers_y[counter]<(mid_path_len/49)*min_collision):
-                                            min_collision = walkers_y[counter]//49
+                                        if(walkers_y[counter]<(mid_path_len/49)*(min_collision+1)):
+                                            min_collision = int(walkers_y[counter]//(mid_path_len/49))
 
                                         return True,person,min_collision       # check velocity
                                     else:
@@ -451,8 +555,8 @@ class BehaviouralPlanner:
                                 if ((w_lane==dest_lane+2) or (w_lane==dest_lane+1) or (w_lane==dest_lane-1)):
                                     if (((dest_lane==w_pt1_lane) or (dest_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
                                         print("G")                        
-                                        if(walkers_y[counter]<(mid_path_len/49)*min_collision):
-                                            min_collision = walkers_y[counter]//49
+                                        if(walkers_y[counter]<(mid_path_len/49)*(min_collision+1)):
+                                            min_collision = int(walkers_y[counter]//(mid_path_len/49))
 
                                         return True,person,min_collision       # check velocity
                                     else:
@@ -463,8 +567,8 @@ class BehaviouralPlanner:
                             elif ((w_lane==dest_lane-1) or (w_lane==dest_lane+1)):
                                 if (((dest_lane==w_pt1_lane) or (dest_lane==w_pt2_lane)) and (w_speed>WALKER_THRESHOLD)):
                                     print("H")                        
-                                    if(walkers_y[counter]<(mid_path_len/49)*min_collision):
-                                        min_collision = walkers_y[counter]//49
+                                    if(walkers_y[counter]<(mid_path_len/49)*(min_collision+1)):
+                                        min_collision = int(walkers_y[counter]//(mid_path_len/49))
 
                                     return True,person,min_collision       # check velocity
                                 else:
@@ -487,7 +591,7 @@ class BehaviouralPlanner:
     """
 
     def need_to_stop(self,lead_vehicle,closest_index,ego_state):
-        
+        # print(lead_vehicle,closest_index)
         # stop = False
         is_intersection = self.is_approaching_intersection(self._waypoints,closest_index,ego_state)       
         # distance_lead = get_road_dist(collission_idx)
@@ -548,6 +652,8 @@ class BehaviouralPlanner:
     def can_overtake(self):
 
         return False 
+
+    
 
 
 
