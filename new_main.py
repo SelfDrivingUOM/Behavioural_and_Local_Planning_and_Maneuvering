@@ -23,7 +23,7 @@ CIRCLE_OFFSETS         = [-1.0, 1.0, 3.0] # m
 CIRCLE_RADII           = [1.8, 1.8, 1.8]  # m
 TIME_GAP               = 1.0              # s
 PATH_SELECT_WEIGHT     = 10               #
-A_MAX                  = 3                # m/s^2
+A_MAX                  = 5                # m/s^2
 SLOW_SPEED             = 0                # m/s
 STOP_LINE_BUFFER       = 1.5              # m
 LEAD_VEHICLE_SPEED     = 1
@@ -44,8 +44,8 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
-NO_VEHICLES =  300
-NO_WALKERS  =  200
+NO_VEHICLES =  100
+NO_WALKERS  =  100
 
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
@@ -776,7 +776,7 @@ def game_loop(args):
         #################################################
         #############  Walker spawn  ####################
         #################################################
-        '''if (WALKER_SPAWN):
+        if (WALKER_SPAWN):
             NUMBER_OF_STUDENT_IN_ROWS    = 10
             NUMBER_OF_STUDENT_IN_COLUMNS = 6
 
@@ -790,7 +790,9 @@ def game_loop(args):
                 for j in range(i):
                     walker_bp = random.choice(blueprintsWalkers)
                     # walker_transform=carla.Transform(carla.Location(x=32-j, y=90+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
-                    walker_transform=carla.Transform(carla.Location(x=40-j, y=0+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+                    # walker_transform=carla.Transform(carla.Location(x=40-j, y=0+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+                    walker_transform=carla.Transform(carla.Location(x=20-j, y=40+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+
                     walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
                     if(walker!=None):
@@ -799,10 +801,10 @@ def game_loop(args):
                         # walker_control.speed = 0.7+0.1*j
                         # walker_heading = -90+(i+j-3)*2*((-1)**i)
                         walker_control.speed = 0.21
-                        walker_heading = 180+(i+j-3)*2*((-1)**i)
+                        walker_heading = 0+(i+j-3)*2*((-1)**i)
                         walker_rotation = carla.Rotation(0,walker_heading,0)
                         walker_control.direction = walker_rotation.get_forward_vector()
-                        walker.apply_control(walker_control)'''
+                        walker.apply_control(walker_control)
 
         '''if (WALKER_SPAWN):
             NUMBER_OF_STUDENT_IN_ROWS    = 10

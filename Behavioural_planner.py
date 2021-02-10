@@ -28,7 +28,7 @@ FOLLOW_LEAD_RANGE = 9
 DIST_WALKER_INTERSECTION = 9 # Dont decrease this unless you make the velocity planner correct
 WALKER_DIST_RANGE_BASE = 5
 
-DEBUG_STATE_MACHINE = False
+DEBUG_STATE_MACHINE = True
 ONLY_STATE_DEBUG    = False
 
 #states
@@ -1426,8 +1426,7 @@ class BehaviouralPlanner:
 
     def check_walkers(self,world_map,walkers,ego_state,paths,best_index,vec_rd,min_collision,walkers_y,walkers_x,mid_path_len,intersection,box_points,junc_bx_pts):
 
-        CHECKING_WALKER_DISTANCE = 7
-        WALKER_DIST_RANGE = min(10,WALKER_DIST_RANGE_BASE + 2*self._open_loop_speed)
+        WALKER_DIST_RANGE = min(15,WALKER_DIST_RANGE_BASE + 2*self._open_loop_speed)
 
         # if  (self._open_loop_speed > 4):
         #     WALKER_DIST_RANGE = 15
@@ -2009,17 +2008,18 @@ class BehaviouralPlanner:
                     magnitude, angle = compute_magnitude_angle(loc,
                                                                ego_location,
                                                                ego_state[2])
-                    
-                    if((magnitude < TRAFFIC_LIGHT_CHECK_DISTANCE + self._lookahead ) and angle<min_angle and angle>0):
+
+                    if((magnitude < TRAFFIC_LIGHT_CHECK_DISTANCE + self._lookahead ) and angle<min_angle and angle>0 and angle<= 60):
 
                        
-
+             
                         angles.append(angle)
                         mags.append(magnitude)
                         #print(angle)
                         sel_magnitude = magnitude
                         sel_traffic_light = traffic_light
                         min_angle = angle
+                #print("/n")
                 # print(angles,mags)
                 if(sel_traffic_light!= None):
                     self._world.debug.draw_line(ego_location, sel_traffic_light.get_location(), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=0.05)
