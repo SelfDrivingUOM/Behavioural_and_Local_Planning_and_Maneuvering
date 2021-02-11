@@ -1023,7 +1023,7 @@ def game_loop(args):
         ################################################################
 
 
-        bp = BehaviouralPlanner(lp,waypoints_np,environment,world.world,HOP_RESOLUTION,world_map,world.player)
+        bp = BehaviouralPlanner(world.world, world_map, world.player, environment, lp, waypoints_np, HOP_RESOLUTION )
 
 
 

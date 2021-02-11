@@ -49,134 +49,181 @@ EMERGENCY_STOP                  = 6
 dict_                           = ["FOLLOW_LANE","DECELERATE_TO_STOP","STAY_STOPPED","INTERSECTION","FOLLOW_LEAD_VEHICLE","OVERTAKE","EMERGENCY_STOP"]
 
 # important variables
-SPEED                           =  5      # Vehicle speed
-TRAFFIC_LIGHT_CHECK_DISTANCE    = 40      # Distance to detect traffic lights  
-BP_LOOKAHEAD_BASE               = 8.0     # Base distance to create lattice paths
-FOLLOW_LEAD_RANGE               = 9       # Range to follow lead vehicles
+SPEED                           =  5      # Vehicle speed (m/s)
+TRAFFIC_LIGHT_CHECK_DISTANCE    = 40      # Distance to detect traffic lights (m)
+BP_LOOKAHEAD_BASE               = 8.0     # Base distance to create lattice paths (m)
+FOLLOW_LEAD_RANGE               = 9       # Range to follow lead vehicles (m)
 DEBUG_STATE_MACHINE             = True    # Set this to true to see all function outputs in state machine. This is better for full debug
 ONLY_STATE_DEBUG                = False   # Set this to true to see current state of state machine
-FOLLOW_LANE_OFFSET              = 0.1     # Path goal point offset in follow lane 
-DECELERATE_OFFSET               = 0.1     # Path goal point offset in decelerate state 
+FOLLOW_LANE_OFFSET              = 0.1     # Path goal point offset in follow lane  (m)
+DECELERATE_OFFSET               = 0.1     # Path goal point offset in decelerate state (m) 
 
 # normal variables
-BP_LOOKAHEAD_TIME               = 1.0     # Lookahead creating distance 
-INTERSECTION_APPROACH_DISTANCE  = 10      # This is used to chnage state machine to intersection state
-WALKER_THRESHOLD                = 0.1     # This is used to identify dynamic walkers
-HEADING_CHECK_LOOKAHEAD         = 10      # Lookahead to identify the turning direction in junctions 
-JUNCTION_HEADING_CHECK_ANGLE    = 30      # To identify the turning direction       
-DIST_WALKER_INTERSECTION        = 9       # Dont decrease this unless you make the velocity planner correct
-WALKER_DIST_RANGE_BASE          = 5       # Minimum walker detection distance in unsrtuctured 
+BP_LOOKAHEAD_TIME               = 1.0     # Lookahead creating time (s) 
+INTERSECTION_APPROACH_DISTANCE  = 10      # This is used to chnage state machine to intersection state (m)
+WALKER_THRESHOLD                = 0.1     # This is used to identify dynamic walkers (m/s)
+HEADING_CHECK_LOOKAHEAD         = 10      # Lookahead to identify the turning direction in junctions (m)
+JUNCTION_HEADING_CHECK_ANGLE    = 30      # To identify the turning direction (degrees)     
+GET_ACTOR_RANGE                 = 40      # Radius to filter actors
+DIST_WALKER_INTERSECTION        = 9       # Dont decrease this unless you make the velocity planner correct (m)
+WALKER_DIST_RANGE_BASE          = 5       # Minimum walker detection distance in unsrtuctured  (m)
 
 
 
 class BehaviouralPlanner:
-    def __init__(self, lp, waypoints,environment, world,HOP_RESOLUTION,world_map,ego_vehicle):
-        self._lp            = lp
-        self._waypoints     = waypoints
-        self._goal_state    = [0.0, 0.0, 0.0]
-        self._goal_index    = 0
-        self._environment   = environment
-        self._hop_resolution= HOP_RESOLUTION
-        self._world         = world
-        self._state         = FOLLOW_LANE
-        self._lookahead     = BP_LOOKAHEAD_BASE
-        self._prev_lookahead = BP_LOOKAHEAD_BASE
-        self.paths = None
-        self._goal_state_next =None
-        self.min_collision = None
-        self._collission_index = 48
-        self._collission_actor = None
-        self._map = world_map
-        self._not_passed = False
-        self.ego_vehicle = ego_vehicle
-        self.started_decel = False
-        self.stop_threshold = 0.01
-        self.num_layers = None
-        self.first_time = False
-        self.box_points = None
-        self._junc_bx_pts = None
-        self.traffic_lights = self._environment.lights_list
-        self._last_traffic_light =None
-        self._proximity_threshold = 10.0 
-        self.stopped = None
-        self._color_light_state = None
-        self._intersection_state = None  # this is to print intersection state. check only
-        self._need_to_stop = None    # check only
-        self._previous_state=None
-        self._best_index_from_decelerate = None
-        self._open_loop_speed = None
+    def __init__(self, world, world_map, ego_vehicle, environment, lp, waypoints, HOP_RESOLUTION):
+        """
+        param   : world             : CARLA world
+                : world_map         : CARLA world map
+                : ego_vehicle        
+                : environment       : Class to get the information about the actors around the ego-vehicle 
+                                      within a radius
+                : lp                : Initialized local planner in the main module
+                : waypoints         : Numpy array containing global waypoints of the path of ego-vehicle
+                                      Length and speed in m and m/s.
+                                      format - numpy.ndarray[[x coordinate,y coordinate, ego-vehicle speed] - waypoint 0
+                                                             [x coordinate,y coordinate, ego-vehicle speed] - waypoint 1
+                                                                        :                   :
+                                                                        :                   :
+                                                             [x coordinate,y coordinate, ego-vehicle speed] - waypoint n-2
+                                                             [x coordinate,y coordinate, ego-vehicle speed]] - waypoint n-1  
+                : HOP_RESOLUTION    : Distance between two waypoints (m)
 
+        """
+        self._world                         = world
+        self._map                           = world_map
+        self._ego_vehicle                   = ego_vehicle
+        self._environment                   = environment
+        self._lp                            = lp
+        self._waypoints                     = waypoints
+        self._hop_resolution                = HOP_RESOLUTION
+
+        self._state                         = FOLLOW_LANE           # State of the ego-vehicle
+        self._previous_state                = None                  # Previous state of the ego-vehicle
+
+        self._lookahead                     = BP_LOOKAHEAD_BASE     # Paths making lookahead of ego-vehicle 
+        self._prev_lookahead                = BP_LOOKAHEAD_BASE     # Paths making lookahead of ego-vehicle in previous state
+        self._paths                          = None                  # Lattice Paths of ego vehicle. 
+                                                                    # Numpy array containing the paths provide by the local planner.
+                                                                    # numpy.ndarray[[ [path1_x1,path1_x2,.....,path1_xn],    (x)
+                                                                    #                 [path1_y1,path1_y2,.....,path1_yn],    (y)    Path1
+                                                                    #                 [path1_h1,path1_h2,.....,path1_hn] ]  (teta)    :
+                                                                    #                                 :                                :
+                                                                    #                                 :                                :
+                                                                    #                 [ [pathN_x1,pathN_x2,.....,pathN_xn],    (x)      :
+                                                                    #                 [pathN_y1,pathN_y2,.....,pathN_yn],    (y)    PathN
+                                                                    #                 [pathN_h1,pathN_h2,.....,pathN_hn] ]] (teta) 
+
+        self._goal_index                    = 0                     # Index of goal waypoint in global waypoints array   
+        self._goal_state                    = [0.0, 0.0, 0.0]       # [x coordinate,y coordinate, ego-vehicle speed]  of the goal point
+        self._goal_state_next               = None                  # [x coordinate,y coordinate, ego-vehicle speed]  of the next goal point
+        self._collission_index              = 48                    # Least local collision index from all the paths in paths array.
+        self._collission_actor              = None                  # Collision actor according to state
+        self._not_passed                    = False                 # Flag to check whether interesection is fully passed or not
+        self._started_decel                 = False                 # Flag to check whether first time of deceleration or not
+        self.stop_threshold                 = 0.01                  # Ego vehicle goes to STAY_STOPPED state from DECELERATE_TO_STOP state when the speed is less than this threshold
+        self.num_layers                     = None                  # Number of path layers in local planner
+        self._first_time                    = False                 # Flag to make high on when entering the intersection and to make low otherwise
+        self._triangle_points               = None                  # Get the relevant traingle points to check pedestrians in intersections in structured environment           
+        self._junc_bx_pts                   = None                  # Get the relevant box points of an intersections                             
+        self._traffic_lights                = self._environment.lights_list # All the traffic lights in CARLA world       
+        self._proximity_threshold           = 10.0                  # Max distance from a reference object
+        self._stopped                       = None                  # Flag to check whether stopped at a intersection or not
+        self._color_light_state             = None                  # State of color light, red or not
+        self._intersection_state            = None                  # this is to print intersection state. check only
+        self._need_to_stop                  = None                  # check only
+        self._best_index_from_decelerate    = None                  # Index of the best feasible path in DECELERATE_TO_STOP state                      
+        self._open_loop_speed               = None
+
+        self._last_traffic_light            = None #Not used
+
+
+
+    ######################################################
+    #####              State Machine                ######
+    ######################################################
 
     def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed):
+        """
+        param   : ego_state         : List containing location and heading of ego- vehicle
+                                      [x coordinate of ego vehicle (m), y coordinate of ego vehicle (m), yaw of ego vehicle (degrees)]
+                : current timestamp : Time difference between current time and simulation starting time
+                : prev_timestamp    : Time difference between time in previous loop and simulation starting time 
+                : current_speed     : Current speed of ego-vehicle 
+
+        return  : local_waypoints   : List which contains the local path as well as the speed to be tracked by the controller (global frame).
+                                      Length and speed in m and m/s.
+                                        Format: [[x0, y0, v0],
+                                                [x1, y1, v1],
+                                                ...,
+                                                [xm, ym, vm]]
+                                        example:
+                                            local_waypoints[2][1]: 
+                                            returns the 3rd point's y position in the local path
+
+                                            local_waypoints[5]:
+                                            returns [x5, y5, v5] (6th point in the local path)
+        """
+
         if(self._collission_actor!=None):
-                # draw_bound_box_actor(self._collission_actor,self._world,255,0,0)
-                pass
-        
+            draw_bound_box_actor(self._collission_actor,self._world,255,0,0)
+        if(ONLY_STATE_DEBUG):
+            print(dict_[self._state])
+
         open_loop_speed = self._lp._velocity_planner.get_open_loop_speed(current_timestamp - prev_timestamp)
         self._open_loop_speed = open_loop_speed
+        self._lookahead = BP_LOOKAHEAD_BASE + BP_LOOKAHEAD_TIME * open_loop_speed 
 
-        self._lookahead= BP_LOOKAHEAD_BASE + BP_LOOKAHEAD_TIME * open_loop_speed 
-        
-        # vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,y_vec,walkers_y = self._environment.get_actors(max(40,self._lookahead),self.paths,self._lp._num_paths//2,  self._intersection_state)
-        vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,y_vec,walkers_y,walkers_x = self._environment.get_actors(40,self.paths,self._lp._num_paths//2,  self._intersection_state)
-        
-        emergency_loc = 1* y_vec
-        #print(emergency_loc)
-        # loc=carla.Location(x=emergency_loc[0]+ego_state[0] , y=emergency_loc[1]+ego_state[1],z=0)
-        # self._world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=0.1,persistent_lines=True)
-        # emergency_array= np.array([[[0,],[emergency_loc[1],emergency_loc[1]],[0,0]]])
-        emergency_array= np.array([[[emergency_loc[0]+ego_state[0],emergency_loc[0]+ego_state[0]],
-                                    [emergency_loc[1]+ego_state[1],emergency_loc[1]+ego_state[1]],
-                                    [0+ego_state[2],0+ego_state[2]]]])
-        # print(emergency_array)
-
-                     
-        
-        #,self._color_light_state ,self._intersection_state)
-        
+        ################## Get list of actors seperately #########################################
+        vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x = self._environment.get_actors(GET_ACTOR_RANGE,self._paths,self._lp._num_paths//2,  self._intersection_state)
         vehicles_static = list(vehicles_static)
         vehicles_dynamic = list(vehicles_dynamic)
         walkers = list(walkers)
-
-        if(ONLY_STATE_DEBUG):
-            print(dict_[self._state])
-        # print(self.stopped)
         obstacle_actors = vehicles_static + vehicles_dynamic 
         all_obstacle_actors = vehicles_static + vehicles_dynamic + walkers 
-        # print(obstacle_actors)
-        # draw_bound_box(obstacle_actors,self._world)
 
-        #print(dict_[self._state])
-        
-        if(closest_vehicle!=None):
-
-            #checking lane
-            # ego_waypoint = self._map.get_waypoint(self.ego_vehicle.get_transform().location,project_to_road=True)
-            # ego_lane = ego_waypoint.lane_id
-            # lead_waypoint = self._map.get_waypoint(closest_vehicle.get_transform().location,project_to_road=True)
-            # lead_lane = lead_waypoint.lane_id
-            # print("ego",ego_lane)    
-            # print("lead",lead_lane)    
-
-            transform = closest_vehicle.get_transform()
-            bounding_box = closest_vehicle.bounding_box
-            bounding_box.location += transform.location
-            #world.debug.draw_box(bounding_box, transform.rotation,life_time=-1.0000, persistent_lines=True)
-            # self._world.debug.draw_box(bounding_box,transform.rotation,1, carla.Color(255,0,0,0),0.001)
+        # if(closest_vehicle!=None):
+        #     ######checking lane
+        #     ego_waypoint = self._map.get_waypoint(self._ego_vehicle.get_transform().location,project_to_road=True)
+        #     ego_lane = ego_waypoint.lane_id
+        #     lead_waypoint = self._map.get_waypoint(closest_vehicle.get_transform().location,project_to_road=True)
+        #     lead_lane = lead_waypoint.lane_id
+        #     print("ego",ego_lane)    
+        #     print("lead",lead_lane)    
+        #     draw_bound_box_actor(closest_vehicle,self._world,0,0,0)
+        #     self._world.debug.draw_box(bounding_box,transform.rotation,1, carla.Color(255,0,0,0),0.001)
         # else:
         #     print("No lead vehicle")
+
+        ###########################################################################################
+
+
+
+        ########################## Making the emergency stop array ################################
+        """
+        Have considered only one meter distance from the centre of ego-vehicle to the 
+        heading direction and have collision checked with actors. Coordinates are duplicated 
+        in emergency_array as the collision checker returns 1 when a collision
+        not detected and 0 when a collision is detected
+
+        """
+        emergency_loc = 1* y_vec
+        emergency_array= np.array([[[emergency_loc[0]+ego_state[0],emergency_loc[0]+ego_state[0]],
+                                    [emergency_loc[1]+ego_state[1],emergency_loc[1]+ego_state[1]],
+                                    [0+ego_state[2],0+ego_state[2]]]])
+        ###########################################################################################
+
 
         if (self._state   == FOLLOW_LANE):
             self._previous_state = self._state
             
             # First, find the closest index to the ego vehicle.
             closest_len, closest_index = self.get_closest_index(ego_state)
+
             # Next, find the goal index that lies within the lookahead distance
             # along the waypoints.
+
             goal_index = self.get_goal_index(ego_state, closest_len, closest_index)
-
-
-            # print(goal_index)
             self._goal_index = goal_index
             self._goal_state = self._waypoints[goal_index]
             self.num_layers = (goal_index - closest_index)//5
@@ -224,7 +271,7 @@ class BehaviouralPlanner:
             ego_section = ego_waypoint.section_id
 
 
-            # green_light = not (self._is_light_red(self.traffic_lights,ego_location, ego_waypoint,goal_waypoint ,ego_state))
+            # green_light = not (self._is_light_red(self._traffic_lights,ego_location, ego_waypoint,goal_waypoint ,ego_state))
 
             # print(green_light)
             # # print(self.is_approaching_intersection(self._waypoints,closest_index,ego_state))
@@ -329,7 +376,7 @@ class BehaviouralPlanner:
             debug_print(paths,self._world,best_index)
             local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
             
-            self.paths = paths
+            self._paths = paths
             # print(self._intersection_state)
             # self._collission_index = min_collision
 
@@ -341,7 +388,7 @@ class BehaviouralPlanner:
             
             # print()
             # vehicles_static, vehicles_dynamic, walkers,closest_vehicle,x_vec,walkers_y = self._environment.get_actors(max(20,self._lookahead))
-            # print(self._collission_index,self.started_decel)
+            # print(self._collission_index,self._started_decel)
             # self._lookahead = None####update this
             # First, find the closest index to the ego vehicle.
             closest_len, closest_index = self.get_closest_index(ego_state)
@@ -402,7 +449,7 @@ class BehaviouralPlanner:
                 pass
             self._intersection_state = intersection
 
-            red_light = self._is_light_red(self.traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)
+            red_light = self._is_light_red(self._traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)
             # print("before",red_light)
             
             self._color_light_state = red_light
@@ -499,11 +546,11 @@ class BehaviouralPlanner:
                 # self._collission_index = min_collision
             # raise Exception
 
-            if(not self.started_decel):
+            if(not self._started_decel):
 
                 # print(min_collision)
-                self.paths = paths
-                self.started_decel = True
+                self._paths = paths
+                self._started_decel = True
 
                 # debug_print(paths,self._world,best_index,life = 1000)
                 # raise Exception
@@ -561,7 +608,7 @@ class BehaviouralPlanner:
             ego_section = ego_waypoint.section_id
 
 
-            # green_light = not (self._is_light_red(self.traffic_lights,ego_location, ego_waypoint,goal_waypoint ,ego_state))
+            # green_light = not (self._is_light_red(self._traffic_lights,ego_location, ego_waypoint,goal_waypoint ,ego_state))
 
             # print(green_light)
             # print(self.is_approaching_intersection(self._waypoints,closest_index,ego_state))
@@ -578,7 +625,7 @@ class BehaviouralPlanner:
             if(col_walker!=None):
                 # draw_bound_box_actor(col_walker,self._world,255,255,255)
                 pass
-            red_light = self._is_light_red(self.traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)
+            red_light = self._is_light_red(self._traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)
             self._color_light_state = red_light
             self._intersection_state = intersection
             need_to_stop,self._intersection_state = self.need_to_stop(closest_vehicle,closest_index,ego_location,ego_waypoint,goal_waypoint,ego_state,min_collision,min_collision_actor)
@@ -610,7 +657,7 @@ class BehaviouralPlanner:
                 for i in range(1000000):          # this is to wait in intersections
                     c=c+i
                 print("Delay")
-                self.stopped = True
+                self._stopped = True
                 self._state   = INTERSECTION
                 
             elif((self._intersection_state and red_light)):
@@ -685,7 +732,7 @@ class BehaviouralPlanner:
             debug_print(paths,self._world,best_index)
             local_waypoints = self._lp._velocity_planner.stop_profile(best_path)
 
-            self.paths = paths
+            self._paths = paths
             # self._collission_index = min_collision
 
             return local_waypoints
@@ -747,7 +794,7 @@ class BehaviouralPlanner:
             ego_section = ego_waypoint.section_id
 
 
-            # green_light = not (self._is_light_red(self.traffic_lights,ego_location, ego_waypoint,goal_waypoint ,ego_state))
+            # green_light = not (self._is_light_red(self._traffic_lights,ego_location, ego_waypoint,goal_waypoint ,ego_state))
 
             # print(green_light)
             # # print(self.is_approaching_intersection(self._waypoints,closest_index,ego_state))
@@ -766,7 +813,7 @@ class BehaviouralPlanner:
                 # draw_bound_box_actor(col_walker,self._world,255,255,255)
                 pass
 
-            red_light = self._is_light_red(self.traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)
+            red_light = self._is_light_red(self._traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)
             need_to_stop,intersection = self.need_to_stop(closest_vehicle,closest_index,ego_location,ego_waypoint,goal_waypoint,ego_state,min_collision,min_collision_actor)
             self._color_light_state = red_light
             self._intersection_state = intersection
@@ -778,14 +825,14 @@ class BehaviouralPlanner:
             # print(self._intersection_state,box_points)
             # print(walker_collide,col_walker,min_collision )
 
-            # print("Pedestrian = ",walker_collide,"lane path blocked = ",self.lane_paths_blocked(best_index)," Do we need to stop = ",self._need_to_stop," Is intersection = ",self._intersection_state," stopped = ",self.stopped,"color light = ",red_light,dict_[self._previous_state])
+            # print("Pedestrian = ",walker_collide,"lane path blocked = ",self.lane_paths_blocked(best_index)," Do we need to stop = ",self._need_to_stop," Is intersection = ",self._intersection_state," stopped = ",self._stopped,"color light = ",red_light,dict_[self._previous_state])
             lane_path_blcked = self.lane_paths_blocked(best_index)
             if (DEBUG_STATE_MACHINE):
                 print("{:<20} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25}".format(   "Pedestrian={}".format(walker_collide), \
                                                                                                     "LanePathBlocked={}".format(lane_path_blcked), \
                                                                                                     "DoWeNeedToStop={}".format(self._need_to_stop), \
                                                                                                     "IsIntersection={}".format(self._intersection_state), \
-                                                                                                    "Stopped={}".format(self.stopped), \
+                                                                                                    "Stopped={}".format(self._stopped), \
                                                                                                     "ColorLight={}".format(red_light), \
                                                                                                     "{}".format('-'*20), \
                                                                                                     "{}".format(dict_[self._previous_state])  ))
@@ -859,7 +906,7 @@ class BehaviouralPlanner:
                 self._collission_actor = closest_vehicle
                 self._collission_index = min_collision
 
-            elif(self.stopped):
+            elif(self._stopped):
                 self._state   = INTERSECTION
                 self._collission_actor = closest_vehicle
                 self._collission_index = min_collision
@@ -888,7 +935,7 @@ class BehaviouralPlanner:
             debug_print(paths,self._world,best_index)
             local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
 
-            self.paths = paths
+            self._paths = paths
             # self._collission_index = min_collision
 
             return local_waypoints
@@ -952,7 +999,7 @@ class BehaviouralPlanner:
             ego_section = ego_waypoint.section_id
 
 
-            # green_light = not (self._is_light_red(self.traffic_lights,ego_location, ego_waypoint,goal_waypoint ,ego_state))
+            # green_light = not (self._is_light_red(self._traffic_lights,ego_location, ego_waypoint,goal_waypoint ,ego_state))
 
             # print(green_light)
             # # print(self.is_approaching_intersection(self._waypoints,closest_index,ego_state))
@@ -1102,7 +1149,7 @@ class BehaviouralPlanner:
                 debug_print(paths,self._world,best_index)
                 local_waypoints = self._lp._velocity_planner.follow_profile(best_path, open_loop_speed, self._goal_state[2],lead_vehicle_state)
 
-                self.paths = paths
+                self._paths = paths
                 # self._collission_index = min_collision
             return local_waypoints
         
@@ -1110,6 +1157,37 @@ class BehaviouralPlanner:
             
             # raise Exception
             self._state = STAY_STOPPED
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
         
@@ -1347,9 +1425,9 @@ class BehaviouralPlanner:
             # return True
 
         else:
-            self.first_time = False
+            self._first_time = False
             intersection = False
-            self.stopped = False
+            self._stopped = False
         # print(intersection)
             # return False
                 # return True
@@ -1357,14 +1435,14 @@ class BehaviouralPlanner:
                 # return True
             # else:
             #     return False
-        if(intersection and not self.first_time):
+        if(intersection and not self._first_time):
             # junc_points = misc.print_junction(self._world,check_waypoint)
             # lines = misc.get_line(junc_points)
 
             # inter_junc_points = misc.solve_lines(lines)
             # box_points = misc.get_box(self._map,inter_junc_points)
-            # self._junc_bx_pts = box_pointsqqqqqqqqqqqqqqq
-            # self.box_points = self.get_shape(idx,box_points,ego_state)
+            # self._junc_bx_pts = box_points
+            # self._triangle_points = self.get_shape(idx,box_points,ego_state)
 
 
             # for i in range(box_points.shape[0]):
@@ -1374,14 +1452,14 @@ class BehaviouralPlanner:
 
 
             # raise Exception
-            self.first_time = True
+            self._first_time = True
 
-            return intersection,self.box_points,self._junc_bx_pts
+            return intersection,self._triangle_points,self._junc_bx_pts
         else:
             if(not intersection):
-                self.box_points = None
+                self._box_points = None
                 self._junc_bx_pts = None
-            return intersection,self.box_points,  self._junc_bx_pts
+            return intersection,self._box_points,  self._junc_bx_pts
         
         # self._waypoints[]
 
@@ -1399,11 +1477,11 @@ class BehaviouralPlanner:
         if(self._collission_actor != None):
             #print("from 1")
             dist_closest = np.sqrt(np.sum(np.square(np.array([self._collission_actor.get_location().x,self._collission_actor.get_location().y]) \
-                             - np.array([self.ego_vehicle.get_location().x,self.ego_vehicle.get_location().y]))))
+                             - np.array([self._ego_vehicle.get_location().x,self._ego_vehicle.get_location().y]))))
 
              
             # dist_to_goal_state = np.sqrt(np.sum(np.square(np.array([self._goal_state[0],self._goal_state[1]]) \
-            #                  - np.array([self.ego_vehicle.get_location().x,self.ego_vehicle.get_location().y]))))
+            #                  - np.array([self._ego_vehicle.get_location().x,self._ego_vehicle.get_location().y]))))
 
 
             #print("*******************",dist_closest,self._prev_lookahead,dist_closest< self._prev_lookahead)
@@ -1429,7 +1507,7 @@ class BehaviouralPlanner:
             return False
 
     def is_ego_less(self):
-        velocity = self.ego_vehicle.get_velocity()
+        velocity = self._ego_vehicle.get_velocity()
         if(np.linalg.norm(np.array([velocity.x,velocity.y,velocity.z]))<self.stop_threshold):
             return True
 
@@ -1871,7 +1949,7 @@ class BehaviouralPlanner:
         # print(min_dist)
         # if (lead_vehicle!=None):
         #     dist_lead = np.sqrt(np.sum(np.square(np.array([lead_vehicle.get_transform().location.x,lead_vehicle.get_transform().location.y]) \
-        #                      - np.array([self.ego_vehicle.get_transform().location.x,self.ego_vehicle.get_transform().location.y]))))
+        #                      - np.array([self._ego_vehicle.get_transform().location.x,self._ego_vehicle.get_transform().location.y]))))
         # else:
         #     dist_lead = 0
         
@@ -1881,7 +1959,7 @@ class BehaviouralPlanner:
 
                 #lead_vehicle = lane_vehicles[0]
                 lead_velocity = lead_vehicle.get_velocity()
-                ego_velocity  = self.ego_vehicle.get_velocity()
+                ego_velocity  = self._ego_vehicle.get_velocity()
 
                 ego_velocity = np.array([ego_velocity.x,ego_velocity.y,ego_velocity.z])
                 lead_velocity = np.array([lead_velocity.x,lead_velocity.y,lead_velocity.z])
@@ -1903,7 +1981,7 @@ class BehaviouralPlanner:
 
 
         elif(is_intersection):
-            green_light = not self._is_light_red(self.traffic_lights,ego_location, ego_vehicle_waypoint,goal_waypoint ,ego_state)
+            green_light = not self._is_light_red(self._traffic_lights,ego_location, ego_vehicle_waypoint,goal_waypoint ,ego_state)
 
             if(type(green_light)!= type("str")):
                 #print(green_light)
@@ -1914,7 +1992,7 @@ class BehaviouralPlanner:
                     # stp = not stop
                     return True,is_intersection
             else:
-                if(self.stopped):
+                if(self._stopped):
                     #print("stopped")
                     return False,is_intersection
                 else:
