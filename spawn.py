@@ -14,8 +14,9 @@ import sys
 import time
 import numpy as np
 
+
 try:
-    sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
 except IndexError:
     pass
 
@@ -215,7 +216,7 @@ def spawn(num_vehicles=0,num_walkers=0,client=None,SPAWN_POINT=0,host='127.0.0.1
 
     for vehi in vehicles_list:
         # traffic_manager.collision_detection(player_actor,world.get_actor(vehi),True)
-        traffic_manager.distance_to_leading_vehicle(world.get_actor(vehi),10)
+        traffic_manager.distance_to_leading_vehicle(world.get_actor(vehi),2)
     # print(vehicles_list)
     # -------------
     # Spawn Walkers
@@ -297,7 +298,7 @@ def spawn(num_vehicles=0,num_walkers=0,client=None,SPAWN_POINT=0,host='127.0.0.1
     print('spawned %d vehicles and %d walkers, press Ctrl+C to exit.' % (len(vehicles_list), len(walkers_list)))
 
     # example of how to use parameters
-    traffic_manager.global_percentage_speed_difference(30.0)
+    traffic_manager.global_percentage_speed_difference(10.0)
 
     # return player_actor
         

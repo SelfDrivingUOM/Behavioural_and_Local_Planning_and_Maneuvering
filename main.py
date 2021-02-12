@@ -44,8 +44,8 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
-NO_VEHICLES =  0
-NO_WALKERS  =  100
+NO_VEHICLES =  200
+NO_WALKERS  =  0
 
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
@@ -64,23 +64,23 @@ import sys
 import time
 import copy
 # ==============================================================================
-# -- Find CARLA module ---------------------------------------------------------
+# -- Find CARLA module ----------------------------------------------------------
 # ==============================================================================
 try:
-    sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+
 except IndexError:
     pass
 
 if (NAVIGATION_SPAWN):
 
     try:
-        sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/')
-
+        sys.path.append('C:/Carla0.99/PythonAPI/carla')
     except IndexError:
         pass
 
     try:
-        sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/agents/navigation')
+        sys.path.append('C:/Carla0.99/PythonAPI/carla/agents/navigation')
 
     except IndexError:
         pass
