@@ -17,18 +17,18 @@ import matplotlib.pyplot as plt
 # -- find carla module ---------------------------------------------------------
 # ==============================================================================
 try:
-    sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
 except IndexError:
     pass
 
 try:
-    sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/')
+    sys.path.append('C:/Carla0.99/PythonAPI/carla/')
 
 except IndexError:
     pass
 
 try:
-    sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/agents/navigation')
+    sys.path.append('C:/Carla0.99/PythonAPI/carla/agents/navigation')
 
 except IndexError:
     pass
