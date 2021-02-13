@@ -12,7 +12,6 @@ import math
 
 import numpy as np
 import hull
-# import misc
 import glob
 import os
 import sys
