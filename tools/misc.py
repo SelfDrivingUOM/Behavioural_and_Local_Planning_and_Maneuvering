@@ -19,15 +19,10 @@ import sys
 import time
 
 try:
-    sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
 except IndexError:
     pass
 
-try:
-    sys.path.append('/home/selfdriving/yasintha/Path_planner_6/')
-
-except IndexError:
-    pass
 
 
 import carla
