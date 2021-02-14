@@ -11,28 +11,46 @@ import math
 import numpy as np
 from gekko import GEKKO
 import matplotlib.pyplot as plt
+from os_carla import WINDOWS
 
 
 # ==============================================================================
 # -- find carla module ---------------------------------------------------------
 # ==============================================================================
-try:
-    sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
-except IndexError:
-    pass
+if WINDOWS:
+    try:
+        sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+    except IndexError:
+        pass
 
-try:
-    sys.path.append('C:/Carla0.99/PythonAPI/carla/')
+    try:
+        sys.path.append('C:/Carla0.99/PythonAPI/carla/')
 
-except IndexError:
-    pass
+    except IndexError:
+        pass
 
-try:
-    sys.path.append('C:/Carla0.99/PythonAPI/carla/agents/navigation')
+    try:
+        sys.path.append('C:/Carla0.99/PythonAPI/carla/agents/navigation')
 
-except IndexError:
-    pass
+    except IndexError:
+        pass
+else:
+    try:
+        sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    except IndexError:
+        pass
 
+    try:
+        sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/')
+
+    except IndexError:
+        pass
+
+    try:
+        sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/agents/navigation')
+
+    except IndexError:
+        pass
 
 
 # ==============================================================================

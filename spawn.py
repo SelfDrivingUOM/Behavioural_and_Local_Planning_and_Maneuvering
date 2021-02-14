@@ -13,12 +13,18 @@ import os
 import sys
 import time
 import numpy as np
+from os_carla import WINDOWS
 
-
-try:
-    sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
-except IndexError:
-    pass
+if WINDOWS:
+    try:
+        sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+    except IndexError:
+        pass
+else:
+    try:
+        sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    except IndexError:
+        pass
 
 import carla
 import argparse

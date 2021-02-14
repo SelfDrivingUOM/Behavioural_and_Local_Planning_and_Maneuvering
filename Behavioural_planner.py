@@ -1461,9 +1461,9 @@ class BehaviouralPlanner:
 
             
                 # print("from 1")
-            elif (best_index == None):
-                    #print("Lane path debug is working congratulations!!!!!")
-                    return True
+            # elif (best_index == None):
+            #         print("Lane path debug is working congratulations!!!!!")
+            #         return True
             else:
                 return False
                 

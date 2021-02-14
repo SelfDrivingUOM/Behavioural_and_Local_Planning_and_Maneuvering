@@ -1,5 +1,6 @@
 from __future__ import print_function
 from tools import misc
+from os_carla import WINDOWS
 
 ITER_FOR_SIM_TIMESTEP  = 100     # no. iterations to compute approx sim timestep
 WAIT_TIME_BEFORE_START = 0       # game seconds (time before controller start)
@@ -44,7 +45,7 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
-NO_VEHICLES =  200
+NO_VEHICLES =  0
 NO_WALKERS  =  0
 
 
@@ -54,9 +55,9 @@ NUMBER_OF_STUDENT_IN_COLUMNS = 5
 SPAWN_POINT = 26  #36 ##20/40-best
 END_POINT   = 0     #119
 
-LEAD_SPAWN  =False
+LEAD_SPAWN  = True
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  True
+WALKER_SPAWN =  False
 
 import glob
 import os
@@ -66,24 +67,46 @@ import copy
 # ==============================================================================
 # -- Find CARLA module ----------------------------------------------------------
 # ==============================================================================
-try:
-    sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
-
-except IndexError:
-    pass
-
-if (NAVIGATION_SPAWN):
+if WINDOWS:
 
     try:
-        sys.path.append('C:/Carla0.99/PythonAPI/carla')
+        sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+
     except IndexError:
         pass
 
-    try:
-        sys.path.append('C:/Carla0.99/PythonAPI/carla/agents/navigation')
+    if (NAVIGATION_SPAWN):
 
+        try:
+            sys.path.append('C:/Carla0.99/PythonAPI/carla')
+        except IndexError:
+            pass
+
+        try:
+            sys.path.append('C:/Carla0.99/PythonAPI/carla/agents/navigation')
+
+        except IndexError:
+            pass
+else:
+    try:
+        sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
     except IndexError:
         pass
+
+    if (NAVIGATION_SPAWN):
+
+        try:
+            sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/')
+
+        except IndexError:
+            pass
+
+        try:
+            sys.path.append('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/agents/navigation')
+
+        except IndexError:
+            pass
+
 
 
 # ==============================================================================
