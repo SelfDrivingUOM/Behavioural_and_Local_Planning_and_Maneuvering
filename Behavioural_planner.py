@@ -267,9 +267,6 @@ class BehaviouralPlanner:
             # Check for walkers
             walker_collide,col_walker,min_collision = self.check_walkers(self._map, walkers, ego_state, ego_lane, paths, best_index,\
                                                         x_vec, min_collision, walkers_y, walkers_x, mid_path_len, intersection, triangle_points, junc_bx_pts)
-            # Draw the collision walker
-            if(col_walker!=None):
-                draw_bound_box_actor(col_walker,self._world,0,255,0)
             
              # Check whether the ego vehicle needs to stop
             need_to_stop= self.need_to_stop(closest_vehicle,closest_index,ego_location,ego_waypoint,goal_waypoint,ego_state,min_collision,min_collision_actor,intersection)
@@ -332,7 +329,7 @@ class BehaviouralPlanner:
             
             best_path = paths[best_index]
             self._paths = paths
-            # debug_print(paths,self._world,best_index)
+            debug_print(paths,self._world,best_index)
 
             local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
             return local_waypoints
@@ -368,12 +365,13 @@ class BehaviouralPlanner:
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
             self._best_index_from_decelerate = best_index
             best_index = self._lp._num_paths//2
-            # debug_print(paths,self._world,best_index)
+            debug_print(paths,self._world,best_index)
 
             intersection,triangle_points, junc_bx_pts = self.is_approaching_intersection(self._waypoints,max(self._collission_index,1),ego_state, ego_waypoint)
             self._intersection_state = intersection
 
             walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state, ego_lane, paths,best_index,x_vec,min_collision,walkers_y,walkers_x,mid_path_len,intersection,triangle_points,junc_bx_pts)
+            
             local_waypoints = self._lp._velocity_planner.decelerate_profile(paths[best_index],current_speed,min_collision)
 
             red_light = self.is_light_red_or_no_light(self._traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)  
@@ -543,7 +541,7 @@ class BehaviouralPlanner:
             
             best_path = paths[best_index]
             self._paths = paths
-            # debug_print(paths,self._world,best_index)
+            debug_print(paths,self._world,best_index)
 
             local_waypoints = self._lp._velocity_planner.stop_profile(best_path)
             return local_waypoints
@@ -656,7 +654,7 @@ class BehaviouralPlanner:
             
             best_path = paths[best_index]
             self._paths = paths
-            # debug_print(paths,self._world,best_index)
+            debug_print(paths,self._world,best_index)
 
             local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
             return local_waypoints
@@ -762,7 +760,7 @@ class BehaviouralPlanner:
                 
                 best_path = paths[best_index]
                 self._paths = paths            
-                # debug_print(paths,self._world,best_index)
+                debug_print(paths,self._world,best_index)
 
                 local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
 
@@ -776,7 +774,7 @@ class BehaviouralPlanner:
 
                 best_path = paths[best_index]
                 self._paths = paths
-                # debug_print(paths,self._world,best_index)
+                debug_print(paths,self._world,best_index)
 
                 local_waypoints = self._lp._velocity_planner.follow_profile(best_path, open_loop_speed, self._goal_state[2],lead_vehicle_state)
 

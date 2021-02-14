@@ -55,9 +55,9 @@ NUMBER_OF_STUDENT_IN_COLUMNS = 5
 SPAWN_POINT = 26  #36 ##20/40-best
 END_POINT   = 0     #119
 
-LEAD_SPAWN  = True
+LEAD_SPAWN  = False
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  False
+WALKER_SPAWN =  True
 
 import glob
 import os
