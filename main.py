@@ -27,7 +27,7 @@ PATH_SELECT_WEIGHT     = 10               #
 A_MAX                  = 5                # m/s^2
 SLOW_SPEED             = 0                # m/s
 STOP_LINE_BUFFER       = 1.5              # m
-LEAD_VEHICLE_SPEED     = 1
+LEAD_VEHICLE_SPEED     = 0                # m/s
 LEAD_VEHICLE_LOOKAHEAD = 20.0             # m
 LP_FREQUENCY_DIVISOR   = 1                # Frequency divisor tdo make the 
                                           # local planner operate at a lower
@@ -52,12 +52,14 @@ NO_WALKERS  =  0
 NUMBER_OF_STUDENT_IN_ROWS    = 10
 NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
-SPAWN_POINT = 26  #36 ##20/40-best
-END_POINT   = 0     #119
+SPAWN_POINT = 179#26  #36 ##20/40-best
+END_POINT   = 50#0     #119
 
-LEAD_SPAWN  = False
+LEAD_SPAWN  = True
+spawn_wpt_parked = 10#160
+
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  True
+WALKER_SPAWN =  False
 
 import glob
 import os
@@ -740,9 +742,9 @@ def game_loop(args):
         if (NAVIGATION_SPAWN):
             spawn_pts=world_map.get_spawn_points()
             # print(spawn_pts)
-            # for i in range (len(spawn_pts)):
-            #     p = world_map.get_spawn_points()[i]
-            #     world.world.debug.draw_string(p.location, str(i), draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+            for i in range (len(spawn_pts)):
+                p = world_map.get_spawn_points()[i]
+                world.world.debug.draw_string(p.location, str(i), draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
             
             '''spawn_pts.remove(start_point)
             for i in range (len(spawn_pts)):
@@ -775,23 +777,22 @@ def game_loop(args):
         #################################################
             
             
-            
         if (LEAD_SPAWN):    
             #spwaning a leading vehicle
-            x_lead=waypoints[10].transform.location.x
-            y_lead=waypoints[10].transform.location.y
+            x_lead=waypoints[spawn_wpt_parked].transform.location.x
+            y_lead=waypoints[spawn_wpt_parked].transform.location.y
             z_lead=1.843102
             #1.4203450679814286772
 
             blueprint_library = client.get_world().get_blueprint_library()
             my_car_bp = blueprint_library.filter("model3")[0]
 
-            lead_vehicle_tansform=carla.Transform(carla.Location(x=x_lead, y=y_lead, z=z_lead),carla.Rotation(yaw= waypoints[10].transform.rotation.yaw,pitch=waypoints[10].transform.rotation.pitch))
+            lead_vehicle_tansform=carla.Transform(carla.Location(x=x_lead, y=y_lead, z=z_lead),carla.Rotation(yaw= waypoints[spawn_wpt_parked].transform.rotation.yaw,pitch=waypoints[spawn_wpt_parked].transform.rotation.pitch))
             leading_vehicle=world.world.spawn_actor(my_car_bp, lead_vehicle_tansform)
             actor_list.append(leading_vehicle)
-            Agent=BasicAgent(leading_vehicle)
+            Agent=BasicAgent(leading_vehicle,LEAD_VEHICLE_SPEED)
             # Agent.set_destination(world.world,world_map.get_spawn_points()[50])
-            Agent.set_path(route[10:])
+            # Agent.set_path(route[spawn_wpt_parked:])
             start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())
 
 

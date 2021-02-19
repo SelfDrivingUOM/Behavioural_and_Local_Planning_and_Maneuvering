@@ -32,6 +32,7 @@ import tools.misc as misc
 import time 
 import carla
 
+from overtake_state import check_lane_closest, can_we_overtake
 
 ######################################################
 #####              GLOBAL VARIABLES             ######
@@ -49,12 +50,13 @@ EMERGENCY_STOP                  = 6
 dict_                           = ["FOLLOW_LANE","DECELERATE_TO_STOP","STAY_STOPPED","INTERSECTION","FOLLOW_LEAD_VEHICLE","OVERTAKE","EMERGENCY_STOP"]
 
 # important variables
-SPEED                           = 5      # Vehicle speed (m/s)
+SPEED                           = 5       # Vehicle speed (m/s)
 TRAFFIC_LIGHT_CHECK_DISTANCE    = 35      # Distance to detect traffic lights (m)
 BP_LOOKAHEAD_BASE               = 8.0     # Base distance to create lattice paths (m)
-FOLLOW_LEAD_RANGE               = 9       # Range to follow lead vehicles (m)
-DEBUG_STATE_MACHINE             = True    # Set this to true to see all function outputs in state machine. This is better for full debug
-ONLY_STATE_DEBUG                = False   # Set this to true to see current state of state machine
+OVERTAKE_LOOKAHEAD_BASE         = 1.5     # Base distance to create lattice paths (m) when in overtake state
+FOLLOW_LEAD_RANGE               = 15 #9   # Range to follow lead vehicles (m)
+DEBUG_STATE_MACHINE             = False   # Set this to true to see all function outputs in state machine. This is better for full debug
+ONLY_STATE_DEBUG                = True    # Set this to true to see current state of state machine
 UNSTRUCTURED                    = True    # Set this to True to behave according to the unstructured walkers
 FOLLOW_LANE_OFFSET              = 0.1     # Path goal point offset in follow lane  (m)
 DECELERATE_OFFSET               = 0.1     # Path goal point offset in decelerate state (m) 
@@ -138,9 +140,9 @@ class BehaviouralPlanner:
         self._need_to_stop                  = None                  # check only
         self._best_index_from_decelerate    = None                  # Index of the best feasible path in DECELERATE_TO_STOP state                      
         self._open_loop_speed               = None
-
-
-
+        self._overtakeLookahead             = 0
+        self._overtakeVeh                   = None
+        self._isOvertake                    = 0
 
     ######################################################
     #####              State Machine                ######
@@ -168,6 +170,9 @@ class BehaviouralPlanner:
                                             returns [x5, y5, v5] (6th point in the local path)
         """
 
+        # set map traffic lights green
+        # self.traffic_light_green(self._traffic_lights)
+
         if(self._collission_actor!=None):
             draw_bound_box_actor(self._collission_actor,self._world,255,0,0)
         if(ONLY_STATE_DEBUG):
@@ -175,15 +180,15 @@ class BehaviouralPlanner:
 
         open_loop_speed = self._lp._velocity_planner.get_open_loop_speed(current_timestamp - prev_timestamp)
         self._open_loop_speed = open_loop_speed
-        self._lookahead = BP_LOOKAHEAD_BASE + BP_LOOKAHEAD_TIME * open_loop_speed 
+        self._lookahead = (BP_LOOKAHEAD_BASE*(1-self._isOvertake)) + (OVERTAKE_LOOKAHEAD_BASE*self._isOvertake) + (BP_LOOKAHEAD_TIME * open_loop_speed)
 
         ################## Get list of actors seperately #########################################
         vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x = self._environment.get_actors(GET_ACTOR_RANGE,self._paths,self._lp._num_paths//2,  self._intersection_state)
         vehicles_static = list(vehicles_static)
         vehicles_dynamic = list(vehicles_dynamic)
         walkers = list(walkers)
-        obstacle_actors = vehicles_static + vehicles_dynamic 
-        all_obstacle_actors = vehicles_static + vehicles_dynamic + walkers 
+        obstacle_actors = vehicles_static + vehicles_dynamic
+        all_obstacle_actors = vehicles_static + vehicles_dynamic + walkers
 
         # if(closest_vehicle!=None):
         #     ######checking lane
@@ -278,7 +283,7 @@ class BehaviouralPlanner:
             if (DEBUG_STATE_MACHINE):
                 print("{:<20} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25}".format(   "Pedestrian={}".format(walker_collide), \
                                                                                                     "LanePathBlock={}".format(lane_path_blcked), \
-                                                                                                    "CanOvertake={}".format(self.can_overtake()), \
+                                                                                                    "CanOvertake={}".format(self.can_overtake(ego_state,vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x,current_speed)), \
                                                                                                     "DoWeNeedToStop={}".format(self._need_to_stop), \
                                                                                                     "IsIntersection={}".format(self._intersection_state), \
                                                                                                     "{}".format('-'*20), \
@@ -294,7 +299,7 @@ class BehaviouralPlanner:
                 self._collission_index = min_collision
  
             elif(lane_path_blcked):  
-                if(self.can_overtake()):
+                if(self.can_overtake(ego_state,vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x,current_speed)):
                     ##### FIX GOAL STATE PROPERLY
                     self._state   = OVERTAKE
                     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
@@ -660,8 +665,136 @@ class BehaviouralPlanner:
             return local_waypoints
 
         elif(self._state == OVERTAKE):
+            self._isOvertake = 1
+            self._overtakeLookahead = 0
             self._previous_state = self._state
-            pass
+
+            # Find the closest index to the ego vehicle.
+            closest_len, closest_index = self.get_closest_index(ego_state)
+            # Find the goal index that lies within the lookahead distance along the waypoints.
+            goal_index = self.get_goal_index(ego_state, closest_len, closest_index)
+            self._goal_index = goal_index
+            # Set the goal state by getting the location and giving derired speed
+            self._goal_state = self._waypoints[goal_index]
+            self._goal_state[2] = SPEED + 3 #get_speed(self._overtakeVeh)
+
+            self.num_layers = (goal_index - closest_index)//5
+        
+            goal_location = carla.Location(x=self._goal_state[0], y=self._goal_state[1], z= Z )
+            goal_waypoint = self._map.get_waypoint(goal_location,project_to_road=True)
+
+            if goal_index < (self._waypoints.shape[0]-1):
+                point_1 = self._waypoints[goal_index+1]
+                point_2 = self._waypoints[goal_index-1]
+
+            else: 
+                point_1 = self._waypoints[goal_index]
+                point_2 = self._waypoints[goal_index-2]
+
+            goal_state_set = self._lp.get_goal_state_set(point_1,point_2,self._goal_state, ego_state,0.8)
+
+            # Calculate planned paths in the local frame.
+            paths, path_validity,mid_path_len = self._lp.plan_paths(goal_state_set)
+
+            # Transform those paths back to the global frame.
+            paths = local_planner.transform_paths(paths, ego_state)
+            
+            ego_to_veh_vector = np.array([self._overtakeVeh.get_transform().location.x,self._overtakeVeh.get_transform().location.y]) - np.array(ego_state[:2])
+            y_dist = np.dot(y_vec,ego_to_veh_vector)
+            
+            if y_dist<-(3.5+self._ego_vehicle.bounding_box.extent.y+self._overtakeVeh.bounding_box.extent.y):
+                paths = paths[2:9]
+                self._overtakeLookahead = 0
+                closest_dist, _ = self.get_closest_index(ego_state)
+                if closest_dist<0.2:
+                    self._overtakeVeh = None
+                    self._isOvertake = 0
+                    self._state   = FOLLOW_LANE
+            else:
+                paths = paths[:3]
+            
+            
+
+            # Check collisions for every path
+            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, all_obstacle_actors,self._world)
+            emergency_collision_check_array,emergency_min_collision,emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world)
+
+            # Calculate the index of the best feasible path
+            best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
+
+            # # Check whether the ego vehicle is approaching an intersection
+            # intersection,triangle_points,junc_bx_pts = self.is_approaching_intersection(self._waypoints, closest_index, ego_state, ego_waypoint)
+            # self._intersection_state = intersection
+
+            # # Check for walkers
+            # walker_collide,col_walker,min_collision = self.check_walkers(self._map, walkers, ego_state, ego_lane, paths, best_index,\
+            #                                             x_vec, min_collision, walkers_y, walkers_x, mid_path_len, intersection, triangle_points, junc_bx_pts)
+            
+            #  # Check whether the ego vehicle needs to stop
+            # need_to_stop= self.need_to_stop(closest_vehicle,closest_index,ego_location,ego_waypoint,goal_waypoint,ego_state,min_collision,min_collision_actor,intersection)
+            # self._need_to_stop = need_to_stop    
+            
+            # # Check all paths of the ego vehicle is blocked or not
+            # lane_path_blcked = self.lane_paths_blocked(best_index)
+
+            # if (DEBUG_STATE_MACHINE):
+            #     print("{:<20} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25}".format(   "Pedestrian={}".format(walker_collide), \
+            #                                                                                         "LanePathBlock={}".format(lane_path_blcked), \
+            #                                                                                         "CanOvertake={}".format(self.can_overtake(ego_state,vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x,current_speed)), \
+            #                                                                                         "DoWeNeedToStop={}".format(self._need_to_stop), \
+            #                                                                                         "IsIntersection={}".format(self._intersection_state), \
+            #                                                                                         "{}".format('-'*20), \
+            #                                                                                         "{}".format('-'*20), \
+            #                                                                                         "{}".format(dict_[self._previous_state])  ))
+           
+            # if (emergency_min_collision!=1):
+            #     self._state   = EMERGENCY_STOP
+                   
+            # elif(walker_collide):
+            #     self._collission_actor = col_walker
+            #     self._state   = DECELERATE_TO_STOP
+            #     self._collission_index = min_collision
+ 
+            # elif(lane_path_blcked):  
+            #     if(self.can_overtake(ego_state,vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x,current_speed)):
+            #         ##### FIX GOAL STATE PROPERLY
+            #         self._state   = OVERTAKE
+            #         self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+            #         self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+            #         self._goal_state[2] = 0
+
+            #     elif((not need_to_stop) and (closest_vehicle!=None)) :
+            #         self._collission_actor = closest_vehicle
+            #         self._state   = FOLLOW_LEAD_VEHICLE
+            #         self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+            #         self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+            #         self._goal_state[2] = 0
+                
+            #     else:
+            #         self._prev_lookahead = self._lookahead
+            #         self._collission_actor = closest_vehicle
+            #         self._state   = DECELERATE_TO_STOP
+            #         self._collission_index = min_collision
+                    
+            # elif(self._intersection_state):
+            #     self._state   = INTERSECTION
+            #     self._collission_actor = closest_vehicle
+            #     self._collission_index = min_collision
+            
+            # else:
+            #     self._state   = FOLLOW_LANE
+            #     self._collission_actor = closest_vehicle
+            #     self._collission_index = min_collision
+
+            if(best_index == None):
+                best_index = 0 #self._lp._num_paths//2
+            
+            best_path = paths[best_index]
+            self._paths = paths
+            debug_print(paths,self._world,best_index)
+
+            local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
+            return local_waypoints
         
         elif(self._state == FOLLOW_LEAD_VEHICLE):
             self._previous_state = self._state
@@ -706,7 +839,7 @@ class BehaviouralPlanner:
             if (DEBUG_STATE_MACHINE):
                 print("{:<20} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25}".format(   "Pedestrian={}".format(walker_collide), \
                                                                                                     "LanePathBlocked={}".format(lane_path_blcked), \
-                                                                                                    "CanOvertake={}".format(self.can_overtake()), \
+                                                                                                    "CanOvertake={}".format(self.can_overtake(ego_state,vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x,current_speed)), \
                                                                                                     "DoWeNeedToStop={}".format(self._need_to_stop), \
                                                                                                     "IsIntersection={}".format(self._intersection_state), \
                                                                                                     "{}".format('-'*20), \
@@ -723,7 +856,7 @@ class BehaviouralPlanner:
                 self._collission_index = min_collision
    
             elif(lane_path_blcked): 
-                if(self.can_overtake()):
+                if(self.can_overtake(ego_state,vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x,current_speed)):
                     ##### FIX GOAL STATE PROPERLY
                     self._state   = OVERTAKE
                     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
@@ -1438,9 +1571,31 @@ class BehaviouralPlanner:
         else:       
             return True
 
-    def can_overtake(self):
-
-        return False 
+    def can_overtake(self, ego_state,vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x,current_speed):
+        """
+        Should we overtake?
+        """
+        can_overtake_ = False
+        # print("can overtake is called")
+        # id there is no leading vehicle, no need to overtake
+        # if the closest vehicle is not in the same lane of the ego vehicle, no need to overtaking
+        # if current ego speed is greater than that of the leading vehicle, we need to overtake 
+        # print(closest_vehicle)
+        if (not(closest_vehicle is None)) and check_lane_closest(closest_vehicle, self._ego_vehicle, self._map) and (current_speed < SPEED):
+            # if the ego vehicle on an intersection, zebra crossing, or the lane markings does not allow overtaking...
+            # ... we should not overtake
+            if can_we_overtake(self._ego_vehicle, vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x, current_speed, self._map, self._world,self._waypoints):
+                can_overtake_ = True
+            ########
+            # TODO #
+            ########
+            # The vehicles both static and dynamic are considered inside a radius, this should be changed 
+            # such that only the relavant vehicles should be taken not considering a radius
+            ########
+        if can_overtake_:
+            self._overtakeVeh = closest_vehicle
+        return can_overtake_ 
+        # return False 
 
     def is_light_red_or_no_light(self, lights_list, ego_location, ego_vehicle_waypoint,goal_waypoint ,ego_state,debug=False):
         """
@@ -1503,5 +1658,8 @@ class BehaviouralPlanner:
                     return "NTL"   
         return False
 
-
+    def traffic_light_green(self,lights_list):
+        for traffic_light in lights_list:
+            traffic_light.set_state(carla.TrafficLightState.Green)
+            # traffic_light.set_green_time(self, 5000.0)
 

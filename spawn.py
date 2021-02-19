@@ -304,7 +304,7 @@ def spawn(num_vehicles=0,num_walkers=0,client=None,SPAWN_POINT=0,host='127.0.0.1
     print('spawned %d vehicles and %d walkers, press Ctrl+C to exit.' % (len(vehicles_list), len(walkers_list)))
 
     # example of how to use parameters
-    traffic_manager.global_percentage_speed_difference(10.0)
+    traffic_manager.global_percentage_speed_difference(25.0)
 
     # return player_actor
         

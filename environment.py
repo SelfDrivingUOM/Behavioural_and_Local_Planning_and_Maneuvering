@@ -78,6 +78,7 @@ class Environment():
         if (type(paths) == type(None)):
             pass
         else:
+            middle_path_idx = paths.shape[0]//2
             goal_location = carla.Location(x=paths[middle_path_idx,0,-1], y=paths[middle_path_idx,1,-1], z= 1.843102 )
             goal_waypoint=self._map.get_waypoint(goal_location,project_to_road=True,lane_type=carla.LaneType.Driving)
             goal_lane = goal_waypoint.lane_id
