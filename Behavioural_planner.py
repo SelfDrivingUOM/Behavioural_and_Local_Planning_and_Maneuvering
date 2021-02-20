@@ -143,7 +143,7 @@ class BehaviouralPlanner:
         self._overtakeLookahead             = 0
         self._overtakeVeh                   = None
         self._isOvertake                    = 0
-
+        self.overtake_lane_changed          = False
     ######################################################
     #####              State Machine                ######
     ######################################################
@@ -180,7 +180,7 @@ class BehaviouralPlanner:
 
         open_loop_speed = self._lp._velocity_planner.get_open_loop_speed(current_timestamp - prev_timestamp)
         self._open_loop_speed = open_loop_speed
-        self._lookahead = (BP_LOOKAHEAD_BASE*(1-self._isOvertake)) + (OVERTAKE_LOOKAHEAD_BASE*self._isOvertake) + (BP_LOOKAHEAD_TIME * open_loop_speed)
+        self._lookahead = (BP_LOOKAHEAD_BASE*(1-self._isOvertake)) + ((OVERTAKE_LOOKAHEAD_BASE + self._overtakeLookahead)*self._isOvertake) + (BP_LOOKAHEAD_TIME * open_loop_speed)
 
         ################## Get list of actors seperately #########################################
         vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x = self._environment.get_actors(GET_ACTOR_RANGE,self._paths,self._lp._num_paths//2,  self._intersection_state)
@@ -666,9 +666,8 @@ class BehaviouralPlanner:
 
         elif(self._state == OVERTAKE):
             self._isOvertake = 1
-            self._overtakeLookahead = 0
             self._previous_state = self._state
-
+            self._lp._num_paths = 19
             # Find the closest index to the ego vehicle.
             closest_len, closest_index = self.get_closest_index(ego_state)
             # Find the goal index that lies within the lookahead distance along the waypoints.
@@ -676,7 +675,7 @@ class BehaviouralPlanner:
             self._goal_index = goal_index
             # Set the goal state by getting the location and giving derired speed
             self._goal_state = self._waypoints[goal_index]
-            self._goal_state[2] = SPEED + 3 #get_speed(self._overtakeVeh)
+            self._goal_state[2] = SPEED + (get_speed(self._overtakeVeh)/2)
 
             self.num_layers = (goal_index - closest_index)//5
         
@@ -691,7 +690,7 @@ class BehaviouralPlanner:
                 point_1 = self._waypoints[goal_index]
                 point_2 = self._waypoints[goal_index-2]
 
-            goal_state_set = self._lp.get_goal_state_set(point_1,point_2,self._goal_state, ego_state,0.8)
+            goal_state_set = self._lp.get_goal_state_set(point_1,point_2,self._goal_state, ego_state,0.4625)
 
             # Calculate planned paths in the local frame.
             paths, path_validity,mid_path_len = self._lp.plan_paths(goal_state_set)
@@ -702,17 +701,26 @@ class BehaviouralPlanner:
             ego_to_veh_vector = np.array([self._overtakeVeh.get_transform().location.x,self._overtakeVeh.get_transform().location.y]) - np.array(ego_state[:2])
             y_dist = np.dot(y_vec,ego_to_veh_vector)
             
+            closest_dist, _ = self.get_closest_index(ego_state)
             if y_dist<-(3.5+self._ego_vehicle.bounding_box.extent.y+self._overtakeVeh.bounding_box.extent.y):
-                paths = paths[2:9]
-                self._overtakeLookahead = 0
-                closest_dist, _ = self.get_closest_index(ego_state)
+                paths = paths[7:12]
+                if self.overtake_lane_changed:
+                    self._overtakeLookahead = 5 + get_speed(self._overtakeVeh)
+                if closest_dist < 3.0 and self.overtake_lane_changed:
+                    self._overtakeLookahead = 6 + get_speed(self._overtakeVeh)
+                    self.overtake_lane_changed = False
                 if closest_dist<0.2:
+                    self._overtakeLookahead = 0
                     self._overtakeVeh = None
                     self._isOvertake = 0
                     self._state   = FOLLOW_LANE
             else:
-                paths = paths[:3]
-            
+                paths = paths[0:3]
+                if closest_dist > 3.0 and (not self.overtake_lane_changed):
+                    self.overtake_lane_changed = True
+                    self._overtakeLookahead = 5 + get_speed(self._overtakeVeh)
+                elif not self.overtake_lane_changed:
+                    self._overtakeLookahead = get_speed(self._overtakeVeh)
             
 
             # Check collisions for every path

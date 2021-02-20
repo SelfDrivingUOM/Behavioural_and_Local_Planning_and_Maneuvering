@@ -184,7 +184,10 @@ class Agent(object):
             if is_within_distance_ahead(target_vehicle.get_transform(),
                                         self._vehicle.get_transform(),
                                         self._proximity_threshold):
-                return (True, target_vehicle)
+                # return (True, target_vehicle)
+                # Changed for Overtake state debugging
+                return (False, None)
+
 
         return (False, None)
 
