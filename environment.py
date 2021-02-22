@@ -397,6 +397,49 @@ class Environment():
         return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,y_vec,walkers_y,walkers_x
 
 
+    def get_overtake_actors(self, _waypoint, thresholdSqr, ego_actor):
+        vehicles = np.array(self.world.get_actors().filter('vehicle.*' ))
+        walkers  = np.array(self.world.get_actors().filter('walker.*.*'))
+
+        vehicle_locs = np.empty((0,2),dtype=np.float32)
+        vehicle_front_locs = np.empty((0,2),dtype=np.float32)
+        vehicle_backk_locs = np.empty((0,2),dtype=np.float32)
+        
+        for veh in vehicles:
+            if (veh.id != ego_actor.id):
+                veh_loc = np.array([[veh.get_transform().location.x,veh.get_transform().location.y]])
+
+                yaw = veh.get_transform().rotation.yaw
+                rot = np.array([[np.cos(yaw),-np.sin(yaw)],[np.cos(yaw),np.sin(yaw)]])
+                # print(np.array[[veh.bounding_box.extent.x],[veh.bounding_box.extent.y]])
+                offset = (rot.T @ np.array([[veh.bounding_box.extent.x],[veh.bounding_box.extent.y]])).T
+                # print(offset.shape)
+
+                # vehicle_locs = np.append(vehicle_locs,veh_loc,axis=0)
+                vehicle_front_locs = np.append(vehicle_front_locs,veh_loc+offset,axis=0)
+                vehicle_backk_locs = np.append(vehicle_backk_locs,veh_loc-offset,axis=0)
+            else:
+                # vehicle_locs = np.append(vehicle_locs,np.array([[100000,100000]]),axis=0)
+                vehicle_front_locs = np.append(vehicle_front_locs,np.array([[100000,100000]]),axis=0)
+                vehicle_backk_locs = np.append(vehicle_backk_locs,np.array([[100000,100000]]),axis=0)
+
+        # closestVehDist = np.amin(np.square(_waypoint[:,0].reshape((-1,1)) - vehicle_locs[:,0].reshape((1,-1))) + np.square(_waypoint[:,1].reshape((-1,1)) - vehicle_locs[:,1].reshape((1,-1))),axis=0)
+        # vehActorsInTresh = vehicles[closestVehDist<thresholdSqr].tolist()
+        closestVehDist_Fnt = np.amin(np.square(_waypoint[:,0].reshape((-1,1)) - vehicle_front_locs[:,0].reshape((1,-1))) + np.square(_waypoint[:,1].reshape((-1,1)) - vehicle_front_locs[:,1].reshape((1,-1))),axis=0)
+        closestVehDist_Bck = np.amin(np.square(_waypoint[:,0].reshape((-1,1)) - vehicle_backk_locs[:,0].reshape((1,-1))) + np.square(_waypoint[:,1].reshape((-1,1)) - vehicle_backk_locs[:,1].reshape((1,-1))),axis=0)
+        vehActorsInTresh_Fnt = vehicles[closestVehDist_Fnt<thresholdSqr].tolist()
+        vehActorsInTresh_Bck = vehicles[closestVehDist_Bck<thresholdSqr].tolist()
+        vehActorsInTresh = list(set(vehActorsInTresh_Fnt+vehActorsInTresh_Bck))
+        
+        walker_locs  = np.empty((0,2),dtype=np.float32)
+        for wkr in walkers:
+            walker_locs  = np.append(walker_locs ,np.array([[wkr.get_transform().location.x,wkr.get_transform().location.y]]),axis=0)
+        closestWkrDist = np.amin(np.square(_waypoint[:,0].reshape((-1,1)) - walker_locs [:,0].reshape((1,-1))) + np.square(_waypoint[:,1].reshape((-1,1)) - walker_locs [:,1].reshape((1,-1))),axis=0)
+        wkrActorsInTresh = walkers[closestWkrDist<thresholdSqr].tolist()
+        for veh in vehActorsInTresh:
+            draw_bound_box_actor(veh,self.world,255,255,255)
+
+        return vehActorsInTresh, wkrActorsInTresh
 
 '''import numpy as np
 class Environment():
