@@ -45,27 +45,32 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
-NO_VEHICLES =  10
+NO_VEHICLES =  0
 NO_WALKERS  =  0
-ONLY_HIGWAY =  1
+ONLY_HIGWAY =  0
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
 NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
-SPAWN_POINT = 179#26  #36 ##20/40-best
+SPAWN_POINT = 189#26  #36 ##20/40-best
 END_POINT   = 258#0     #119
 
 LEAD_SPAWN  = True
-spawn_wpt_parked = 170
+spawn_wpt_parked = 50
+
+OVERTAKE_WALKERS = True
+spawn_wpt_overtake_wlker = 75
 
 NAVIGATION_SPAWN = False
 WALKER_SPAWN =  False
+
+Z           = 1.843102
+
 
 import glob
 import os
 import sys
 import time
-import copy
 # ==============================================================================
 # -- Find CARLA module ----------------------------------------------------------
 # ==============================================================================
@@ -707,17 +712,20 @@ def game_loop(args):
         world.world.debug.draw_line(carla.Location(x=-50 , y=0,z=0),carla.Location(x=200 , y=0,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
         world.world.debug.draw_line(carla.Location(x=0 , y=-50,z=0),carla.Location(x=0 , y=200,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
 
-        ###############################################################
-        ###  Spawn Vehicles and Actors using CARLA Traffic Manager  ###
-        ###############################################################
+    ###################################################################
+    #######  Spawn Vehicles and Actors using CARLA Traffic Manager  ###
+    ###################################################################
         if (NO_VEHICLES >= 0) and (NO_WALKERS >= 0):
             # Do common things related to spawning walkers and vehicles
             logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
             traffic_manager = client.get_trafficmanager(8000)
-            # traffic_manager.global_percentage_speed_difference(88.0)
+            traffic_manager.global_percentage_speed_difference(30.0)
 
             if NO_VEHICLES >= 0:
+                vehicle_id_list = []
+                vehicle_actor_list = []
                 number_of_vehicles_spwan = NO_VEHICLES
+
                 blueprints = world.world.get_blueprint_library().filter('vehicle.*')
                 blueprints = [x for x in blueprints if int(x.get_attribute('number_of_wheels')) == 4]
                 blueprints = [x for x in blueprints if not x.id.endswith('isetta')]
@@ -740,15 +748,14 @@ def game_loop(args):
                 number_of_spawn_points = len(spawn_points)
                 
                 if number_of_vehicles_spwan < number_of_spawn_points:
-                    random.shuffle(spawn_points)
+                    random.shuffle(spawn_points) # If Vehicle spawn is to be done in a randomly selected order
+                    # pass
                 elif number_of_vehicles_spwan > number_of_spawn_points:
                     msg = 'requested %d vehicles, but could only find %d spawn points'
                     logging.warning(msg, NO_VEHICLES, number_of_spawn_points)
                     number_of_vehicles_spwan = number_of_spawn_points
 
                 batch = []
-                vehicle_id_list = []
-                vehicle_actor_list = []
                 for n, transform in enumerate(spawn_points):
                     if n >= number_of_vehicles_spwan:
                         break
@@ -763,7 +770,7 @@ def game_loop(args):
                     
                     batch.append(carla.command.SpawnActor(blueprint, transform).then(carla.command.SetAutopilot(carla.command.FutureActor, True, traffic_manager.get_port())))
                 
-                speeds_percen = [88.0]#,68.85]
+                # speeds_percen = [88.0]#,68.85]
                 for n, response in enumerate(client.apply_batch_sync(batch, False)):
                     if response.error:
                         logging.error(response.error)
@@ -771,13 +778,82 @@ def game_loop(args):
                         vehicle_id_list.append(response.actor_id)
                         vehicle_actor_list.append(world.world.get_actor(response.actor_id))
                         traffic_manager.distance_to_leading_vehicle(vehicle_actor_list[-1],2)
-                        traffic_manager.auto_lane_change(vehicle_actor_list[-1], False)
-                        traffic_manager.vehicle_percentage_speed_difference(vehicle_actor_list[-1],speeds_percen[n])
+                        # traffic_manager.auto_lane_change(vehicle_actor_list[-1], False)
+                        # traffic_manager.vehicle_percentage_speed_difference(vehicle_actor_list[-1],speeds_percen[n])
                 
             if NO_WALKERS >= 0:
+                number_of_walkers_spwan = NO_WALKERS
                 blueprintsWalkers = world.world.get_blueprint_library().filter('walker.pedestrian.*')
             
-            world.world.wait_for_tick()
+                percentagePedestriansRunning  = 0.0         # how many pedestrians will run
+                percentagePedestriansCrossing = 0.0         # how many pedestrians will walk through the road
+                # 1. take all the random locations to spawn
+                spawn_points = []
+                for i in range(number_of_walkers_spwan):
+                    spawn_point = carla.Transform()
+                    loc = world.world.get_random_location_from_navigation()
+                    if (loc != None):
+                        spawn_point.location = loc
+                        spawn_points.append(spawn_point)
+                # 2. we spawn the walker object
+                batch = []
+                walker_speed = []
+                for spawn_point in spawn_points:
+                    walker_bp = random.choice(blueprintsWalkers)
+                    # set as not invincible
+                    if walker_bp.has_attribute('is_invincible'):
+                        walker_bp.set_attribute('is_invincible', 'false')
+                    # set the max speed
+                    if walker_bp.has_attribute('speed'):
+                        if (random.random() > percentagePedestriansRunning):
+                            # walking
+                            walker_speed.append(walker_bp.get_attribute('speed').recommended_values[1])
+                        else:
+                            # running
+                            walker_speed.append(walker_bp.get_attribute('speed').recommended_values[2])
+                    else:
+                        print("Walker has no speed")
+                        walker_speed.append(0.0)
+                    batch.append(carla.command.SpawnActor(walker_bp, spawn_point))
+                results = client.apply_batch_sync(batch, False)
+                walker_speed_temp = []
+                walkers_list = []
+                all_id = []
+                for i in range(len(results)):
+                    if results[i].error:
+                        logging.error(results[i].error)
+                    else:
+                        walkers_list.append({"id": results[i].actor_id})
+                        walker_speed_temp.append(walker_speed[i])
+                walker_speed = walker_speed_temp
+                # 3. we spawn the walker controller
+                batch = []
+                walker_controller_bp = world.world.get_blueprint_library().find('controller.ai.walker')
+                for i in range(len(walkers_list)):
+                    batch.append(carla.command.SpawnActor(walker_controller_bp, carla.Transform(), walkers_list[i]["id"]))
+                results = client.apply_batch_sync(batch, False)
+                for i in range(len(results)):
+                    if results[i].error:
+                        logging.error(results[i].error)
+                    else:
+                        walkers_list[i]["con"] = results[i].actor_id
+                # 4. we put altogether the walkers and controllers id to get the objects from their id
+                for i in range(len(walkers_list)):
+                    all_id.append(walkers_list[i]["con"])
+                    all_id.append(walkers_list[i]["id"])
+                all_actors = world.world.get_actors(all_id)
+
+                world.world.wait_for_tick()
+
+                world.world.set_pedestrians_cross_factor(percentagePedestriansCrossing)
+                for i in range(0, len(all_id), 2):
+                    # start walker
+                    all_actors[i].start()
+                    # set walk to random point
+                    all_actors[i].go_to_location(world.world.get_random_location_from_navigation())
+                    # max speed
+                    all_actors[i].set_max_speed(float(walker_speed[int(i/2)]))
+    ###################################################################
 
         # Spawn Vehicles
         # spawnedVehicleActorList, traffic_manager = spawn(NO_VEHICLES,NO_WALKERS,client,traffic_manager,world.world,SPAWN_POINT,ONLY_HIGWAY)
@@ -851,7 +927,7 @@ def game_loop(args):
         if (LEAD_SPAWN):    
             #spwaning a leading vehicle
             x_lead=waypoints[spawn_wpt_parked].transform.location.x
-            y_lead=waypoints[spawn_wpt_parked].transform.location.y
+            y_lead=waypoints[spawn_wpt_parked].transform.location.y 
             z_lead=1.843102
             #1.4203450679814286772
 
@@ -867,6 +943,15 @@ def game_loop(args):
                 Agent.set_path(route[spawn_wpt_parked:])
             start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())
 
+        if OVERTAKE_WALKERS:
+            x_overtake_walker=waypoints[spawn_wpt_overtake_wlker].transform.location.x + 1
+            y_overtake_walker=waypoints[spawn_wpt_overtake_wlker].transform.location.y + 1
+            z_overtake_walker=Z
+            #1.4203450679814286772
+            blueprintsWalkers = world.world.get_blueprint_library().filter("walker.pedestrian.*")[0]
+
+            overtake_walker_tansform = carla.Transform(carla.Location(x=x_overtake_walker, y=y_overtake_walker, z=z_overtake_walker),carla.Rotation(yaw= waypoints[spawn_wpt_overtake_wlker].transform.rotation.yaw,pitch=waypoints[spawn_wpt_overtake_wlker].transform.rotation.pitch))
+            overtake_walker = world.world.spawn_actor(blueprintsWalkers, overtake_walker_tansform)
 
 
         #################################################
@@ -934,9 +1019,9 @@ def game_loop(args):
         
         time.sleep(5)
     
-        sleep_time_start= time.time()
-        while(time.time()-sleep_time_start<30):
-            world.world.wait_for_tick()
+        # sleep_time_start= time.time()
+        # while(time.time()-sleep_time_start<30):
+        #     world.world.wait_for_tick()
         
         # time.sleep(40)
 
@@ -1366,6 +1451,16 @@ def game_loop(args):
 
     finally:
 
+        # Destroy Spawned Vehicels
+        print('\ndestroying %d vehicles' % len(vehicle_id_list))
+        client.apply_batch([carla.command.DestroyActor(x) for x in vehicle_id_list])
+
+        # Destroy Spawned Walkers
+        for i in range(0, len(all_id), 2):
+            all_actors[i].stop()
+        print('\ndestroying %d walkers' % len(walkers_list))
+        client.apply_batch([carla.command.DestroyActor(x) for x in all_id])
+
         if (world and world.recording_enabled):
             client.stop_recorder()
 
@@ -1391,12 +1486,9 @@ def game_loop(args):
 
         # time.sleep(0.5)
 
-
-
 # ==============================================================================
 # -- main() --------------------------------------------------------------------
 # ==============================================================================
-
 
 def main():
     argparser = argparse.ArgumentParser(

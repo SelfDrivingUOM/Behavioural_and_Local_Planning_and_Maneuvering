@@ -36,7 +36,7 @@ def can_we_overtake(ego_vehicle, closest_vehicle,_map,_world,glb_wpts,desired_sp
     # Find the distance to closest vehicle using the global wapypoint 
     _, ego_index = get_closest_index(np.array([ego_vehicle.get_transform().location.x, ego_vehicle.get_transform().location.y]),glb_wpts)
     _, veh_index = get_closest_index(np.array([closest_vehicle.get_transform().location.x, closest_vehicle.get_transform().location.y]),glb_wpts)
-    print('index:',ego_index,veh_index)
+    # print('index:',ego_index,veh_index)
     to_closest = 0
     for i in range(ego_index,veh_index-1):
         to_closest += np.linalg.norm(glb_wpts[i,:2]-glb_wpts[i+1,:2])
@@ -54,7 +54,7 @@ def can_we_overtake(ego_vehicle, closest_vehicle,_map,_world,glb_wpts,desired_sp
     # print("end of condition2")
     if roadRulesOK and ( not is_overtake_collisions(rear_buffer_wpts, frwd_buffer_wpts, frwd_buffer_ego_wpts,_world, environment, ego_vehicle)):
         canOveretake = True
-    print("Can Overtake",canOveretake)
+    # print("Can Overtake",canOveretake)
     return canOveretake
 
 def road_rules_ok(ego_vehicle, to_closest, rear_buffer, frwd_buffer, frwd_buffer_ego, _map, _world):
@@ -91,15 +91,15 @@ def road_rules_ok(ego_vehicle, to_closest, rear_buffer, frwd_buffer, frwd_buffer
                 # while True:
                 #     pass
                 is_ok = False
-                print("Len not equal 1 rear")
+                # print("Len not equal 1 rear")
                 # print("dist",prev_wpt)
                 # print("left lane backward waypoint is none")
                 # raise Exception
                 break
-        if is_ok:
-            print('rear buffer ok')
-        else:
-            print('rear buffer not ok')
+        # if is_ok:
+        #     # print('rear buffer ok')
+        # else:
+        #     print('rear buffer not ok')
             
     
     # getting the waypoints in the left lane (forward dirn)
@@ -117,12 +117,12 @@ def road_rules_ok(ego_vehicle, to_closest, rear_buffer, frwd_buffer, frwd_buffer
                 next_wpt = next_wpt[0]
             else:
                 is_ok = False
-                print("Len not equal 1 Forward")
+                # print("Len not equal 1 Forward")
                 break
-        if is_ok:
-            print('forwd next buffer ok')
-        else:
-            print('forwd next buffer not ok')
+        # if is_ok:
+        #     print('forwd next buffer ok')
+        # else:
+        #     print('forwd next buffer not ok')
 
         
     # getting the waypoints in the ego lane (forward dirn)
@@ -140,12 +140,12 @@ def road_rules_ok(ego_vehicle, to_closest, rear_buffer, frwd_buffer, frwd_buffer
                 next_wpt = next_wpt[0]
             else:
                 is_ok = False
-                print("Len not equal 1 Ego")
+                # print("Len not equal 1 Ego")
                 break
-        if is_ok:
-            print('forwd ego buffer ok')
-        else:
-            print('forwd ego buffer not ok')
+        # if is_ok:
+        #     print('forwd ego buffer ok')
+        # else:
+        #     print('forwd ego buffer not ok')
 
     if  not is_ok:
         rear_buffer_wpts = None
@@ -159,18 +159,18 @@ def is_overtake_collisions(rear_buffer_wpts, frwd_buffer_wpts, frwd_buffer_ego_w
     tresh_dist_sq = (3.7/2)**2  #half the width of a lane
 
     buffer_wpts = np.concatenate((rear_buffer_wpts,frwd_buffer_wpts,frwd_buffer_ego_wpts))
-    for b in rear_buffer_wpts:
+    for b in [rear_buffer_wpts[0],rear_buffer_wpts[-1]]:
         _world.debug.draw_string(carla.Location(x=b[0],y=b[1],z=1.843), 'X', draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=500,persistent_lines=True)
-    for b in frwd_buffer_wpts:
+    for b in [frwd_buffer_wpts[0],frwd_buffer_wpts[-1]]:
         _world.debug.draw_string(carla.Location(x=b[0],y=b[1],z=1.843), 'X', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=500,persistent_lines=True)
-    for b in frwd_buffer_ego_wpts:
+    for b in [frwd_buffer_ego_wpts[0],frwd_buffer_ego_wpts[-1]]:
         _world.debug.draw_string(carla.Location(x=b[0],y=b[1],z=1.843), 'X', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=500,persistent_lines=True)
     
     vehicles, walkers = environment.get_overtake_actors(buffer_wpts, tresh_dist_sq, ego_vehicle)
-    print("vehicles no",len(vehicles))
+    # print("vehicles no",len(vehicles))
     # print(vehicles)
 
-    if (len(vehicles)>1):
+    if (len(vehicles+walkers)>1):
         is_collision = True
     else:
         is_collision = False

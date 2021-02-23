@@ -436,8 +436,6 @@ class Environment():
             walker_locs  = np.append(walker_locs ,np.array([[wkr.get_transform().location.x,wkr.get_transform().location.y]]),axis=0)
         closestWkrDist = np.amin(np.square(_waypoint[:,0].reshape((-1,1)) - walker_locs [:,0].reshape((1,-1))) + np.square(_waypoint[:,1].reshape((-1,1)) - walker_locs [:,1].reshape((1,-1))),axis=0)
         wkrActorsInTresh = walkers[closestWkrDist<thresholdSqr].tolist()
-        for veh in vehActorsInTresh:
-            draw_bound_box_actor(veh,self.world,255,255,255)
 
         return vehActorsInTresh, wkrActorsInTresh
 
