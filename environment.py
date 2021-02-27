@@ -1,6 +1,8 @@
 import numpy as np
 import carla
 from tools.misc import draw_bound_box_actor
+import time
+from collections import defaultdict
 
 class Environment():
     def __init__(self, world, ego_vehicle,map_):
@@ -12,6 +14,69 @@ class Environment():
         self.yaw = np.radians(ego_vehicle.get_transform().rotation.yaw)
         self.actors = self.world.get_actors()
         self.lights_list = self.actors.filter("*traffic_light*")
+        self.traf_light_dict = {1260:[carla.Location(x=  17.250000, y= 177.399994, z= 0.000000),carla.Location(x=  15.650000, y= 197.949997, z=0.000000),carla.Location(x=  40.849998, y= 216.349991, z=0.000000)],
+                                1070:[carla.Location(x=  19.150000, y= 101.699997, z= 0.000000),carla.Location(x=  18.600000, y=  79.750000, z=0.000000),carla.Location(x=  42.549999, y= 100.199997, z=0.000000),carla.Location(x=  40.250000, y=  78.599998, z=0.000000)],
+                                829: [carla.Location(x=  40.899998, y=  10.500000, z= 0.000000),carla.Location(x=  40.250000, y= -11.099999, z=0.000000),carla.Location(x=  18.600000, y=  -9.950000, z=0.000000),carla.Location(x=  19.150000, y=  12.000000, z=0.000000)],
+                                751 :[carla.Location(x=  41.399998, y= -78.099998, z= 0.000000),carla.Location(x=  41.849998, y=-100.199997, z=0.000000),carla.Location(x=  20.250000, y= -99.900002, z=0.000000),carla.Location(x=  21.250000, y= -78.849998, z=0.000000)],
+                                1148:[carla.Location(x=  43.899998, y=-158.199997, z= 0.200000),carla.Location(x=  23.327223, y=-154.399994, z=0.100000)],
+                                943 :[carla.Location(x=  46.349998, y=-178.500000, z= 0.000000),carla.Location(x=  47.950001, y=-197.349991, z=0.000000),carla.Location(x=  22.750000, y=-215.149994, z=0.000000)],
+                                139 :[carla.Location(x= -38.649998, y= 100.049995, z= 0.000000),carla.Location(x= -37.450001, y=  78.000000, z=0.000000),carla.Location(x= -61.250000, y=  76.699997, z=0.000000),carla.Location(x= -61.349998, y= 101.250000, z=0.000000)],
+                                965 :[carla.Location(x= -38.549999, y=  11.599999, z= 0.000000),carla.Location(x= -38.599998, y=  -9.650000, z=0.000000),carla.Location(x= -60.699997, y=  -9.500000, z=0.000000),carla.Location(x= -59.599998, y=  12.450000, z=0.000000)],
+                                599 :[carla.Location(x= -39.599998, y= -78.099998, z= 0.000000),carla.Location(x= -38.849998, y=-101.299995, z=0.000000),carla.Location(x= -62.799999, y=-101.799995, z=0.000000),carla.Location(x= -61.149998, y= -78.099998, z=0.000000)],
+                                1050:[carla.Location(x=-112.299995, y= 159.399994, z= 0.000000),carla.Location(x=-138.500000, y= 137.550003, z=0.000000),carla.Location(x=-138.800003, y= 159.550003, z=0.000000)],
+                                1175:[carla.Location(x=-112.299995, y= 101.099998, z= 0.000000),carla.Location(x=-113.399994, y=  78.000000, z=0.000000),carla.Location(x=-139.800003, y=  77.849998, z=0.000000),carla.Location(x=-138.800003, y= 100.049995, z=0.000000)],
+                                509 :[carla.Location(x=-113.149994, y=  11.599999, z= 0.000000),carla.Location(x=-113.899994, y=  -9.650000, z=0.000000),carla.Location(x=-139.349991, y= -10.300000, z=0.000000),carla.Location(x=-140.399994, y=  12.450000, z=0.000000)],
+                                53  :[carla.Location(x=-113.149994, y= -78.949997, z= 0.000000),carla.Location(x=-112.799995, y=-101.299995, z=0.000000),carla.Location(x=-139.349991, y=-100.849998, z=0.000000),carla.Location(x=-140.399994, y= -78.099998, z=0.000000)],
+                                905 :[carla.Location(x=-112.966469, y=-128.849045, z=-0.000005),carla.Location(x=-112.765907, y=-150.949997, z=0.000000),carla.Location(x=-143.038879, y=-150.019562, z=0.000000)],
+                                421 :[carla.Location(x=-179.349991, y=  12.450000, z= 0.000000),carla.Location(x=-179.250000, y=  -9.700000, z=0.000000),carla.Location(x=-201.399994, y= -10.300000, z=0.000000),carla.Location(x=-201.550003, y=  12.450000, z=0.000000)]}
+        self.traf_actor_dict = defaultdict(list)
+        for light_actor in self.lights_list:
+            light_loc = light_actor.get_location()
+            for junc_id in self.traf_light_dict.keys():
+                for locs in self.traf_light_dict[junc_id]:
+                    if ((((locs.x-light_loc.x)**2)+((locs.y-light_loc.y)**2)+((locs.z-light_loc.z)**2))<1):
+                        self.traf_actor_dict[junc_id].append(light_actor)
+        # for a in self.traf_actor_dict:
+        #     print(a,self.traf_actor_dict[a])
+        # print(self.traf_actor_dict)
+            
+
+
+        # for light in self.lights_list:
+        #     world.debug.draw_string(light.get_location(), str(light.id), draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=10000,persistent_lines=True)
+        #     print(str(light.id),light.get_location())
+        # traf_loc  =[[carla.Location(x=  17.250000, y= 177.399994, z= 0.000000),carla.Location(x=  15.650000, y= 197.949997, z=0.000000),carla.Location(x=  40.849998, y= 216.349991, z=0.000000)],
+        #             [carla.Location(x=  19.150000, y= 101.699997, z= 0.000000),carla.Location(x=  18.600000, y=  79.750000, z=0.000000),carla.Location(x=  42.549999, y= 100.199997, z=0.000000),carla.Location(x=  40.250000, y=  78.599998, z=0.000000)],
+        #             [carla.Location(x=  40.899998, y=  10.500000, z= 0.000000),carla.Location(x=  40.250000, y= -11.099999, z=0.000000),carla.Location(x=  18.600000, y=  -9.950000, z=0.000000),carla.Location(x=  19.150000, y=  12.000000, z=0.000000)],
+        #             [carla.Location(x=  41.399998, y= -78.099998, z= 0.000000),carla.Location(x=  41.849998, y=-100.199997, z=0.000000),carla.Location(x=  20.250000, y= -99.900002, z=0.000000),carla.Location(x=  21.250000, y= -78.849998, z=0.000000)],
+        #             [carla.Location(x=  43.899998, y=-158.199997, z= 0.200000),carla.Location(x=  23.327223, y=-154.399994, z=0.100000)],
+        #             [carla.Location(x=  46.349998, y=-178.500000, z= 0.000000),carla.Location(x=  47.950001, y=-197.349991, z=0.000000),carla.Location(x=  22.750000, y=-215.149994, z=0.000000)],
+        #             [carla.Location(x= -38.649998, y= 100.049995, z= 0.000000),carla.Location(x= -37.450001, y=  78.000000, z=0.000000),carla.Location(x= -61.250000, y=  76.699997, z=0.000000),carla.Location(x= -61.349998, y= 101.250000, z=0.000000)],
+        #             [carla.Location(x= -38.549999, y=  11.599999, z= 0.000000),carla.Location(x= -38.599998, y=  -9.650000, z=0.000000),carla.Location(x= -60.699997, y=  -9.500000, z=0.000000),carla.Location(x= -59.599998, y=  12.450000, z=0.000000)],
+        #             [carla.Location(x= -39.599998, y= -78.099998, z= 0.000000),carla.Location(x= -38.849998, y=-101.299995, z=0.000000),carla.Location(x= -62.799999, y=-101.799995, z=0.000000),carla.Location(x= -61.149998, y= -78.099998, z=0.000000)],
+        #             [carla.Location(x=-112.299995, y= 159.399994, z= 0.000000),carla.Location(x=-138.500000, y= 137.550003, z=0.000000),carla.Location(x=-138.800003, y= 159.550003, z=0.000000)],
+        #             [carla.Location(x=-112.299995, y= 101.099998, z= 0.000000),carla.Location(x=-113.399994, y=  78.000000, z=0.000000),carla.Location(x=-139.800003, y=  77.849998, z=0.000000),carla.Location(x=-138.800003, y= 100.049995, z=0.000000)],
+        #             [carla.Location(x=-113.149994, y=  11.599999, z= 0.000000),carla.Location(x=-113.899994, y=  -9.650000, z=0.000000),carla.Location(x=-139.349991, y= -10.300000, z=0.000000),carla.Location(x=-140.399994, y=  12.450000, z=0.000000)],
+        #             [carla.Location(x=-113.149994, y= -78.949997, z= 0.000000),carla.Location(x=-112.799995, y=-101.299995, z=0.000000),carla.Location(x=-139.349991, y=-100.849998, z=0.000000),carla.Location(x=-140.399994, y= -78.099998, z=0.000000)],
+        #             [carla.Location(x=-112.966469, y=-128.849045, z=-0.000005),carla.Location(x=-112.765907, y=-150.949997, z=0.000000),carla.Location(x=-143.038879, y=-150.019562, z=0.000000)],
+        #             [carla.Location(x=-179.349991, y=  12.450000, z= 0.000000),carla.Location(x=-179.250000, y=  -9.700000, z=0.000000),carla.Location(x=-201.399994, y= -10.300000, z=0.000000),carla.Location(x=-201.550003, y=  12.450000, z=0.000000)]]
+        # for j in traf_loc:
+        #     _x = 0
+        #     _y = 0
+        #     _z = 0
+        #     for i in j:
+        #         _x += i.x
+        #         _y += i.y
+        #         _z += i.z
+        #     mean_loc = carla.Location(x=_x/len(j),y=_y/len(j),z=_z/len(j))
+        #     wpt = map_.get_waypoint(mean_loc,project_to_road=True)
+        #     if wpt.is_junction:
+        #         print(wpt.get_junction(),wpt.get_junction().id)
+        #     else:
+        #         print("no_juntion")
+            # world.debug.draw_string(mean_loc, 'M', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=100000,persistent_lines=True)
+            # time.sleep(5)
+
         self.vehicles = self.actors.filter('vehicle.*')
         self.walkers = self.actors.filter('walker.*.*')
         # for w in (self.walkers ):

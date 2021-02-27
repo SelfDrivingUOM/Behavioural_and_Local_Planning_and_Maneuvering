@@ -45,6 +45,7 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
+NO_AGENT_VEHICLES = 0
 NO_VEHICLES =  0
 NO_WALKERS  =  0
 ONLY_HIGWAY =  0
@@ -52,14 +53,17 @@ ONLY_HIGWAY =  0
 NUMBER_OF_STUDENT_IN_ROWS    = 10
 NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
-SPAWN_POINT = 189#26  #36 ##20/40-best
-END_POINT   = 258#0     #119
+SPAWN_POINT = 35#189#26  #36 ##20/40-best
+END_POINT   = 92#0     #119
+# global_path_points_set = [60,130,62,301,32,[32,28],[31,17],17]
+# global_path_points_set = [126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
+global_path_points_set = [35,39,98,146,113,284,142,[278,114],[279,115],56,126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
 
-LEAD_SPAWN  = True
-spawn_wpt_parked = 50
+LEAD_SPAWN  = False
+spawn_wpt_parked = 140
 
-OVERTAKE_WALKERS = True
-spawn_wpt_overtake_wlker = 75
+OVERTAKE_WALKERS = False
+spawn_wpt_overtake_wlker = -20
 
 NAVIGATION_SPAWN = False
 WALKER_SPAWN =  False
@@ -330,6 +334,56 @@ def add_lane_change_waypoints(waypoints,lp,velocity,world):
             i+=1
 
     return updated_waypoints
+
+def genarate_global_path(globalPathPoints, world_map):
+    # Setting up global router
+    dao = GlobalRoutePlannerDAO(world_map, HOP_RESOLUTION)
+    grp = GlobalRoutePlanner(dao)
+    grp.setup()
+
+    globalPath = []
+    globalPathLocations = []
+    spawnPoints = world_map.get_spawn_points()
+    numberOfSpawnPts = len(spawnPoints)
+    for i in range(len(globalPathPoints)):
+        if type(globalPathPoints[i]) is list:
+            if len(globalPathPoints[i])==2:
+                if ((globalPathPoints[i][0]+1)>numberOfSpawnPts) or ((globalPathPoints[i][0]+1)<1) or ((globalPathPoints[i][1]+1)>numberOfSpawnPts) or ((globalPathPoints[i][1]+1)<1):
+                    print("Invalid Global path point at globalPathPoints list index %d (value out of range):" %i,globalPathPoints[i])
+                    raise Exception 
+                else:
+                    laneChangeLoc = carla.Location( x=(spawnPoints[globalPathPoints[i][0]].location.x+spawnPoints[globalPathPoints[i][1]].location.x)/2,
+                                                    y=(spawnPoints[globalPathPoints[i][0]].location.y+spawnPoints[globalPathPoints[i][1]].location.y)/2,
+                                                    z=(spawnPoints[globalPathPoints[i][0]].location.z+spawnPoints[globalPathPoints[i][1]].location.z)/2 )
+                    
+                    laneChangeLoc = (world_map.get_waypoint(laneChangeLoc,project_to_road=True,lane_type=carla.LaneType.Driving)).transform.location
+                    globalPathLocations.append([laneChangeLoc])
+            else:
+                print("Global path points are not defined properly")
+                raise Exception
+        else:
+            if ((globalPathPoints[i]+1)>numberOfSpawnPts) or ((globalPathPoints[i]+1)<1):
+                print("Invalid Global path point at globalPathPoints list index %d (value out of range):" %i,globalPathPoints[i])
+                raise Exception
+            else:
+                globalPathLocations.append(spawnPoints[globalPathPoints[i]].location)
+
+    for n in range(len(globalPathLocations)-1):
+        start = globalPathLocations[n]
+        end = globalPathLocations[n+1]
+        if (type(start) is list) and (type(end) is list):
+            continue
+        elif (type(start) is list):
+            start = start[0]
+        elif (type(end) is list):
+            end = end[0]
+        globalPath += grp.trace_route(start,end)
+
+    # waypoints = np.array(globalPath)[:,0]
+
+    # return waypoints
+    return globalPath
+
 
 ### ----- These functions are used for the Model Predictive Controller ----- ###
 def find_beta(vel,dir):
@@ -770,7 +824,7 @@ def game_loop(args):
                     
                     batch.append(carla.command.SpawnActor(blueprint, transform).then(carla.command.SetAutopilot(carla.command.FutureActor, True, traffic_manager.get_port())))
                 
-                # speeds_percen = [88.0]#,68.85]
+                speeds_percen = [88.0]#,68.85]
                 for n, response in enumerate(client.apply_batch_sync(batch, False)):
                     if response.error:
                         logging.error(response.error)
@@ -881,7 +935,10 @@ def game_loop(args):
         
         # spawn_new(world.world,NO_VEHICLES)
 
-        route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
+        # route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
+        # waypoints = np.array(route)[:,0]
+        # waypoints = genarate_global_path(global_path_points_set,world_map)
+        route = genarate_global_path(global_path_points_set,world_map)
         waypoints = np.array(route)[:,0]
         waypoints_np = np.empty((0,3))
         vehicle_speed = 5
@@ -893,12 +950,12 @@ def game_loop(args):
                 p = world_map.get_spawn_points()[i]
                 world.world.debug.draw_string(p.location, str(i), draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
             
-            '''spawn_pts.remove(start_point)
+            spawn_pts.remove(start_point)
             for i in range (len(spawn_pts)):
                 #print(i,len(spawn_pts)-1-i)
                 if(i==SPAWN_POINT):
                     continue
-                if (i >= NO_VEHICLES):
+                if (i >= NO_AGENT_VEHICLES):
                     break 
                 else:
                     blueprint_library = world.world.get_blueprint_library()
@@ -915,7 +972,7 @@ def game_loop(args):
                     #debug=world.debug
 
                     #all_actor_list = world.get_actors()
-                    #vehicle_list = all_actor_list.filter("*vehicle*")'''
+                    #vehicle_list = all_actor_list.filter("*vehicle*")
                     
             
             
@@ -1450,16 +1507,17 @@ def game_loop(args):
                 time.sleep(SIMULATION_TIME_STEP - (toc-tic))
 
     finally:
+        if NO_VEHICLES>0:
+            # Destroy Spawned Vehicels
+            print('\ndestroying %d vehicles' % len(vehicle_id_list))
+            client.apply_batch([carla.command.DestroyActor(x) for x in vehicle_id_list])
 
-        # Destroy Spawned Vehicels
-        print('\ndestroying %d vehicles' % len(vehicle_id_list))
-        client.apply_batch([carla.command.DestroyActor(x) for x in vehicle_id_list])
-
-        # Destroy Spawned Walkers
-        for i in range(0, len(all_id), 2):
-            all_actors[i].stop()
-        print('\ndestroying %d walkers' % len(walkers_list))
-        client.apply_batch([carla.command.DestroyActor(x) for x in all_id])
+        if NO_WALKERS>0:
+            # Destroy Spawned Walkers
+            for i in range(0, len(all_id), 2):
+                all_actors[i].stop()
+            print('\ndestroying %d walkers' % len(walkers_list))
+            client.apply_batch([carla.command.DestroyActor(x) for x in all_id])
 
         if (world and world.recording_enabled):
             client.stop_recorder()
