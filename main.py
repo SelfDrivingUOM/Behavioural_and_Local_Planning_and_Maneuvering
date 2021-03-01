@@ -46,7 +46,7 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
 NO_AGENT_VEHICLES = 0
-NO_VEHICLES =  0
+NO_VEHICLES =  300
 NO_WALKERS  =  0
 ONLY_HIGWAY =  0
 
@@ -59,7 +59,7 @@ END_POINT   = 92#0     #119
 # global_path_points_set = [126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
 global_path_points_set = [35,39,98,146,113,284,142,[278,114],[279,115],56,126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
 
-LEAD_SPAWN  = True
+LEAD_SPAWN  = False
 spawn_wpt_parked = 30 #140
 
 OVERTAKE_WALKERS = False

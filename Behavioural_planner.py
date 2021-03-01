@@ -580,11 +580,10 @@ class BehaviouralPlanner:
 
                     elif(lane_path_blcked_folwLead):
                         if ((not need_to_stop) and (closest_vehicle!=None)) :
-                            if (not self._stopped):
-                                c=0
-                                for i in range(10000000):          # this is to wait in intersections which has no traffic lights
-                                    c=c+i
-                                print("Delay")
+                            c=0
+                            for i in range(10000000):          # this is to wait in intersections which has no traffic lights
+                                c=c+i
+                            print("Delay")
                             self._stopped = True
                             self._collission_actor = closest_vehicle
                             self._state   = FOLLOW_LEAD_VEHICLE
@@ -609,22 +608,20 @@ class BehaviouralPlanner:
                         #     self._collission_index = min_collision
 
                     elif(self._intersection_state):
-                        if (not self._stopped):
-                                c=0
-                                for i in range(10000000):          # this is to wait in intersections which has no traffic lights
-                                    c=c+i
-                                print("Delay")
+                        c=0
+                        for i in range(10000000):          # this is to wait in intersections which has no traffic lights
+                            c=c+i
+                        print("Delay")
                         self._stopped = True
                         self._state   = INTERSECTION
                         self._collission_actor = closest_vehicle
                         self._collission_index = min_collision
 
                     else:
-                        if (not self._stopped):
-                                c=0
-                                for i in range(10000000):          # this is to wait in intersections which has no traffic lights
-                                    c=c+i
-                                print("Delay")
+                        c=0
+                        for i in range(10000000):          # this is to wait in intersections which has no traffic lights
+                            c=c+i
+                        print("Delay")
                         self._stopped = True
                         self._state   = FOLLOW_LANE
                         self._collission_actor = closest_vehicle
