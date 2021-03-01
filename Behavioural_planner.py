@@ -196,7 +196,7 @@ class BehaviouralPlanner:
             print(dict_[self._state])
 
         open_loop_speed = self._lp._velocity_planner.get_open_loop_speed(current_timestamp - prev_timestamp)
-        # print("openloopSpeed:",open_loop_speed)
+        print("openloopSpeed:",open_loop_speed)
         self._open_loop_speed = open_loop_speed
         self._lookahead = (BP_LOOKAHEAD_BASE*(1-self._isOvertake)) + ((OVERTAKE_LOOKAHEAD_BASE + self._overtakeLookahead)*self._isOvertake) + (BP_LOOKAHEAD_TIME * open_loop_speed)
     
@@ -380,7 +380,7 @@ class BehaviouralPlanner:
             
             best_path = paths[best_index]
             self._paths = paths
-            # debug_print(paths,self._world,best_index)
+            debug_print(paths,self._world,best_index)
 
             local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
             return local_waypoints
@@ -416,7 +416,7 @@ class BehaviouralPlanner:
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
             self._best_index_from_decelerate = best_index
             best_index = self._lp._num_paths//2
-            # debug_print(paths,self._world,best_index)
+            debug_print(paths,self._world,best_index)
 
             intersection,triangle_points, junc_bx_pts = self.is_approaching_intersection(closest_index,ego_state, ego_waypoint)
             # intersection,triangle_points, junc_bx_pts = self.is_approaching_intersection(max(self._collission_index,1),ego_state, ego_waypoint)
@@ -510,7 +510,9 @@ class BehaviouralPlanner:
             # self.num_layers = (goal_index - closest_index)//5
 
             goal_location = carla.Location(x = self._goal_state[0], y = self._goal_state[1], z= Z )
-            self._world.debug.draw_string(goal_location, 'X', draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=100,persistent_lines=True)
+            ego_location = carla.Location(x = self._waypoints[closest_index,0],y = self._waypoints[closest_index,1], z= Z )
+            self._world.debug.draw_string(goal_location, str(goal_index), draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=100,persistent_lines=True)
+            self._world.debug.draw_string(ego_location, str(closest_index), draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=100,persistent_lines=True)
             goal_waypoint = self._map.get_waypoint(goal_location,project_to_road=True)
 
             if goal_index < (self._waypoints.shape[0]-1):
@@ -773,7 +775,7 @@ class BehaviouralPlanner:
             
             best_path = paths[best_index]
             self._paths = paths
-            # debug_print(paths,self._world,best_index)
+            debug_print(paths,self._world,best_index)
 
             local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
             return local_waypoints
@@ -1062,7 +1064,7 @@ class BehaviouralPlanner:
                 
                 best_path = paths[best_index]
                 self._paths = paths            
-                # debug_print(paths,self._world,best_index)
+                debug_print(paths,self._world,best_index)
 
                 local_waypoints = self._lp._velocity_planner.nominal_profile(best_path, open_loop_speed, self._goal_state[2])
 
@@ -1076,7 +1078,7 @@ class BehaviouralPlanner:
 
                 best_path = paths[best_index]
                 self._paths = paths
-                # debug_print(paths,self._world,best_index)
+                debug_print(paths,self._world,best_index)
 
                 local_waypoints = self._lp._velocity_planner.follow_profile(best_path, open_loop_speed, self._goal_state[2],lead_vehicle_state)
 
@@ -1142,10 +1144,12 @@ class BehaviouralPlanner:
         # In this case, reaching the closest waypoint is already far enough 
         # for the planner. No need to check additional waypoints.
         if arc_length > self._lookahead:
+            # print("arc_len>lookahead")
             return wp_index
 
         # We are already at the end of the path.
         if wp_index == (self._waypoints.shape[0] - 1):
+            # print("end of the road")
             return wp_index
 
         # Otherwise, find our next waypoint.
@@ -1413,7 +1417,7 @@ class BehaviouralPlanner:
 
             
             _,lead_closest = self.get_closest_index([self._collission_actor.get_location().x,self._collission_actor.get_location().y])
-            self._world.debug.draw_string(carla.Location(x= self._waypoints[lead_closest,0],y = self._waypoints[lead_closest,1],z = Z),"X", draw_shadow=False,color=carla.Color(r=255, g=255, b=0), life_time=30,persistent_lines=True)
+            # self._world.debug.draw_string(carla.Location(x= self._waypoints[lead_closest,0],y = self._waypoints[lead_closest,1],z = Z),"X", draw_shadow=False,color=carla.Color(r=255, g=255, b=0), life_time=30,persistent_lines=True)
 
             _,ego_closest = self.get_closest_index(ego_state)
             dist_closest = (lead_closest - ego_closest) * self._hop_resolution

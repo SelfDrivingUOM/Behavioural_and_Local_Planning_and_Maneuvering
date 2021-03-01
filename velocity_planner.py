@@ -28,6 +28,12 @@ class VelocityPlanner:
     # trajectory, and the timestep since the last planning cycle.
     # Input: timestep is in seconds
     def get_open_loop_speed(self, timestep):
+        # Replacing negative speed values with 0s
+        self._prev_trajectory = np.array(self._prev_trajectory)
+        replaced_velocities = np.where(self._prev_trajectory<0, 0, self._prev_trajectory) 
+        self._prev_trajectory[:,2] = replaced_velocities [:,2]
+        self._prev_trajectory = self._prev_trajectory.tolist()
+
         if len(self._prev_trajectory) == 1:
             return self._prev_trajectory[0][2] 
         
