@@ -27,7 +27,7 @@ PATH_SELECT_WEIGHT     = 10               #
 A_MAX                  = 5                # m/s^2
 SLOW_SPEED             = 0                # m/s
 STOP_LINE_BUFFER       = 1.5              # m
-LEAD_VEHICLE_SPEED     = 0                # m/s
+LEAD_VEHICLE_SPEED     = 10                # m/s
 LEAD_VEHICLE_LOOKAHEAD = 20.0             # m
 LP_FREQUENCY_DIVISOR   = 1                # Frequency divisor tdo make the 
                                           # local planner operate at a lower
@@ -59,8 +59,8 @@ END_POINT   = 92#0     #119
 # global_path_points_set = [126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
 global_path_points_set = [35,39,98,146,113,284,142,[278,114],[279,115],56,126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
 
-LEAD_SPAWN  = False
-spawn_wpt_parked = 140
+LEAD_SPAWN  = True
+spawn_wpt_parked = 30 #140
 
 OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
@@ -294,7 +294,7 @@ def add_lane_change_waypoints(waypoints,lp,velocity,world):
         if((np.linalg.norm(waypoints[i+1, :2]-waypoints[i,:2]) > 2) and (i > 6) and (i<waypoints.shape[0]-6)):
             
             start_index = i
-            end_index = i+10
+            end_index = i+20
 
             start_vector = (waypoints[start_index] - waypoints[start_index-1])
             start_vector[2] = 0
@@ -327,7 +327,7 @@ def add_lane_change_waypoints(waypoints,lp,velocity,world):
 
             updated_waypoints = np.append(updated_waypoints,path_wp.T,axis=0)
 
-            i+=10
+            i+=20
 
         else:
             updated_waypoints = np.append(updated_waypoints,waypoints[i+1].reshape((1,3)),axis=0)

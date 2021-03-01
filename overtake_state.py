@@ -73,7 +73,7 @@ def road_rules_ok(ego_vehicle, to_closest, rear_buffer, frwd_buffer, frwd_buffer
         is_ok = False
     else:
         if (wpt.lane_id*ego_waypoint.lane_id)<0:
-            print("overtaking  using oppsite direction lane")
+            # print("overtaking  using oppsite direction lane")
             rear_buffer, frwd_buffer = frwd_buffer, rear_buffer
         dist = 0
         rear_buffer_wpts = np.array([[wpt.transform.location.x, wpt.transform.location.y]])
@@ -220,3 +220,4 @@ def get_closest_index(ego_state, _waypoints):
 #  [157,160,158,159],
 #  [187,188,180],
 #  [178,183,179,182]]
+
