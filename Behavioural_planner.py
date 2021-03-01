@@ -54,12 +54,12 @@ SPEED                           = 5       # Vehicle speed (m/s)
 TRAFFIC_LIGHT_CHECK_DISTANCE    = 35      # Distance to detect traffic lights (m)
 BP_LOOKAHEAD_BASE               = 8.0     # Base distance to create lattice paths (m)
 OVERTAKE_LOOKAHEAD_BASE         = 1.5     # Base distance to create lattice paths (m) when in overtake state
-FOLLOW_LEAD_RANGE               = 11       # Range to follow lead vehicles (m)
+FOLLOW_LEAD_RANGE               = 12       # Range to follow lead vehicles (m)
 OVERTAKE_RANGE                  = 15      # Range to overtake vehicles (m)
 DEBUG_STATE_MACHINE             = False   # Set this to true to see all function outputs in state machine. This is better for full debug
 ONLY_STATE_DEBUG                = True    # Set this to true to see current state of state machine
 UNSTRUCTURED                    = True    # Set this to True to behave according to the unstructured walkers
-TRAFFIC_LIGHT                   = True
+TRAFFIC_LIGHT                   = True   # Set this to True to on traffic lights 
 FOLLOW_LANE_OFFSET              = 0.1     # Path goal point offset in follow lane  (m)
 DECELERATE_OFFSET               = 0.1     # Path goal point offset in decelerate state (m) 
 Z                               = 1.843102
@@ -337,21 +337,22 @@ class BehaviouralPlanner:
                         self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
                         self._goal_state[2] = 0
 
-                    elif (need_to_stop):
+                    # elif (need_to_stop):
+                    else:
                         self._prev_lookahead = self._lookahead
                         self._collission_actor = closest_vehicle
                         self._state   = DECELERATE_TO_STOP
                         self._collission_index = min_collision
 
-                    elif(self._intersection_state):
-                        self._state   = INTERSECTION
-                        self._collission_actor = closest_vehicle
-                        self._collission_index = min_collision
+                    # elif(self._intersection_state):
+                    #     self._state   = INTERSECTION
+                    #     self._collission_actor = closest_vehicle
+                    #     self._collission_index = min_collision
                     
-                    else:
-                        self._state   = FOLLOW_LANE
-                        self._collission_actor = closest_vehicle
-                        self._collission_index = min_collision
+                    # else:
+                    #     self._state   = FOLLOW_LANE
+                    #     self._collission_actor = closest_vehicle
+                    #     self._collission_index = min_collision
                                         
                 elif(self._intersection_state):
                     self._state   = INTERSECTION
@@ -464,22 +465,23 @@ class BehaviouralPlanner:
                     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
                     self._goal_state[2] = 0
 
-                elif (need_to_stop):
+                # elif (need_to_stop):
+                else:
                     self._prev_lookahead = self._lookahead
                     self._collission_actor = closest_vehicle
                     self._state   = DECELERATE_TO_STOP
                     self._collission_index = min_collision
 
-                elif(self._intersection_state and red_light):
-                    self._prev_lookahead = self._lookahead
-                    self._state = DECELERATE_TO_STOP
-                    self._collission_index = min_collision
-                    self._collission_actor = closest_vehicle
+                # elif(self._intersection_state and red_light):
+                #     self._prev_lookahead = self._lookahead
+                #     self._state = DECELERATE_TO_STOP
+                #     self._collission_index = min_collision
+                #     self._collission_actor = closest_vehicle
 
-                else:
-                    self._state = FOLLOW_LANE
-                    self._collission_actor = closest_vehicle
-                    self._collission_index = min_collision
+                # else:
+                #     self._state = FOLLOW_LANE
+                #     self._collission_actor = closest_vehicle
+                #     self._collission_index = min_collision
 
             elif(self._intersection_state and red_light):
                 self._prev_lookahead = self._lookahead
@@ -562,12 +564,72 @@ class BehaviouralPlanner:
 
             elif(red_light == "NTL"):
                 #time.sleep(2.0)
-                c=0
-                for i in range(1000000):          # this is to wait in intersections which has no traffic lights
-                    c=c+i
-                print("Delay")
-                self._stopped = True
-                self._state   = INTERSECTION
+                # c=0
+                # for i in range(1000000):          # this is to wait in intersections which has no traffic lights
+                #     c=c+i
+                # print("Delay")
+                # self._stopped = True
+                # self._state   = INTERSECTION
+                if(lane_path_blcked_overtake):
+                    if(self.can_overtake(ego_state,closest_vehicle,current_speed)):
+                        ##### FIX GOAL STATE PROPERLY
+                        self._state   = OVERTAKE
+                        self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+                        self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+                        self._goal_state[2] = 0
+
+                    elif(lane_path_blcked_folwLead):
+                        if ((not need_to_stop) and (closest_vehicle!=None)) :
+                            if (not self._stopped):
+                                c=0
+                                for i in range(10000000):          # this is to wait in intersections which has no traffic lights
+                                    c=c+i
+                                print("Delay")
+                            self._stopped = True
+                            self._collission_actor = closest_vehicle
+                            self._state   = FOLLOW_LEAD_VEHICLE
+                            self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+                            self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+                            self._goal_state[2] = 0
+
+                        # elif (need_to_stop):
+                        else:
+                            self._collission_actor = closest_vehicle
+                            self._state   = STAY_STOPPED
+                            self._collission_index = min_collision
+                        
+                        # elif(self._intersection_state):
+                        #     self._state   = INTERSECTION
+                        #     self._collission_actor = closest_vehicle
+                        #     self._collission_index = min_collision
+
+                        # else:
+                        #     self._state   = FOLLOW_LANE
+                        #     self._collission_actor = closest_vehicle
+                        #     self._collission_index = min_collision
+
+                    elif(self._intersection_state):
+                        if (not self._stopped):
+                                c=0
+                                for i in range(10000000):          # this is to wait in intersections which has no traffic lights
+                                    c=c+i
+                                print("Delay")
+                        self._stopped = True
+                        self._state   = INTERSECTION
+                        self._collission_actor = closest_vehicle
+                        self._collission_index = min_collision
+
+                    else:
+                        if (not self._stopped):
+                                c=0
+                                for i in range(10000000):          # this is to wait in intersections which has no traffic lights
+                                    c=c+i
+                                print("Delay")
+                        self._stopped = True
+                        self._state   = FOLLOW_LANE
+                        self._collission_actor = closest_vehicle
+                        self._collission_index = min_collision
+
                 
             elif((self._intersection_state and red_light)):             
                 self._collission_actor = col_walker
@@ -591,20 +653,21 @@ class BehaviouralPlanner:
                         self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
                         self._goal_state[2] = 0
 
-                    elif (need_to_stop):
+                    # elif (need_to_stop):
+                    else:
                         self._collission_actor = closest_vehicle
                         self._state   = STAY_STOPPED
                         self._collission_index = min_collision
                     
-                    elif(self._intersection_state):
-                        self._state   = INTERSECTION
-                        self._collission_actor = closest_vehicle
-                        self._collission_index = min_collision
+                    # elif(self._intersection_state):
+                    #     self._state   = INTERSECTION
+                    #     self._collission_actor = closest_vehicle
+                    #     self._collission_index = min_collision
 
-                    else:
-                        self._state   = FOLLOW_LANE
-                        self._collission_actor = closest_vehicle
-                        self._collission_index = min_collision
+                    # else:
+                    #     self._state   = FOLLOW_LANE
+                    #     self._collission_actor = closest_vehicle
+                    #     self._collission_index = min_collision
 
                 elif(self._intersection_state):
                     self._state   = INTERSECTION
@@ -711,34 +774,35 @@ class BehaviouralPlanner:
                     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
                     self._goal_state[2] = 0
 
-                elif (need_to_stop):
-                    self._prev_lookahead = self._lookahead
-                    self._collission_actor = closest_vehicle
-                    self._state   = DECELERATE_TO_STOP
-                    self._collission_index = min_collision
-
-                elif((not self._intersection_state) ):               
-                    self._state   = FOLLOW_LANE
-                    self._collission_actor = closest_vehicle
-                    self._collission_index = min_collision
-
-                elif(self._stopped):
-                    self._state   = INTERSECTION
-                    self._collission_actor = closest_vehicle
-                    self._collission_index = min_collision
-
-                elif(red_light): 
-                    self._prev_lookahead = self._lookahead
-                    ###change the goal point
-                    self._state   = DECELERATE_TO_STOP
-                    self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
-                    self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
-                    self._goal_state[2] = 0
-                    
+                # elif (need_to_stop):
                 else:
-                    self._state = INTERSECTION
+                    self._prev_lookahead = self._lookahead
                     self._collission_actor = closest_vehicle
+                    self._state   = DECELERATE_TO_STOP
                     self._collission_index = min_collision
+
+                # elif((not self._intersection_state) ):               
+                #     self._state   = FOLLOW_LANE
+                #     self._collission_actor = closest_vehicle
+                #     self._collission_index = min_collision
+
+                # elif(self._stopped):
+                #     self._state   = INTERSECTION
+                #     self._collission_actor = closest_vehicle
+                #     self._collission_index = min_collision
+
+                # elif(red_light): 
+                #     self._prev_lookahead = self._lookahead
+                #     ###change the goal point
+                #     self._state   = DECELERATE_TO_STOP
+                #     self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
+                #     self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
+                #     self._goal_state[2] = 0
+                    
+                # else:
+                #     self._state = INTERSECTION
+                #     self._collission_actor = closest_vehicle
+                #     self._collission_index = min_collision
 
       
             elif((not self._intersection_state) ):               
@@ -1013,20 +1077,21 @@ class BehaviouralPlanner:
                         self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
                         self._goal_state[2] = 0
 
-                    elif (need_to_stop):
+                    # elif (need_to_stop):
+                    else:
                         self._prev_lookahead = self._lookahead
                         self._collission_actor = closest_vehicle
                         self._state   = DECELERATE_TO_STOP
                         self._collission_index = min_collision
-                    elif(self._intersection_state):
-                        self._state   = INTERSECTION
-                        self._collission_actor = closest_vehicle
-                        self._collission_index = min_collision
+                    # elif(self._intersection_state):
+                    #     self._state   = INTERSECTION
+                    #     self._collission_actor = closest_vehicle
+                    #     self._collission_index = min_collision
                     
-                    else:
-                        self._state   = FOLLOW_LANE
-                        self._collission_actor = closest_vehicle
-                        self._collission_index = min_collision
+                    # else:
+                    #     self._state   = FOLLOW_LANE
+                    #     self._collission_actor = closest_vehicle
+                    #     self._collission_index = min_collision
 
 
 
@@ -1739,6 +1804,20 @@ class BehaviouralPlanner:
                 elif(angle>np.pi/2): 
                     # When the lead vehicle going across the path of ego vehicle
                     return True
+                elif(is_intersection):
+                    green_light = not self.is_light_red_or_no_light(self._traffic_lights,ego_location, ego_vehicle_waypoint,goal_waypoint ,ego_state)
+                    # When traffic lights present
+                    if(type(green_light)!= type("str")):
+                        if(green_light):
+                            return False
+                        else:
+                            return True
+                    else:
+                        # When already stopped at the stop line in intersection
+                        if(self._stopped):
+                            return False
+                        else:
+                            return True
                 else:
                     return False
             else:
