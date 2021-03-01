@@ -564,69 +564,12 @@ class BehaviouralPlanner:
 
             elif(red_light == "NTL"):
                 #time.sleep(2.0)
-                # c=0
-                # for i in range(1000000):          # this is to wait in intersections which has no traffic lights
-                #     c=c+i
-                # print("Delay")
-                # self._stopped = True
-                # self._state   = INTERSECTION
-                if(lane_path_blcked_overtake):
-                    if(self.can_overtake(ego_state,closest_vehicle,current_speed)):
-                        ##### FIX GOAL STATE PROPERLY
-                        self._state   = OVERTAKE
-                        self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
-                        self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
-                        self._goal_state[2] = 0
-
-                    elif(lane_path_blcked_folwLead):
-                        if ((not need_to_stop) and (closest_vehicle!=None)) :
-                            c=0
-                            for i in range(10000000):          # this is to wait in intersections which has no traffic lights
-                                c=c+i
-                            print("Delay")
-                            self._stopped = True
-                            self._collission_actor = closest_vehicle
-                            self._state   = FOLLOW_LEAD_VEHICLE
-                            self._goal_state = paths[self._lp._num_paths//2,:,max(min_collision-1,1)]
-                            self._goal_state_next = paths[self._lp._num_paths//2,:,max(min_collision,0)]
-                            self._goal_state[2] = 0
-
-                        # elif (need_to_stop):
-                        else:
-                            self._collission_actor = closest_vehicle
-                            self._state   = STAY_STOPPED
-                            self._collission_index = min_collision
-                        
-                        # elif(self._intersection_state):
-                        #     self._state   = INTERSECTION
-                        #     self._collission_actor = closest_vehicle
-                        #     self._collission_index = min_collision
-
-                        # else:
-                        #     self._state   = FOLLOW_LANE
-                        #     self._collission_actor = closest_vehicle
-                        #     self._collission_index = min_collision
-
-                    elif(self._intersection_state):
-                        c=0
-                        for i in range(10000000):          # this is to wait in intersections which has no traffic lights
-                            c=c+i
-                        print("Delay")
-                        self._stopped = True
-                        self._state   = INTERSECTION
-                        self._collission_actor = closest_vehicle
-                        self._collission_index = min_collision
-
-                    else:
-                        c=0
-                        for i in range(10000000):          # this is to wait in intersections which has no traffic lights
-                            c=c+i
-                        print("Delay")
-                        self._stopped = True
-                        self._state   = FOLLOW_LANE
-                        self._collission_actor = closest_vehicle
-                        self._collission_index = min_collision
-
+                c=0
+                for i in range(1000000):          # this is to wait in intersections which has no traffic lights
+                    c=c+i
+                print("Delay")
+                self._stopped = True
+                self._state   = INTERSECTION
                 
             elif((self._intersection_state and red_light)):             
                 self._collission_actor = col_walker
