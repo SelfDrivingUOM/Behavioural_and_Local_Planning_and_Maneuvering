@@ -1292,7 +1292,7 @@ def game_loop(args):
                                     color=carla.Color(r=0, g=255, b=0), life_time=500,
                                     persistent_lines=True)
 
-        raise Exception
+        # raise Exception
         ################################################################
         #############        Initializing Controller      ##############
         ################################################################
