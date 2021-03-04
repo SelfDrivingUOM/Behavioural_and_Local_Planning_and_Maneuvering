@@ -27,7 +27,7 @@ PATH_SELECT_WEIGHT     = 10               #
 A_MAX                  = 5                # m/s^2
 SLOW_SPEED             = 0                # m/s
 STOP_LINE_BUFFER       = 1.5              # m
-LEAD_VEHICLE_SPEED     = 10                # m/s
+LEAD_VEHICLE_SPEED     = 15                # m/s
 LEAD_VEHICLE_LOOKAHEAD = 20.0             # m
 LP_FREQUENCY_DIVISOR   = 1                # Frequency divisor tdo make the 
                                           # local planner operate at a lower
@@ -46,21 +46,21 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
 NO_AGENT_VEHICLES = 0
-NO_VEHICLES =  300
-NO_WALKERS  =  0
+NO_VEHICLES =  0
+NO_WALKERS  =  300
 ONLY_HIGWAY =  0
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
 NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
 SPAWN_POINT = 35#189#26  #36 ##20/40-best
-END_POINT   = 92#0     #119
+END_POINT   = 92 #0     #119
 # global_path_points_set = [60,130,62,301,32,[32,28],[31,17],17]
 # global_path_points_set = [126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
 global_path_points_set = [35,39,98,146,113,284,142,[278,114],[279,115],56,126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
-
+# global_path_points_set = [179, 258]
 LEAD_SPAWN  = False
-spawn_wpt_parked = 30 #140
+spawn_wpt_parked = 50
 
 OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
@@ -194,6 +194,10 @@ def get_current_pose(transform):
     y = transform.location.y
     yaw = np.deg2rad(transform.rotation.yaw)
 
+    if(yaw>np.pi):
+        yaw-=2*np.pi
+    elif(yaw<-np.pi):
+        yaw+=2*np.pi
     return (x,y,yaw)
 
 def send_control_command(vehicle, throttle, steer, brake, 
@@ -262,13 +266,17 @@ def remove_dup_wp(wp):
     waypoints = np.append(waypoints,wp[0].reshape((1,3)),axis=0)
     dist = 0
     for i in range(wp.shape[0]-1):
+        # print(lane_change_points)
         dist += np.linalg.norm(wp[i+1,:2]-wp[i,:2])
         if (dist<0.5):
+
             continue
         else:
             waypoints = np.append(waypoints,wp[i+1].reshape((1,3)),axis=0)
             dist = 0
     return waypoints
+    
+
 
 def find_angle(vect1, vect2): #(x,y)
     vect1 = np.array([vect1[0],vect1[1],0]) # (x y 0)
@@ -282,19 +290,30 @@ def find_angle(vect1, vect2): #(x,y)
     else:
         return np.arccos(v1_v2_dot)
 
-def add_lane_change_waypoints(waypoints,lp,velocity,world):
+def add_lane_change_waypoints(waypoints,lp,velocity,world,map_):
     updated_waypoints = np.empty((0,3))
     updated_waypoints = np.append(updated_waypoints,waypoints[0].reshape((1,3)),axis=0)
-
+    lane_changes =[]
+    lanechange_laneid = []
     i=0
+    count= 0
     while(True):
         if(i==(waypoints.shape[0]-1)):
             break
+        wp_1 = map_.get_waypoint(carla.Location(x= waypoints[i+1,0],y = waypoints[i+1,1],z=0),project_to_road = True)
+        wp_2 = map_.get_waypoint(carla.Location(x= waypoints[i,0],y = waypoints[i,1],z=0),project_to_road = True)
 
-        if((np.linalg.norm(waypoints[i+1, :2]-waypoints[i,:2]) > 2) and (i > 6) and (i<waypoints.shape[0]-6)):
+        if((np.linalg.norm(waypoints[i+1, :2]-waypoints[i,:2]) > 2) and (i > 6) and (i<waypoints.shape[0]-6) and wp_1.lane_id != wp_2.lane_id and not(wp_1.is_junction or wp_2.is_junction)):
             
+
+            # world.debug.draw_string(carla.Location(x=waypoints[i,0],y=waypoints[i,1],z=0), 'H', draw_shadow=False,
+            #         color=carla.Color(r=0, g=0, b=255), life_time=500,
+            #         persistent_lines=True)
+            lane_changes.append(waypoints[i,:2])
+            lanechange_laneid.append(wp_1.lane_id)
             start_index = i
-            end_index = i+20
+            end_index = i+10
+            count+=1
 
             start_vector = (waypoints[start_index] - waypoints[start_index-1])
             start_vector[2] = 0
@@ -324,16 +343,17 @@ def add_lane_change_waypoints(waypoints,lp,velocity,world):
             path = paths[0]
             
             path_wp = np.vstack((path[:2],np.full((1,path.shape[1]),velocity)))
-
+            # print(path_wp.shape)
             updated_waypoints = np.append(updated_waypoints,path_wp.T,axis=0)
 
-            i+=20
+            i+=10
 
         else:
             updated_waypoints = np.append(updated_waypoints,waypoints[i+1].reshape((1,3)),axis=0)
             i+=1
-
-    return updated_waypoints
+    lane_changes = np.array(lane_changes)
+    
+    return updated_waypoints,lane_changes,lanechange_laneid
 
 def genarate_global_path(globalPathPoints, world_map):
     # Setting up global router
@@ -743,6 +763,15 @@ class CameraManager(object):
         if self.recording:
             image.save_to_disk('_out/%08d' % image.frame)
 
+def get_lane_change_ids(lane_changes, waypoints):
+    index = []
+    for i in range(lane_changes.shape[0]):
+        dist_ = np.sum(np.square(waypoints[:,:2] - lane_changes[i]),axis = 1)
+        idx = np.argmin(dist_)
+        index.append(idx)
+    # print(lane_changes.shape,waypoints.shape)
+
+    return index
 
 def game_loop(args):
     pygame.init()
@@ -763,8 +792,8 @@ def game_loop(args):
         world = World(client.get_world(), hud, args,SPAWN_POINT)
         world_map = world.world.get_map()
         clock = pygame.time.Clock()
-        world.world.debug.draw_line(carla.Location(x=-50 , y=0,z=0),carla.Location(x=200 , y=0,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
-        world.world.debug.draw_line(carla.Location(x=0 , y=-50,z=0),carla.Location(x=0 , y=200,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
+        world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=200 , y=0,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
+        world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=0 , y=200,z=0), thickness=0.5, color=carla.Color(r=0, g=255, b=0), life_time=-1.)
 
     ###################################################################
     #######  Spawn Vehicles and Actors using CARLA Traffic Manager  ###
@@ -1121,10 +1150,12 @@ def game_loop(args):
 
         waypoints_np = remove_dup_wp(waypoints_np)
 
-        waypoints_np = add_lane_change_waypoints(waypoints_np,lp,vehicle_speed, world.world)
+        waypoints_np,lane_changes,lane_change_ids = add_lane_change_waypoints(waypoints_np,lp,vehicle_speed, world.world,world_map)
 
         waypoints_np = remove_dup_wp(waypoints_np)
 
+        lane_change_id = get_lane_change_ids(lane_changes,waypoints_np)
+        # print(lane_changes , lane_changes.shape)
 
         #################################################
         #############  Walker spawn  ####################
@@ -1250,11 +1281,18 @@ def game_loop(args):
 
 
 
-        for w in waypoints_np:
-            world.world.debug.draw_string(carla.Location(x=w[0],y=w[1],z=0), 'O', draw_shadow=False,
-                                   color=carla.Color(r=0, g=255, b=0), life_time=500,
-                                   persistent_lines=True)
+        for i in range (waypoints_np.shape[0]):
 
+            if(i in lane_change_id):
+                world.world.debug.draw_string(carla.Location(x=waypoints_np[i,0],y=waypoints_np[i,1],z=0), 'O', draw_shadow=False,
+                    color=carla.Color(r=255, g=0, b=0), life_time=500,
+                    persistent_lines=True)
+            else:
+                world.world.debug.draw_string(carla.Location(x=waypoints_np[i,0],y=waypoints_np[i,1],z=0), 'O', draw_shadow=False,
+                                    color=carla.Color(r=0, g=255, b=0), life_time=500,
+                                    persistent_lines=True)
+
+        raise Exception
         ################################################################
         #############        Initializing Controller      ##############
         ################################################################
@@ -1267,7 +1305,7 @@ def game_loop(args):
         ################################################################
 
 
-        bp = BehaviouralPlanner(world.world, world_map, world.player, environment, lp, waypoints_np, HOP_RESOLUTION )
+        bp = BehaviouralPlanner(world.world, world_map, world.player, environment, lp, waypoints_np, HOP_RESOLUTION ,lane_changes,lane_change_ids)
 
 
 

@@ -42,8 +42,8 @@ def can_we_overtake(ego_vehicle, closest_vehicle,_map,_world,glb_wpts,desired_sp
         to_closest += np.linalg.norm(glb_wpts[i,:2]-glb_wpts[i+1,:2])
     ##############################################################################
 
-    time_to_pass =  (to_closest + ego_vehicle.bounding_box.extent.y + closest_vehicle.bounding_box.extent.y + 3.5 + 3)/desired_speed
-    time_to_global  = (ego_vehicle.bounding_box.extent.y + 15)/(desired_speed-((1-speedFactor)*closest_veh_speed))
+    time_to_pass =  (to_closest + ego_vehicle.bounding_box.extent.x + closest_vehicle.bounding_box.extent.x + 3.5 + 3)/desired_speed
+    time_to_global  = (ego_vehicle.bounding_box.extent.x + 15)/(desired_speed-((1-speedFactor)*closest_veh_speed))
 
     # print("Speed lead",get_speed(closest_vehicle))
     frwd_buffer_ego = (time_to_pass*(desired_speed + closest_veh_speed)) + (time_to_global*(desired_speed + (speedFactor*closest_veh_speed)))

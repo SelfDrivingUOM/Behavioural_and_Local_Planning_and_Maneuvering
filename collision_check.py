@@ -129,9 +129,33 @@ class CollisionChecker:
 
         return obstacle_pts
 
+        def in_back(self,rot,ego_loc,actors,actors_loc):
+
+            # print(actors)
+            # print(rot.shape,actors.shape,ego_loc.shape,actors_loc.shape)
+            rot = np.array([[np.cos(yaw),-np.sin(yaw)],[np.sin(yaw),np.cos(yaw)]])
+            car_frame = rot.T@((actors_loc - ego_loc).T)
+
+            # return_walkers = walkers[crit]
+            crit = car_frame[0] + self.ego_vehicle.bounding_box.extent.x <= 0
+            car_frame = car_frame[:,crit]
+
+            #print(car_frame)
+            car_frame = np.append(car_frame,[actors[crit]],axis = 0)
+            car_frame = car_frame[:,car_frame[0].argsort(kind = "mergesort")]
+
+            # print(car_frame.shape,"HUUUU")
+            return_actors = car_frame[2]
+            actors_x = car_frame[0]
+
+            # print(return_actors,actors_y)
+            if(car_frame.shape[1] == 0):
+                return None,None
+            else:
+                return actors_x[0],return_actors[0]
 
     def collision_check_static(self, paths, obstacle_actors, world):
-        """
+        """,all_lanes,ego_lane,goal_lane
             Inputs
                 paths           -   Numpy array containing the paths provide by the local planner.
                                         numpy.ndarray[[ [path1_x1,path1_x2,.....,path1_xn],    (x)
@@ -173,6 +197,10 @@ class CollisionChecker:
         if obstacle_num > 0:
             j = 0
             # Check Collision of each local path provided by loal planner one by one
+
+            # if(ego_lane!=goal_lane and paths.size!=6 ):
+                
+
             for path in paths:
                 theta = path[2,:].reshape((1,path.shape[1])).T
                 path = path[:2,:].T

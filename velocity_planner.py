@@ -537,6 +537,7 @@ class VelocityPlanner:
 
         profile = np.append(path[:2],velo,axis = 0)
         profile = list(profile.T)
+        self._prev_trajectory = profile
         return profile
     
 

@@ -1,8 +1,26 @@
 import numpy as np
-import carla
 from tools.misc import draw_bound_box_actor, draw_bound_box
 import time
 from collections import defaultdict
+from os_carla import WINDOWS
+import sys
+import glob
+
+if WINDOWS:
+    try:
+        sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+
+    except IndexError:
+        pass
+
+else:
+    try:
+        sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    except IndexError:
+        pass
+
+import carla
+ 
 
 class Environment():
     def __init__(self, world, ego_vehicle,map_):
@@ -89,29 +107,51 @@ class Environment():
         # print(len(self.lights_list),"A")
     def in_front(self,rot,ego_loc,actors,actors_loc):
 
+        # print(actors)
         # print(rot.shape,actors.shape,ego_loc.shape,actors_loc.shape)
 
-        car_frame = rot@((actors_loc - ego_loc).T)
-        # return_walkers = walkers[crit]
+        car_frame = rot.T@((actors_loc - ego_loc).T)
 
-        crit = car_frame[1] - self.ego_vehicle.bounding_box.extent.y >= 0
+        # return_walkers = walkers[crit]
+        crit = car_frame[0] - self.ego_vehicle.bounding_box.extent.x >= 0
         car_frame = car_frame[:,crit]
 
+        #print(car_frame)
         car_frame = np.append(car_frame,[actors[crit]],axis = 0)
-        car_frame = car_frame[:, car_frame[1].argsort(kind = "mergesort")]
+        car_frame = car_frame[:,car_frame[0].argsort(kind = "mergesort")]
 
         # print(car_frame.shape,"HUUUU")
         return_actors = car_frame[2]
-        actors_y = car_frame[1]
-
+        actors_x = car_frame[0]
 
         # print(return_actors,actors_y)
         if(car_frame.shape[1] == 0):
             return None,None
         else:
-            return actors_y[0],return_actors[0]
+            return actors_x[0],return_actors[0]
 
+    # def in_front(self,rot,ego_loc,actors,actors_loc):
 
+    #     # print(rot.shape,actors.shape,ego_loc.shape,actors_loc.shape)
+
+    #     car_frame = rot@((actors_loc - ego_loc).T)
+    #     # return_walkers = walkers[crit]
+    #     print(car_frame)
+    #     crit = car_frame[1] - self.ego_vehicle.bounding_box.extent.y >= 0
+    #     car_frame = car_frame[:,crit]
+
+    #     car_frame = np.append(car_frame,[actors[crit]],axis = 0)
+    #     car_frame = car_frame[:, car_frame[1].argsort(kind = "mergesort")]
+
+    #     # print(car_frame.shape,"HUUUU")
+    #     return_actors = car_frame[2]
+    #     actors_y = car_frame[1]
+
+    #     # print(return_actors,actors_y)
+    #     if(car_frame.shape[1] == 0):
+    #         return None,None
+    #     else:
+    #         return actors_y[0],return_actors[0]
 
     def get_actors(self,in_radius,paths,middle_path_idx, intersection_state, intersection_waypoint):
         
@@ -136,11 +176,15 @@ class Environment():
         return_walkers = []
         vehicle_lanes = []
         vehicle_sections = []
+
         vehicle_locs = []
+        vehicle_front_locs = np.empty((0,2),dtype=np.float32)
+        vehicle_backk_locs = np.empty((0,2),dtype=np.float32)
 
         ego_waypoint=self._map.get_waypoint(self.ego_vehicle_loc,project_to_road=True,lane_type=carla.LaneType.Driving)
         ego_lane = ego_waypoint.lane_id
         ego_section = ego_waypoint.section_id
+        goal_lane =None
 
         if (type(paths) == type(None)):
             pass
@@ -157,14 +201,17 @@ class Environment():
 
         # vehicle_loc = []
         # walker loc = []
-        
+        # print(vehicles)
         for vehicle in vehicles:
             if self.ego_vehicle.id == vehicle.id:
                 return_dynamic_vehicles.append([10000,10000])
                 return_static_vehicles.append([10000,10000])
                 vehicle_lanes.append(ego_lane)
                 vehicle_sections.append(ego_section)
+
                 vehicle_locs.append([10000,10000])
+                vehicle_front_locs = np.append(vehicle_front_locs,np.array([[100000,100000]]),axis=0)
+                vehicle_backk_locs = np.append(vehicle_backk_locs,np.array([[100000,100000]]),axis=0)
 
                 # continue
             else:
@@ -183,6 +230,45 @@ class Environment():
                 locs = [vehicle_loc.x,vehicle_loc.y]
                 vels = np.array([vehicle_vel.x,vehicle_vel.y,vehicle_vel.z])
                 vehicle_locs.append([vehicle_loc.x,vehicle_loc.y])
+                
+
+                ################### intersection closest vehicle handling #############################################
+                
+                veh_loc = np.array([[vehicle.get_transform().location.x,vehicle.get_transform().location.y]])
+
+                yaw = np.radians(vehicle.get_transform().rotation.yaw)
+
+                if(yaw>np.pi):
+                    yaw-=2*np.pi
+                elif(yaw<-np.pi):
+                    yaw+=2*np.pi
+                    
+                rot = np.array([[np.cos(yaw),-np.sin(yaw)],[np.sin(yaw),np.cos(yaw)]])
+
+                x_vec = rot@np.array([[1],[0]])
+                x_vec = x_vec.reshape((2,))
+
+                y_vec = rot@np.array([[0],[1]])
+                y_vec = y_vec.reshape((2,))
+                # # print(y_vec)
+                # print(np.array(locs))
+
+                # SS = np.array(locs) + vehicle.bounding_box.extent.x*x_vec
+                # SS_1 = np.array(locs) - vehicle.bounding_box.extent.x*x_vec
+                # # print(yaw)
+                # self.world.debug.draw_string(carla.Location(x=SS[0],y = SS[1],z = 0),"0", draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=100,persistent_lines=True)    
+                # self.world.debug.draw_string(carla.Location(x=SS_1[0],y = SS_1[1],z = 0),"0", draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=100,persistent_lines=True)    
+     
+                offset = vehicle.bounding_box.extent.x*x_vec
+                # SS = np.array(locs) + offset
+                # SA = np.array(locs) - offset
+                # self.world.debug.draw_string(carla.Location(x=SS[0],y = SS[1],z = 1.843),"0", draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=30,persistent_lines=True)    
+                # self.world.debug.draw_string(carla.Location(x=SA[0],y = SA[1],z = 1.843),"0", draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=30,persistent_lines=True)    
+                
+                # # print(offset.shape)
+                vehicle_front_locs = np.append(vehicle_front_locs,veh_loc+offset,axis=0)
+                vehicle_backk_locs = np.append(vehicle_backk_locs,veh_loc-offset,axis=0)
+                ###############################################################################################################
 
                 if(vels[vels>0.0].size == 0 ):
                     return_dynamic_vehicles.append([10000,10000])
@@ -231,12 +317,12 @@ class Environment():
         walkers = np.array(walkers)
         walkers_y = None
         walkers_x = None
-        rot = np.array([[np.cos(self.yaw),-np.sin(self.yaw)],[np.cos(self.yaw),np.sin(self.yaw)]])
+        rot = np.array([[np.cos(self.yaw),-np.sin(self.yaw)],[np.sin(self.yaw),np.cos(self.yaw)]])
 
-        x_vec = rot.T@np.array([[1],[0]])
+        x_vec = rot@np.array([[1],[0]])
         x_vec = x_vec.reshape((2,))
 
-        y_vec = rot.T@np.array([[0],[1]])
+        y_vec = rot@np.array([[0],[1]])
         y_vec = y_vec.reshape((2,))
 
         if(vehicle_lanes!=[]):
@@ -319,7 +405,7 @@ class Environment():
             #print("dyns", dyns)
 
             dist_dynamic,dynamic_closest = self.in_front(rot,loc,dyns,return_dynamic_vehicles)
-            return_dynamic_vehicles = dyns
+            # return_dynamic_vehicles = dyns
             # temp_ = np.amin(dist_dynamic[vehicle_lanes == ego_lane])
             # dyn_idx = np.where(dist_dynamic == temp_)
             # dist_dynamic = temp_ #closest dynamic distance squared
@@ -381,11 +467,15 @@ class Environment():
             #print("stats", stats)
             dist_static,static_closest = self.in_front(rot,loc,stats,return_static_vehicles)
             return_static_vehicles = vehicles[stat_temp<in_radius**2]
+
+
+            
+            # return_static_vehicles = stats
             # temp_ = np.amin(dist_static[vehicle_lanes == ego_lane])
             # stat_idx = np.where(dist_static ==temp_)
             # dist_static = temp_  #closest static distance squared
 
-            
+        
         # print(dist_dynamic,dist_static)
         if(return_walkers!=[]):
             """
@@ -398,45 +488,93 @@ class Environment():
 
             # return_walkers = walkers[crit]
             walks = walkers[crit]
-            
-
-
-
-            car_frame = rot@((return_walkers[crit] - loc).T)
+            car_frame = rot.T@((return_walkers[crit] - loc).T)
             # return_walkers = walkers[crit]
 
-            crit = car_frame[1] - self.ego_vehicle.bounding_box.extent.y >= 0
+            crit = car_frame[0] - self.ego_vehicle.bounding_box.extent.x >= 0
             car_frame = car_frame[:,crit]
             
 
             car_frame = np.append(car_frame,[walks[crit]],axis = 0)
-            car_frame = car_frame[:, car_frame[1].argsort(kind = "mergesort")]
+            car_frame = car_frame[:, car_frame[0].argsort(kind = "mergesort")]
             return_walkers = car_frame[2]
-            walkers_y = car_frame[1]
-            walkers_x = car_frame[0]
+            walkers_y = car_frame[0]
+            walkers_x = car_frame[1]
         
-        # print(dist_dynamic,dist_static)
         if (intersection_state):
             # for i in range(intersection_waypoint.shape[0]):
             #     self.world.debug.draw_string(carla.Location(x=intersection_waypoint[i,0],y = intersection_waypoint[i,1],z = 1),"0", draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=30,persistent_lines=True)    
             vehicle_locs = np.array(vehicle_locs)
             dist_vehicles = np.sum(np.square(vehicle_locs-loc),axis = 1)
             intersection_vehicles = vehicles[dist_vehicles<in_radius**2]
-            intersection_vehicle_locs = vehicle_locs[dist_vehicles<in_radius**2]       
-            intersection_vehicles_dist = np.sqrt(np.square(intersection_waypoint[:,0].reshape((-1,1)) - intersection_vehicle_locs[:,0].reshape((1,-1))) + np.square(intersection_waypoint[:,1].reshape((-1,1)) - intersection_vehicle_locs[:,1].reshape((1,-1))))
-            indx_list = np.argwhere(intersection_vehicles_dist < 3.7/2)
-            
-            if (indx_list.size!=0):
-                closest_waypoint = indx_list[0][0]
-                vehicle_index  = np.argwhere(intersection_vehicles_dist[closest_waypoint,:]==np.amin(intersection_vehicles_dist[closest_waypoint,:]))
+            # intersection_vehicle_locs = vehicle_locs[dist_vehicles<in_radius**2]      
+            # intersection_vehicles_dist = np.sqrt(np.square(intersection_waypoint[:,0].reshape((-1,1)) - intersection_vehicle_locs[:,0].reshape((1,-1))) + np.square(intersection_waypoint[:,1].reshape((-1,1)) - intersection_vehicle_locs[:,1].reshape((1,-1))))
+            # indx_list = np.argwhere(intersection_vehicles_dist < 3.7/2)
+
+            # if (indx_list.size!=0):
+            #     closest_waypoint = indx_list[0][0]
+            #     vehicle_index  = np.argwhere(intersection_vehicles_dist[closest_waypoint,:]==np.amin(intersection_vehicles_dist[closest_waypoint,:]))
+            #     vehicle_index = vehicle_index.flatten()
+            #     intersection_vehicles = list(intersection_vehicles)
+            #     draw_bound_box_actor(intersection_vehicles[vehicle_index[0]], self.world,255,255,255)
+            #     closest_vehicle = intersection_vehicles[vehicle_index[0]]
+            #     # print("Check this function when debugging. There can be issues")
+            #     # closest_vehicle = None
+            # else:
+            #     closest_vehicle = None
+
+            # # for k in range(vehicle_front_locs.shape[0]):
+                
+            # #     self.world.debug.draw_string(carla.Location(x=vehicle_front_locs[k,0],y = vehicle_front_locs[k,1],z = 1.843),"0", draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=30,persistent_lines=True)    
+            # #     self.world.debug.draw_string(carla.Location(x=vehicle_backk_locs[k,0],y = vehicle_backk_locs[k,1],z = 1.843),"0", draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=30,persistent_lines=True)    
+
+
+            intersection_vehicle_locs_Fnt = vehicle_front_locs[dist_vehicles<in_radius**2]  
+            intersection_vehicle_locs_Bck = vehicle_backk_locs[dist_vehicles<in_radius**2] 
+            intersection_vehicles_dist_Fnt = np.sqrt(np.square(intersection_waypoint[:,0].reshape((-1,1)) - intersection_vehicle_locs_Fnt[:,0].reshape((1,-1))) + np.square(intersection_waypoint[:,1].reshape((-1,1)) - intersection_vehicle_locs_Fnt[:,1].reshape((1,-1))))
+            intersection_vehicles_dist_Bck = np.sqrt(np.square(intersection_waypoint[:,0].reshape((-1,1)) - intersection_vehicle_locs_Bck[:,0].reshape((1,-1))) + np.square(intersection_waypoint[:,1].reshape((-1,1)) - intersection_vehicle_locs_Bck[:,1].reshape((1,-1))))
+            indx_list_Fnt = np.argwhere(intersection_vehicles_dist_Fnt < 3.7/2)
+            indx_list_Bck = np.argwhere(intersection_vehicles_dist_Bck < 3.7/2)
+            closest_waypoint_Fnt = None
+            closest_waypoint_Bck = None
+
+            if (indx_list_Fnt.size!=0):
+                closest_waypoint_Fnt = indx_list_Fnt[0][0]
+
+            if (indx_list_Bck.size!=0):
+                closest_waypoint_Bck = indx_list_Bck[0][0]
+
+            if ((closest_waypoint_Fnt is None) and (closest_waypoint_Bck is None)):
+                closest_vehicle = None
+
+            elif (closest_waypoint_Fnt is None):
+                vehicle_index  = np.argwhere(intersection_vehicles_dist_Bck[closest_waypoint_Bck,:]==np.amin(intersection_vehicles_dist_Bck[closest_waypoint_Bck,:]))
                 vehicle_index = vehicle_index.flatten()
                 intersection_vehicles = list(intersection_vehicles)
                 draw_bound_box_actor(intersection_vehicles[vehicle_index[0]], self.world,255,255,255)
                 closest_vehicle = intersection_vehicles[vehicle_index[0]]
-                # print("Check this function when debugging. There can be issues")
-                # closest_vehicle = None
+
+            elif (closest_waypoint_Bck is None):
+                vehicle_index  = np.argwhere(intersection_vehicles_dist_Fnt[closest_waypoint_Fnt,:]==np.amin(intersection_vehicles_dist_Fnt[closest_waypoint_Fnt,:]))
+                vehicle_index = vehicle_index.flatten()
+                intersection_vehicles = list(intersection_vehicles)
+                draw_bound_box_actor(intersection_vehicles[vehicle_index[0]], self.world,255,255,255)
+                closest_vehicle = intersection_vehicles[vehicle_index[0]]
+            
             else:
-                closest_vehicle = None
+                if (closest_waypoint_Fnt <= closest_waypoint_Bck):
+                    vehicle_index  = np.argwhere(intersection_vehicles_dist_Fnt[closest_waypoint_Fnt,:]==np.amin(intersection_vehicles_dist_Fnt[closest_waypoint_Fnt,:]))
+                    vehicle_index = vehicle_index.flatten()
+                    intersection_vehicles = list(intersection_vehicles)
+                    draw_bound_box_actor(intersection_vehicles[vehicle_index[0]], self.world,255,255,255)
+                    closest_vehicle = intersection_vehicles[vehicle_index[0]]
+
+                else:
+                    vehicle_index  = np.argwhere(intersection_vehicles_dist_Bck[closest_waypoint_Bck,:]==np.amin(intersection_vehicles_dist_Bck[closest_waypoint_Bck,:]))
+                    vehicle_index = vehicle_index.flatten()
+                    intersection_vehicles = list(intersection_vehicles)
+                    draw_bound_box_actor(intersection_vehicles[vehicle_index[0]], self.world,255,255,255)
+                    closest_vehicle = intersection_vehicles[vehicle_index[0]]
 
         else:
             if(dist_dynamic!=None and dist_static!=None):
@@ -478,8 +616,11 @@ class Environment():
                     # closest_vehicle = vehicles[dyn_idx][0]
                     # closest_vehicle = vehicles[stat_idx][0]
                     closest_vehicle = temp_
+        
+        return_stat_lanes = vehicle_lanes[stat_temp<in_radius**2] 
+        return_dyn_lanes  = vehicle_lanes[dist_temp<in_radius**2]
 
-        return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,y_vec,walkers_y,walkers_x
+        return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,y_vec,walkers_y,walkers_x,return_stat_lanes,return_dyn_lanes,ego_lane,goal_lane
 
 
     def get_overtake_actors(self, _waypoint, thresholdSqr, ego_actor):
@@ -494,10 +635,15 @@ class Environment():
             if (veh.id != ego_actor.id):
                 veh_loc = np.array([[veh.get_transform().location.x,veh.get_transform().location.y]])
 
-                yaw = veh.get_transform().rotation.yaw
-                rot = np.array([[np.cos(yaw),-np.sin(yaw)],[np.cos(yaw),np.sin(yaw)]])
+                yaw = np.radians(veh.get_transform().rotation.yaw)
+                rot = np.array([[np.cos(yaw),-np.sin(yaw)],[np.sin(yaw),np.cos(yaw)]])
                 # print(np.array[[veh.bounding_box.extent.x],[veh.bounding_box.extent.y]])
-                offset = (rot.T @ np.array([[veh.bounding_box.extent.x],[veh.bounding_box.extent.y]])).T
+
+                ####Gershom was here
+
+
+
+                offset = (rot@ np.array([[veh.bounding_box.extent.x],[veh.bounding_box.extent.y]])).T
                 # print(offset.shape)
 
                 # vehicle_locs = np.append(vehicle_locs,veh_loc,axis=0)
