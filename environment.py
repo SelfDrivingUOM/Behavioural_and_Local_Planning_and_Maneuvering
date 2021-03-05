@@ -375,18 +375,21 @@ class Environment():
             # else:
 
             if (type(paths) == type(None)):
-                dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]                
-                return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)]
+                crit_1 = np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)
+                dyns = vehicles[crit_1]                
+                return_dynamic_vehicles = return_dynamic_vehicles[crit_1]
+                dyn_lane_chng_dist = dist_dynamic[crit_1] 
+
 
                 # dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, np.logical_and(ego_lane == vehicle_lanes,ego_section == vehicle_sections))]                
                 # return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, np.logical_and(ego_lane == vehicle_lanes,ego_section == vehicle_sections))]
 
                 # print("paths = None ",return_dynamic_vehicles)
             else:
-                
-                dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2,np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
-                return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2,np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
-                
+                crit_1 = np.logical_and(dist_dynamic<in_radius**2,np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))
+                dyns = vehicles[crit_1]
+                return_dynamic_vehicles = return_dynamic_vehicles[crit_1]
+                dyn_lane_chng_dist = dist_dynamic[crit_1] 
                 # vehicles_in_ego = np.logical_and(ego_lane == vehicle_lanes,ego_section==vehicle_sections)
                 # vehicles_in_goal = np.logical_and(goal_lane == vehicle_lanes,goal_section == vehicle_sections)
 
@@ -620,7 +623,8 @@ class Environment():
         return_stat_lanes = vehicle_lanes[stat_temp<in_radius**2] 
         return_dyn_lanes  = vehicle_lanes[dist_temp<in_radius**2]
 
-        return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,y_vec,walkers_y,walkers_x,return_stat_lanes,return_dyn_lanes,ego_lane,goal_lane
+        # print(return_dynamic_vehicles)
+        return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,y_vec,walkers_y,walkers_x,return_stat_lanes,return_dyn_lanes,ego_lane,goal_lane,dyn_lane_chng_dist
 
 
     def get_overtake_actors(self, _waypoint, thresholdSqr, ego_actor):

@@ -66,7 +66,7 @@ OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
 
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  True
+WALKER_SPAWN =  False
 
 Z           = 1.843102
 
@@ -352,7 +352,7 @@ def add_lane_change_waypoints(waypoints,lp,velocity,world,map_):
             updated_waypoints = np.append(updated_waypoints,waypoints[i+1].reshape((1,3)),axis=0)
             i+=1
     lane_changes = np.array(lane_changes)
-    
+    lanechange_laneid = np.array(lanechange_laneid)
     return updated_waypoints,lane_changes,lanechange_laneid
 
 def genarate_global_path(globalPathPoints, world_map):
@@ -770,7 +770,7 @@ def get_lane_change_ids(lane_changes, waypoints):
         idx = np.argmin(dist_)
         index.append(idx)
     # print(lane_changes.shape,waypoints.shape)
-
+    index = np.array(index)
     return index
 
 def game_loop(args):
@@ -1152,11 +1152,11 @@ def game_loop(args):
 
         waypoints_np = remove_dup_wp(waypoints_np)
 
-        waypoints_np,lane_changes,lane_change_ids = add_lane_change_waypoints(waypoints_np,lp,vehicle_speed, world.world,world_map)
+        waypoints_np,lane_changes,lane_change_lane_ids = add_lane_change_waypoints(waypoints_np,lp,vehicle_speed, world.world,world_map)
 
         waypoints_np = remove_dup_wp(waypoints_np)
 
-        lane_change_id = get_lane_change_ids(lane_changes,waypoints_np)
+        lane_change_idx = get_lane_change_ids(lane_changes,waypoints_np)
         # print(lane_changes , lane_changes.shape)
 
         #################################################
@@ -1285,7 +1285,7 @@ def game_loop(args):
 
         for i in range (waypoints_np.shape[0]):
 
-            if(i in lane_change_id):
+            if(i in lane_change_idx):
                 world.world.debug.draw_string(carla.Location(x=waypoints_np[i,0],y=waypoints_np[i,1],z=0), 'O', draw_shadow=False,
                     color=carla.Color(r=255, g=0, b=0), life_time=500,
                     persistent_lines=True)
@@ -1307,7 +1307,7 @@ def game_loop(args):
         ################################################################
 
 
-        bp = BehaviouralPlanner(world.world, world_map, world.player, environment, lp, waypoints_np, HOP_RESOLUTION ,lane_changes,lane_change_ids)
+        bp = BehaviouralPlanner(world.world, world_map, world.player, environment, lp, waypoints_np, HOP_RESOLUTION ,lane_change_idx,lane_change_lane_ids)
 
 
 
