@@ -47,7 +47,7 @@ INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
 NO_AGENT_VEHICLES = 0
 NO_VEHICLES =  0
-NO_WALKERS  =  300
+NO_WALKERS  =  0
 ONLY_HIGWAY =  0
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
@@ -66,7 +66,7 @@ OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
 
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  False
+WALKER_SPAWN =  True
 
 Z           = 1.843102
 
@@ -1044,7 +1044,7 @@ def game_loop(args):
         #############  Walker spawn  ####################
         #################################################
         if (WALKER_SPAWN):
-            NUMBER_OF_STUDENT_IN_ROWS    = 4
+            NUMBER_OF_STUDENT_IN_ROWS    = 10
             NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
             blueprint_library = client.get_world().get_blueprint_library()
@@ -1059,7 +1059,9 @@ def game_loop(args):
                     # walker_transform=carla.Transform(carla.Location(x=32-j, y=90+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
                     # walker_transform=carla.Transform(carla.Location(x=40-j, y=0+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
                     # walker_transform=carla.Transform(carla.Location(x=20-j, y=40+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
-                    walker_transform=carla.Transform(carla.Location(x=-15-j, y=8+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+                    # walker_transform=carla.Transform(carla.Location(x=-15-j, y=8+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+                    #########SCHOOL NEW################
+                    walker_transform=carla.Transform(carla.Location(x=-150-j, y=90+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
 
                     walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
@@ -1068,7 +1070,7 @@ def game_loop(args):
                         walker_control = carla.WalkerControl()
                         # walker_control.speed = 0.7+0.1*j
                         # walker_heading = -90+(i+j-3)*2*((-1)**i)
-                        walker_control.speed = 0.12
+                        walker_control.speed = 0.1
                         # walker_heading = 0+(i+j-3)*2*((-1)**i)
                         walker_heading = -90+(i+j-3)*2*((-1)**i)
                         walker_rotation = carla.Rotation(0,walker_heading,0)

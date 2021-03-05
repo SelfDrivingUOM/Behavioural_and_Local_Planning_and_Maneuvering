@@ -58,8 +58,8 @@ FOLLOW_LEAD_RANGE               = 12       # Range to follow lead vehicles (m)
 OVERTAKE_RANGE                  = 15      # Range to overtake vehicles (m)
 DEBUG_STATE_MACHINE             = False   # Set this to true to see all function outputs in state machine. This is better for full debug
 ONLY_STATE_DEBUG                = True    # Set this to true to see current state of state machine
-UNSTRUCTURED                    = False    # Set this to True to behave according to the unstructured walkers
-TRAFFIC_LIGHT                   = False   # Set this to True to on traffic lights 
+UNSTRUCTURED                    = True    # Set this to True to behave according to the unstructured walkers
+TRAFFIC_LIGHT                   = True   # Set this to True to on traffic lights 
 FOLLOW_LANE_OFFSET              = 0.1     # Path goal point offset in follow lane  (m)
 DECELERATE_OFFSET               = 0.1     # Path goal point offset in decelerate state (m) 
 Z                               = 1.843102
@@ -73,7 +73,7 @@ JUNCTION_HEADING_CHECK_ANGLE    = 20      # To identify the turning direction (d
 GET_ACTOR_RANGE                 = 40      # Radius to filter actors
 DIST_WALKER_INTERSECTION        = 40      # Dont decrease this unless you make the velocity planner correct (m)
 WALKER_DIST_RANGE_BASE          = 5       # Minimum walker detection distance in unsrtuctured  (m)
-WALKER_DIST_RANGE_MAX           = 15      # Maximum walker detection distance in unsrtuctured  (m)
+WALKER_DIST_RANGE_MAX           = 10      # Maximum walker detection distance in unsrtuctured  (m)
 LANE_WIDTH_WALKERS              = 2       # Width of checking walkers for botth left and right (m)
 LEAD_SPEED_THRESHOLD            = 0.5     # Threshold to stop when there is a lead vehicle
 
@@ -210,7 +210,7 @@ class BehaviouralPlanner:
         walkers = list(walkers)
         obstacle_actors = vehicles_static + vehicles_dynamic
         all_obstacle_actors = vehicles_static + vehicles_dynamic + walkers
-        all_lanes           = stat_veh_lanes+dyn_veh_lanes
+        # all_lanes           = stat_veh_lanes+dyn_veh_lanes
         # if(closest_vehicle!=None):
         #     print(get_speed(closest_vehicle))
         #     ######checking lane
@@ -244,7 +244,7 @@ class BehaviouralPlanner:
         """
         emergency_loc = 2* x_vec
         loc = np.array(ego_state)[0:2] + emergency_loc
-        self._world.debug.draw_string(carla.Location(x=loc[0],y = loc[1],z = 0),"0", draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=30,persistent_lines=True)    
+        # self._world.debug.draw_string(carla.Location(x=loc[0],y = loc[1],z = 0),"0", draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=30,persistent_lines=True)    
 
         # _, index_emg = self.get_closest_index([emergency_loc[0]+ego_state[0],emergency_loc[1]+ego_state[1],ego_state[2]])
         emergency_array= np.array([[[emergency_loc[0]+ego_state[0],emergency_loc[0]+ego_state[0]],
@@ -307,8 +307,8 @@ class BehaviouralPlanner:
             self._need_to_stop = need_to_stop    
             
             # Check all paths of the ego vehicle is blocked or not
-            lane_path_blcked_overtake = self.lane_paths_blocked(best_index,OVERTAKE_RANGE, ego_state)
-            lane_path_blcked_folwLead = self.lane_paths_blocked(best_index,FOLLOW_LEAD_RANGE, ego_state)
+            lane_path_blcked_overtake = self.lane_paths_blocked(best_index,OVERTAKE_RANGE, ego_state, min_collision_actor, closest_vehicle)
+            lane_path_blcked_folwLead = self.lane_paths_blocked(best_index,FOLLOW_LEAD_RANGE, ego_state, min_collision_actor, closest_vehicle)
             if (DEBUG_STATE_MACHINE):
                 print("{:<20} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25}".format(   "Pedestrian={}".format(walker_collide), \
                                                                                                     "LanePathBlock={}".format(lane_path_blcked_overtake), \
@@ -323,6 +323,7 @@ class BehaviouralPlanner:
                 self._state   = EMERGENCY_STOP
                    
             elif(walker_collide):
+                print("WALKER COLLIDEEEEEEEEEEEEEEEEE")
                 self._collission_actor = col_walker
                 self._state   = DECELERATE_TO_STOP
                 self._collission_index = min_collision
@@ -345,6 +346,7 @@ class BehaviouralPlanner:
 
                     # elif (need_to_stop):
                     else:
+                        print("DECELERATEWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")
                         self._prev_lookahead = self._lookahead
                         self._collission_actor = closest_vehicle
                         self._state   = DECELERATE_TO_STOP
@@ -440,8 +442,8 @@ class BehaviouralPlanner:
             need_to_stop = self.need_to_stop(closest_vehicle,self._collission_index,ego_location,ego_waypoint,goal_waypoint,ego_state,min_collision,min_collision_actor,intersection)
             self._need_to_stop = need_to_stop
 
-            lane_path_blcked_overtake = self.lane_paths_blocked(self._best_index_from_decelerate,OVERTAKE_RANGE, ego_state)
-            lane_path_blcked_folwLead = self.lane_paths_blocked(self._best_index_from_decelerate,FOLLOW_LEAD_RANGE, ego_state)
+            lane_path_blcked_overtake = self.lane_paths_blocked(self._best_index_from_decelerate,OVERTAKE_RANGE, ego_state, min_collision_actor, closest_vehicle)
+            lane_path_blcked_folwLead = self.lane_paths_blocked(self._best_index_from_decelerate,FOLLOW_LEAD_RANGE, ego_state, min_collision_actor, closest_vehicle)
             if (DEBUG_STATE_MACHINE):
                 print("{:<20} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25}".format(   "Pedestrian={}".format(walker_collide), \
                                                                                                     "LanePathBlocked={}".format(lane_path_blcked_overtake), \
@@ -550,8 +552,8 @@ class BehaviouralPlanner:
             need_to_stop= self.need_to_stop(closest_vehicle,closest_index,ego_location,ego_waypoint,goal_waypoint,ego_state,min_collision,min_collision_actor,intersection)
             self._need_to_stop = need_to_stop
             
-            lane_path_blcked_overtake = self.lane_paths_blocked(best_index,OVERTAKE_RANGE, ego_state)
-            lane_path_blcked_folwLead = self.lane_paths_blocked(best_index,FOLLOW_LEAD_RANGE, ego_state)
+            lane_path_blcked_overtake = self.lane_paths_blocked(best_index,OVERTAKE_RANGE, ego_state, min_collision_actor, closest_vehicle)
+            lane_path_blcked_folwLead = self.lane_paths_blocked(best_index,FOLLOW_LEAD_RANGE, ego_state, min_collision_actor, closest_vehicle)
             if (DEBUG_STATE_MACHINE):
                 print("{:<20} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25}".format(   "Pedestrian={}".format(walker_collide), \
                                                                                                     "NoTrafficLight={}".format((red_light == "NTL")), \
@@ -680,7 +682,6 @@ class BehaviouralPlanner:
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
 
             intersection,triangle_points,junc_bx_pts = self.is_approaching_intersection(closest_index,ego_state, ego_waypoint)
-            # print("tri", triangle_points)
             self._intersection_state = intersection
 
             walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state, ego_lane, paths,best_index,y_vec,min_collision,walkers_y,walkers_x,mid_path_len,intersection,triangle_points, junc_bx_pts)
@@ -694,7 +695,7 @@ class BehaviouralPlanner:
             if(type(red_light) == type("str")):
                 red_light = True
             
-            lane_path_blcked_folwLead= self.lane_paths_blocked(best_index,FOLLOW_LEAD_RANGE, ego_state)
+            lane_path_blcked_folwLead= self.lane_paths_blocked(best_index,FOLLOW_LEAD_RANGE, ego_state, min_collision_actor, closest_vehicle)
 
             if (DEBUG_STATE_MACHINE):
                 print("{:<20} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25}".format(   "Pedestrian={}".format(walker_collide), \
@@ -989,8 +990,8 @@ class BehaviouralPlanner:
             need_to_stop= self.need_to_stop(closest_vehicle,closest_index,ego_location,ego_waypoint,goal_waypoint,ego_state,min_collision,min_collision_actor, intersection)
             self._need_to_stop = need_to_stop
             
-            lane_path_blcked_overtake = self.lane_paths_blocked(best_index,OVERTAKE_RANGE, ego_state)
-            lane_path_blcked_folwLead = self.lane_paths_blocked(best_index,FOLLOW_LEAD_RANGE, ego_state)
+            lane_path_blcked_overtake = self.lane_paths_blocked(best_index,OVERTAKE_RANGE, ego_state, min_collision_actor, min_collision_actor, closest_vehicle)
+            lane_path_blcked_folwLead = self.lane_paths_blocked(best_index,FOLLOW_LEAD_RANGE, ego_state, min_collision_actor, min_collision_actor, closest_vehicle)
             if (DEBUG_STATE_MACHINE):
                 print("{:<20} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25} | {:<25}".format(   "Pedestrian={}".format(walker_collide), \
                                                                                                     "LanePathBlocked={}".format(lane_path_blcked_overtake), \
@@ -1204,7 +1205,6 @@ class BehaviouralPlanner:
         return points
                 
     def within_polygon(self,points,location):
-        print(points)
         within = False
         sign = None
         for i in range(-1,points.shape[0]-1,1):
@@ -1418,14 +1418,14 @@ class BehaviouralPlanner:
 
             return intersection,self._triangle_points,  self._junc_bx_pts
 
-    def lane_paths_blocked(self,best_index,rangeThreshold, ego_state):
+    def lane_paths_blocked(self,best_index,rangeThreshold, ego_state, min_collision_actor, lead_vehicle):
 
-        if(not(self._collission_actor is None)):
+        if(not(lead_vehicle is None)):
             # dist_closest = np.sqrt(np.sum(np.square(np.array([self._collission_actor.get_location().x,self._collission_actor.get_location().y]) \
             #                  - np.array([self._ego_vehicle.get_location().x,self._ego_vehicle.get_location().y]))))
 
             
-            _,lead_closest = self.get_closest_index([self._collission_actor.get_location().x,self._collission_actor.get_location().y])
+            _,lead_closest = self.get_closest_index([lead_vehicle.get_location().x,lead_vehicle.get_location().y])
             # self._world.debug.draw_string(carla.Location(x= self._waypoints[lead_closest,0],y = self._waypoints[lead_closest,1],z = Z),"X", draw_shadow=False,color=carla.Color(r=255, g=255, b=0), life_time=30,persistent_lines=True)
 
             _,ego_closest = self.get_closest_index(ego_state)
@@ -1440,8 +1440,17 @@ class BehaviouralPlanner:
                 return False         
 
         elif(best_index is None):
-            print("best index noneeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
-            return True
+            if (not(min_collision_actor is None)):
+                type_id = min_collision_actor.type_id
+                blue_print_library = self._world.get_blueprint_library()
+                blue_print = blue_print_library.find(type_id)
+                if (blue_print.has_tag('walker')):
+                    return False
+                else:
+                    return True
+
+            else:
+                return False
         else:
             return False
 
@@ -1487,7 +1496,7 @@ class BehaviouralPlanner:
                 : min_collision         : Least local collision index from all the paths in paths array
         """ 
          
-        WALKER_DIST_RANGE = min(WALKER_DIST_RANGE_MAX,WALKER_DIST_RANGE_BASE + 2*self._open_loop_speed)
+        WALKER_DIST_RANGE = min(WALKER_DIST_RANGE_MAX,WALKER_DIST_RANGE_BASE + 1*self._open_loop_speed)
         
         if UNSTRUCTURED:     
             danger_walkers=[]
@@ -1534,8 +1543,10 @@ class BehaviouralPlanner:
             dest_waypoint = world_map.get_waypoint(carla.Location(x=best_path[0][-1], y=best_path[1][-1], z= Z ),project_to_road = True, lane_type =carla.LaneType.Driving)
             dest_lane = dest_waypoint.lane_id
             counter = -1
+            count = -1
             if walkers:
                 for w in walkers:
+                    count+=1
                     walker_loc= w.get_location()
                     walker_waypoint=world_map.get_waypoint(carla.Location(x=walker_loc.x, y=walker_loc.y, z= walker_loc.z ),project_to_road=True,lane_type = ( carla.LaneType.Driving | carla.LaneType.Sidewalk ))
                     w_lane = walker_waypoint.lane_id
@@ -1544,7 +1555,7 @@ class BehaviouralPlanner:
                         draw_bound_box_actor(w,self._world,0,255,0)
                     
                     elif not intersection:
-                        if(ego_lane==w_lane):
+                        if((ego_lane==w_lane) and (walkers_y[count]<WALKER_DIST_RANGE)):
                             draw_bound_box_actor(w,self._world,0,255,0)
 
                 for person in walkers:
@@ -1565,7 +1576,7 @@ class BehaviouralPlanner:
                     w_pt2_lane = walker_way_pt2.lane_id
                     w_speed = person.get_control().speed
                  
-                    if (intersection and (dist_walker<DIST_WALKER_INTERSECTION)):
+                    if (intersection):
                         # Check walker is within the polygon or not
                         in_polygon = self.within_polygon(triangle_points,np.array([walker_loc.x,walker_loc.y]))
                         # Check walker is within the junction or not
@@ -1579,7 +1590,7 @@ class BehaviouralPlanner:
                                 min_collision = int(walkers_y[counter]//(mid_path_len/49))
                             return True,person,min_collision
                         # When the goal point and walker both are not within junction check lanes 
-                        elif ((not in_junction) and (not dest_in_polygon) ):    
+                        elif ((not in_junction) and (not dest_in_polygon) and (dist_walker<WALKER_DIST_RANGE)):    
                             # print("not in junction")
                             if (dest_lane==w_lane):
                                 # print("EE")                        
@@ -1740,7 +1751,15 @@ class BehaviouralPlanner:
                 
         return  : bool                  : Output True if need to stop and False otherwise
         """    
-        # print("min collision actor", min_collision_actor)
+        # if (not(min_collision_actor is None)):
+        #     print("min collision actor", min_collision_actor.type_id)
+        #     type_id = min_collision_actor.type_id
+        #     blue_print_library = self._world.get_blueprint_library()
+        #     blue_print = blue_print_library.find(type_id)
+        #     print("has tags",blue_print.has_tag('walker'))
+
+        # else:
+        #     print("min collision actor",min_collision_actor)
         # print("lead vehcile",lead_vehicle)
         if(not(lead_vehicle is None)):
             # set to True if the closest colliding actor is not the lead vehicle
