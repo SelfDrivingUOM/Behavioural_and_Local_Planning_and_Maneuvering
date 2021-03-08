@@ -1,7 +1,8 @@
 from __future__ import print_function
 from tools import misc
 from os_carla import WINDOWS
-from scenarios.school import school 
+from scenarios.school import school
+from scenarios.Jaywalking import jaywalking
 
 ITER_FOR_SIM_TIMESTEP  = 100     # no. iterations to compute approx sim timestep
 WAIT_TIME_BEFORE_START = 0       # game seconds (time before controller start)
@@ -68,6 +69,7 @@ spawn_wpt_overtake_wlker = -20
 
 NAVIGATION_SPAWN = False
 WALKER_SPAWN =  False
+DANGER_CAR   = True
 
 Z           = 1.843102
 
@@ -155,7 +157,7 @@ from global_route_planner_dao import GlobalRoutePlannerDAO
 from carla import ColorConverter as cc
 import controller2d
 import local_planner
-if (LEAD_SPAWN):
+if (LEAD_SPAWN or DANGER_CAR):
     from basic_agent.basic_agent import BasicAgent
 # import ogm_generator
 from local_planner import get_closest_index
@@ -1129,6 +1131,29 @@ def game_loop(args):
                         walker_control.direction = walker_rotation.get_forward_vector()
                         walker.apply_control(walker_control)'''
         
+        if (DANGER_CAR):
+            #spwaning a leading vehicle
+            spawn_pts=world_map.get_spawn_points()
+            for i in range (len(spawn_pts)):
+               p = world_map.get_spawn_points()[i]
+               world.world.debug.draw_string(p.location, str(i), draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+            
+            strt = 69
+            x_lead = spawn_pts[strt].location.x
+            y_lead = spawn_pts[strt].location.y
+            z_lead = 1.843102
+
+            danger_route = genarate_global_path([strt,95],world_map)
+
+            blueprint_library = client.get_world().get_blueprint_library()
+            danger_car_bp = blueprint_library.filter("model3")[0]
+
+            danger_vehicle_tansform=carla.Transform(carla.Location(x=x_lead, y=y_lead, z=z_lead),carla.Rotation(yaw= 180,pitch=0))
+            danger_vehicle=world.world.spawn_actor(danger_car_bp, danger_vehicle_tansform)
+            actor_list.append(danger_vehicle)
+            danger_car_agent=BasicAgent(danger_vehicle,100)
+            danger_car_agent.set_path(danger_route)
+
         time.sleep(5)
     
         # sleep_time_start= time.time()
@@ -1396,7 +1421,10 @@ def game_loop(args):
                 for j in range (len(actor_list)):
                     cmd=agent_list[j].run_step(False)
                     send_control_command(actor_list[j],cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
-
+            
+            if (DANGER_CAR):
+                cmd=danger_car_agent.danger_step(False)
+                send_control_command(danger_vehicle,0.20,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
             # lead_waypoint = world_map.get_waypoint(leading_vehicle.get_transform().location,project_to_road=True)
             # lead_lane = lead_waypoint.lane_id   
             # print("lead",lead_lane)   
