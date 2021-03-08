@@ -1,6 +1,7 @@
 from __future__ import print_function
 from tools import misc
 from os_carla import WINDOWS
+from scenarios.school import school 
 
 ITER_FOR_SIM_TIMESTEP  = 100     # no. iterations to compute approx sim timestep
 WAIT_TIME_BEFORE_START = 0       # game seconds (time before controller start)
@@ -1064,38 +1065,41 @@ def game_loop(args):
         #############  Walker spawn  ####################
         #################################################
         if (WALKER_SPAWN):
-            NUMBER_OF_STUDENT_IN_ROWS    = 10
-            NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
-            blueprint_library = client.get_world().get_blueprint_library()
-            blueprintsWalkers = world.world.get_blueprint_library().filter("walker.pedestrian.*")
-            #walker_bp = blueprint_library.filter("walker")[0]
+            school(client)
+
+            # NUMBER_OF_STUDENT_IN_ROWS    = 10
+            # NUMBER_OF_STUDENT_IN_COLUMNS = 5
+
+            # blueprint_library = client.get_world().get_blueprint_library()
+            # blueprintsWalkers = world.world.get_blueprint_library().filter("walker.pedestrian.*")
+            # #walker_bp = blueprint_library.filter("walker")[0]
 
             
 
-            for i in range(NUMBER_OF_STUDENT_IN_ROWS):
-                for j in range(i):
-                    walker_bp = random.choice(blueprintsWalkers)
-                    # walker_transform=carla.Transform(carla.Location(x=32-j, y=90+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
-                    # walker_transform=carla.Transform(carla.Location(x=40-j, y=0+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
-                    # walker_transform=carla.Transform(carla.Location(x=20-j, y=40+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
-                    # walker_transform=carla.Transform(carla.Location(x=-15-j, y=8+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
-                    #########SCHOOL NEW################
-                    walker_transform=carla.Transform(carla.Location(x=-150-j, y=90+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+            # for i in range(NUMBER_OF_STUDENT_IN_ROWS):
+            #     for j in range(i):
+            #         walker_bp = random.choice(blueprintsWalkers)
+            #         # walker_transform=carla.Transform(carla.Location(x=32-j, y=90+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+            #         # walker_transform=carla.Transform(carla.Location(x=40-j, y=0+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+            #         # walker_transform=carla.Transform(carla.Location(x=20-j, y=40+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+            #         # walker_transform=carla.Transform(carla.Location(x=-15-j, y=8+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+            #         #########SCHOOL NEW################
+            #         walker_transform=carla.Transform(carla.Location(x=-150-j, y=90+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
 
-                    walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
+            #         walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
-                    if(walker!=None):
+            #         if(walker!=None):
 
-                        walker_control = carla.WalkerControl()
-                        # walker_control.speed = 0.7+0.1*j
-                        # walker_heading = -90+(i+j-3)*2*((-1)**i)
-                        walker_control.speed = 0.1
-                        # walker_heading = 0+(i+j-3)*2*((-1)**i)
-                        walker_heading = -90+(i+j-3)*2*((-1)**i)
-                        walker_rotation = carla.Rotation(0,walker_heading,0)
-                        walker_control.direction = walker_rotation.get_forward_vector()
-                        walker.apply_control(walker_control)
+            #             walker_control = carla.WalkerControl()
+            #             # walker_control.speed = 0.7+0.1*j
+            #             # walker_heading = -90+(i+j-3)*2*((-1)**i)
+            #             walker_control.speed = 0.1
+            #             # walker_heading = 0+(i+j-3)*2*((-1)**i)
+            #             walker_heading = -90+(i+j-3)*2*((-1)**i)
+            #             walker_rotation = carla.Rotation(0,walker_heading,0)
+            #             walker_control.direction = walker_rotation.get_forward_vector()
+            #             walker.apply_control(walker_control)
 
         '''if (WALKER_SPAWN):
             NUMBER_OF_STUDENT_IN_ROWS    = 10

@@ -72,8 +72,8 @@ HEADING_CHECK_LOOKAHEAD         = 10      # Lookahead to identify the turning di
 JUNCTION_HEADING_CHECK_ANGLE    = 20      # To identify the turning direction (degrees)     
 GET_ACTOR_RANGE                 = 40      # Radius to filter actors
 DIST_WALKER_INTERSECTION        = 40      # Dont decrease this unless you make the velocity planner correct (m)
-WALKER_DIST_RANGE_BASE          = 5       # Minimum walker detection distance in unsrtuctured  (m)
-WALKER_DIST_RANGE_MAX           = 10      # Maximum walker detection distance in unsrtuctured  (m)
+WALKER_DIST_RANGE_BASE          = 4       # Minimum walker detection distance in unsrtuctured  (m)
+WALKER_DIST_RANGE_MAX           = 8      # Maximum walker detection distance in unsrtuctured  (m)
 LANE_WIDTH_WALKERS              = 2       # Width of checking walkers for botth left and right (m)
 LEAD_SPEED_THRESHOLD            = 0.5     # Threshold to stop when there is a lead vehicle
 
@@ -204,7 +204,7 @@ class BehaviouralPlanner:
         self._lookahead = (BP_LOOKAHEAD_BASE*(1-self._isOvertake)) + ((OVERTAKE_LOOKAHEAD_BASE + self._overtakeLookahead)*self._isOvertake) + (BP_LOOKAHEAD_TIME * open_loop_speed)
         # print("lookahead", self._lookahead)
         ################## Get list of actors seperately #########################################
-        vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x,stat_veh_lanes,dyn_veh_lanes,ego_lane,goal_lane,dyn_lane_chng_dist = self._environment.get_actors(GET_ACTOR_RANGE,self._paths,self._lp._num_paths//2,  self._intersection_state, self._checking_wpt_intersection )
+        vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x,stat_veh_lanes,dyn_veh_lanes,ego_lane,goal_lane,dyn_lane_chng_dist,lane_change_dyn_veh = self._environment.get_actors(GET_ACTOR_RANGE,self._paths,self._lp._num_paths//2,  self._intersection_state, self._checking_wpt_intersection )
         vehicles_static = list(vehicles_static)
         vehicles_dynamic = list(vehicles_dynamic)
         walkers = list(walkers)
@@ -288,8 +288,8 @@ class BehaviouralPlanner:
 
             # Check collisions for every path
             # print(self.lane_changes,self.lane_change_ids)
-            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,vehicles_dynamic)
-            emergency_collision_check_array,emergency_min_collision,emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,vehicles_dynamic)
+            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
+            emergency_collision_check_array,emergency_min_collision,emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
             draw_bound_box_actor(emg_min_collision_actor,self._world, 0,255,0)
 
             # Calculate the index of the best feasible path
@@ -419,8 +419,8 @@ class BehaviouralPlanner:
             paths, path_validity,mid_path_len = self._lp.plan_paths(goal_state_set)
             paths = local_planner.transform_paths(paths, ego_state)
 
-            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,vehicles_dynamic)   
-            emergency_collision_check_array,emergency_min_collision,emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,vehicles_dynamic)
+            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)   
+            emergency_collision_check_array,emergency_min_collision,emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
 
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
             self._best_index_from_decelerate = best_index
@@ -537,8 +537,8 @@ class BehaviouralPlanner:
             paths, path_validity,mid_path_len = self._lp.plan_paths(goal_state_set)
             paths = local_planner.transform_paths(paths, ego_state)
             
-            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,vehicles_dynamic)
-            emergency_collision_check_array,emergency_min_collision,emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,vehicles_dynamic)
+            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
+            emergency_collision_check_array,emergency_min_collision,emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
 
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
 
@@ -677,8 +677,8 @@ class BehaviouralPlanner:
             paths, path_validity,mid_path_len = self._lp.plan_paths(goal_state_set)
             paths = local_planner.transform_paths(paths, ego_state)
             
-            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,vehicles_dynamic)
-            emergency_collision_check_array,emergency_min_collision, emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,vehicles_dynamic)
+            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
+            emergency_collision_check_array,emergency_min_collision, emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
 
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
 
@@ -869,8 +869,8 @@ class BehaviouralPlanner:
             
 
             # Check collisions for every path
-            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,vehicles_dynamic)
-            emergency_collision_check_array,emergency_min_collision,emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,vehicles_dynamic)
+            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
+            emergency_collision_check_array,emergency_min_collision,emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
 
             # Calculate the index of the best feasible path
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
@@ -978,8 +978,8 @@ class BehaviouralPlanner:
             paths, path_validity,mid_path_len = self._lp.plan_paths(goal_state_set)
             paths = local_planner.transform_paths(paths, ego_state)
             
-            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,vehicles_dynamic)
-            emergency_collision_check_array,emergency_min_collision, emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,vehicles_dynamic)
+            collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
+            emergency_collision_check_array,emergency_min_collision, emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
           
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
 

@@ -161,8 +161,8 @@ class CollisionChecker:
             else:
                 return actors_x[0],return_actors[0]
 
-    def collision_check_static(self, paths, obstacle_actors, world,goal_index,lane_change_idx,lane_change_lane_ids,dyn_lanes,dyn_vehicles):
-        dyn_vehicles = np.array(dyn_vehicles)
+    def collision_check_static(self, paths, obstacle_actors, world,goal_index,lane_change_idx,lane_change_lane_ids,dyn_lanes,lane_change_dyn_vehicles,lane_change_dists):
+        lane_change_dyn_vehicles = np.array(lane_change_dyn_vehicles)
         """,all_lanes,ego_lane,goal_lane
             Inputs
                 paths           -   Numpy array containing the paths provide by the local planner.
@@ -205,10 +205,12 @@ class CollisionChecker:
             if(dyn_lanes.size!=0):
                 # print('lane hari')
                 if(np.any(dyn_lanes==lane_change_lane_ids[lane_change_idx==goal_index])):
+                    print(goal_index,lane_change_idx,np.any(lane_change_idx==goal_index),dyn_lanes,lane_change_dyn_vehicles,lane_change_dists)
                     # print(143)
                     collision_check_array = np.array([False]*paths.shape[0])
-                    closest_min_obj = dyn_vehicles[dyn_lanes==lane_change_lane_ids[lane_change_idx==goal_index]][0]
+                    closest_min_obj = lane_change_dyn_vehicles[np.argmin(lane_change_dists)]
                     closest_colln_index = 48
+                    
                     return collision_check_array, closest_colln_index, closest_min_obj
 
 
