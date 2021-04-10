@@ -1,6 +1,6 @@
 import numpy as np
 from tools.misc import get_speed
-from os_carla import WINDOWS
+from os_carla import WINDOWS, YASINTHA_WINDOWS
 import sys
 import glob
 import time
@@ -9,6 +9,12 @@ if WINDOWS:
     try:
         sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
 
+    except IndexError:
+        pass
+
+elif YASINTHA_WINDOWS:
+    try:
+        sys.path.append(glob.glob('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
     except IndexError:
         pass
 

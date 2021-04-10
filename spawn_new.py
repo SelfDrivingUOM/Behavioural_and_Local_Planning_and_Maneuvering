@@ -11,7 +11,7 @@ import math
 import numpy as np
 from gekko import GEKKO
 import matplotlib.pyplot as plt
-from os_carla import WINDOWS
+from os_carla import WINDOWS,YASINTHA_WINDOWS
 
 
 # ==============================================================================
@@ -34,6 +34,28 @@ if WINDOWS:
 
     except IndexError:
         pass
+
+
+elif YASINTHA_WINDOWS:
+    try:
+        sys.path.append(glob.glob('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+    except IndexError:
+        pass
+
+    try:
+            sys.path.append('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/')
+
+    except IndexError:
+        pass
+
+    try:
+        sys.path.append('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/agents/navigation')
+
+    except IndexError:
+        pass
+
+
+
 else:
     try:
         sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
@@ -128,11 +150,6 @@ def spawn_new(world,vehicles):
 		all_actor_list = world.get_actors()
 		vehicle_list = all_actor_list.filter("*vehicle*")
 		
-
 		while(True):
 			cmd=Agent.run_step(True)
 			send_control_command(vehicle,cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
-			
-
-	
-

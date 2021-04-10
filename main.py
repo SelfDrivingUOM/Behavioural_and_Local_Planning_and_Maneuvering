@@ -1,6 +1,7 @@
 from __future__ import print_function
 from tools import misc
 from os_carla import WINDOWS
+from os_carla import YASINTHA_WINDOWS
 from scenarios.school import school
 from scenarios.Jaywalking import jaywalking
 
@@ -101,23 +102,23 @@ if WINDOWS:
 
         except IndexError:
             pass
-elif YASINTHA_UBUNTU:
+elif YASINTHA_WINDOWS:
 
     try:
-        sys.path.append(glob.glob('/home/yasintha/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+        sys.path.append(glob.glob('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
     except IndexError:
         pass
 
     if (NAVIGATION_SPAWN):
 
         try:
-            sys.path.append('/home/yasintha/CARLA_0.9.9/PythonAPI/carla/')
+            sys.path.append('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/')
 
         except IndexError:
             pass
 
         try:
-            sys.path.append('/home/yasintha/CARLA_0.9.9/PythonAPI/carla/agents/navigation')
+            sys.path.append('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/agents/navigation')
 
         except IndexError:
             pass
