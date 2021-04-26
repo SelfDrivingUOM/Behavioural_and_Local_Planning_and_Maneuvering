@@ -69,8 +69,8 @@ OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
 
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  False
-DANGER_CAR   = True
+WALKER_SPAWN =  True
+DANGER_CAR   = False
 
 Z           = 1.843102
 
@@ -1069,7 +1069,7 @@ def game_loop(args):
         #################################################
         if (WALKER_SPAWN):
 
-            school(client)
+            jaywalking(client)
 
             # NUMBER_OF_STUDENT_IN_ROWS    = 10
             # NUMBER_OF_STUDENT_IN_COLUMNS = 5
@@ -1155,7 +1155,7 @@ def game_loop(args):
             danger_car_agent=BasicAgent(danger_vehicle,100)
             danger_car_agent.set_path(danger_route)
 
-        time.sleep(5)
+        time.sleep(2)
     
         # sleep_time_start= time.time()
         # while(time.time()-sleep_time_start<30):

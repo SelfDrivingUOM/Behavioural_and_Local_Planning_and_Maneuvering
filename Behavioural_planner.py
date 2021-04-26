@@ -324,7 +324,7 @@ class BehaviouralPlanner:
                 self._state   = EMERGENCY_STOP
                    
             elif(walker_collide):
-                print("WALKER COLLIDEEEEEEEEEEEEEEEEE")
+                #print("WALKER COLLIDEEEEEEEEEEEEEEEEE")
                 self._collission_actor = col_walker
                 self._state   = DECELERATE_TO_STOP
                 self._collission_index = min_collision
