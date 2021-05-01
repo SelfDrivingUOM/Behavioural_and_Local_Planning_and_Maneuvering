@@ -69,7 +69,7 @@ OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
 
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  True
+WALKER_SPAWN =  False
 DANGER_CAR   = False
 
 Z           = 1.843102
@@ -233,7 +233,7 @@ def send_control_command(vehicle, throttle, steer, brake,
     throttle = np.fmax(np.fmin(throttle, 1.0), 0)
     brake = np.fmax(np.fmin(brake, 1.0), 0)
 
-    control = carla.VehicleControl(brake = brake , steer = float(steer),throttle = throttle)
+    control = carla.VehicleControl(brake = brake , steer = float(steer),throttle = throttle,hand_brake=hand_brake)
     vehicle.apply_control(control)
 
 def trace_route(start_waypoint, end_waypoint,sampling_resolution,vehicle,world):
@@ -1563,16 +1563,21 @@ def game_loop(args):
 
                 controller.update_controls()
                 cmd_throttle, cmd_steer, cmd_brake = controller.get_commands()
+                # Output controller command to CARLA server
+                # print(cmd_throttle,cmd_steer,cmd_brake)
+                send_control_command(world.player, throttle=cmd_throttle, steer= cmd_steer, brake=cmd_brake)
+
             else:
                 cmd_throttle = 0.0
                 cmd_steer = 0.0
                 cmd_brake = 0.0
+                # Output controller command to CARLA server
+                # print(cmd_throttle,cmd_steer,cmd_brake)
+                send_control_command(world.player, throttle=cmd_throttle, steer= cmd_steer, brake=cmd_brake,hand_brake=True)
+            
 
 
-            # Output controller command to CARLA server
-            # print(cmd_throttle,cmd_steer,cmd_brake)
-            send_control_command(world.player, throttle=cmd_throttle, steer= cmd_steer, brake=cmd_brake)
-          
+            
             # Find if reached the end of waypoint. If the car is within
             # DIST_THRESHOLD_TO_LAST_WAYPOINT to the last waypoint,
             # the simulation will end.
