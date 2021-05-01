@@ -69,8 +69,8 @@ OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
 
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  False
-DANGER_CAR   = True
+WALKER_SPAWN =  True
+DANGER_CAR   = False
 
 Z           = 1.843102
 
@@ -819,6 +819,13 @@ def game_loop(args):
         world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=200 , y=0,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
         world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=0 , y=200,z=0), thickness=0.5, color=carla.Color(r=0, g=255, b=0), life_time=-1.)
 
+        spectator = world.world.get_spectator()
+        specTrans = world.player.get_transform()
+        specTrans.rotation.pitch = -90
+        specTrans.rotation.yaw = 0
+        specTrans.location.z = 20
+        spectator.set_transform(specTrans)
+
     ###################################################################
     #######  Spawn Vehicles and Actors using CARLA Traffic Manager  ###
     ###################################################################
@@ -1069,7 +1076,8 @@ def game_loop(args):
         #################################################
         if (WALKER_SPAWN):
 
-            school(client)
+            # school(client)
+            jaywalking(client)
 
             # NUMBER_OF_STUDENT_IN_ROWS    = 10
             # NUMBER_OF_STUDENT_IN_COLUMNS = 5
@@ -1135,9 +1143,6 @@ def game_loop(args):
         if (DANGER_CAR):
             #spwaning a leading vehicle
             spawn_pts=world_map.get_spawn_points()
-            for i in range (len(spawn_pts)):
-               p = world_map.get_spawn_points()[i]
-               world.world.debug.draw_string(p.location, str(i), draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
             
             strt = 69
             x_lead = spawn_pts[strt].location.x
@@ -1155,15 +1160,6 @@ def game_loop(args):
             danger_car_agent=BasicAgent(danger_vehicle,100)
             danger_car_agent.set_path(danger_route)
 
-        time.sleep(5)
-    
-        # sleep_time_start= time.time()
-        # while(time.time()-sleep_time_start<30):
-        #     world.world.wait_for_tick()
-        
-        # time.sleep(40)
-
-        environment = Environment(world.world,world.player,world_map)
 
         ################################################################
         ############        Initializing Local Planner     #############
@@ -1207,6 +1203,18 @@ def game_loop(args):
         waypoints_np = remove_dup_wp(waypoints_np)
 
         lane_change_idx = get_lane_change_ids(lane_changes,waypoints_np)
+
+        for i in range (waypoints_np.shape[0]):
+
+            if(i in lane_change_idx):
+                world.world.debug.draw_point(carla.Location(x=waypoints_np[i,0],y=waypoints_np[i,1],z=0.2), size=0.04,
+                    color=carla.Color(r=255, g=0, b=0), life_time=500,
+                    persistent_lines=True)
+            else:
+                world.world.debug.draw_point(carla.Location(x=waypoints_np[i,0],y=waypoints_np[i,1],z=0.2),size=0.04,
+                                    color=carla.Color(r=0, g=255, b=0), life_time=500,
+                                    persistent_lines=True)
+
         # print(lane_changes , lane_changes.shape)
 
         #################################################
@@ -1333,18 +1341,18 @@ def game_loop(args):
 
 
 
-        for i in range (waypoints_np.shape[0]):
-
-            if(i in lane_change_idx):
-                world.world.debug.draw_string(carla.Location(x=waypoints_np[i,0],y=waypoints_np[i,1],z=0), 'O', draw_shadow=False,
-                    color=carla.Color(r=255, g=0, b=0), life_time=500,
-                    persistent_lines=True)
-            else:
-                world.world.debug.draw_string(carla.Location(x=waypoints_np[i,0],y=waypoints_np[i,1],z=0), 'O', draw_shadow=False,
-                                    color=carla.Color(r=0, g=255, b=0), life_time=500,
-                                    persistent_lines=True)
-
+        
         # raise Exception
+
+        time.sleep(20)
+    
+        # sleep_time_start= time.time()
+        # while(time.time()-sleep_time_start<30):
+        #     world.world.wait_for_tick()
+        
+        # time.sleep(40)
+
+        environment = Environment(world.world,world.player,world_map)
         ################################################################
         #############        Initializing Controller      ##############
         ################################################################
@@ -1359,10 +1367,6 @@ def game_loop(args):
 
         bp = BehaviouralPlanner(world.world, world_map, world.player, environment, lp, waypoints_np, HOP_RESOLUTION ,lane_change_idx,lane_change_lane_ids)
 
-
-
-
-
         sim_start_timestamp = world.world.get_snapshot().timestamp.elapsed_seconds
 
         # Initialize the current timestamp.
@@ -1376,12 +1380,7 @@ def game_loop(args):
         start_x, start_y, start_yaw = get_current_pose(world.player.get_transform())
         send_control_command(world.player, throttle=0.0, steer=0.0, brake=1.0)
 
-        spectator = world.world.get_spectator()
-        specTrans = world.player.get_transform()
-        specTrans.rotation.pitch = -90
-        specTrans.rotation.yaw = 0
-        specTrans.location.z = 20
-        spectator.set_transform(specTrans)
+        
 
         #############################################
         # Scenario Execution Loop
@@ -1402,17 +1401,20 @@ def game_loop(args):
         #                        [-LENGTH/(2*(2**0.5)),-WIDTH*(7**0.5)/(4)],
         #                        [-LENGTH/(2*(2**0.5)), WIDTH*(7**0.5)/(4)],
         #                        [ LENGTH/(2*(2**0.5)),-WIDTH*(7**0.5)/(4)]])
-        
+        count=0
         while True:
-            # specTrans = world.player.get_transform()
-            # specTrans.rotation.pitch = -90
-            # specTrans.rotation.yaw = 0
-            # specTrans.location.z = 20
-            # spectator.set_transform(specTrans)
+            # if (count%50==0):
+            
+            #     specTrans = world.player.get_transform()
+            #     specTrans.rotation.pitch = -90
+            #     specTrans.rotation.yaw = 0
+            #     specTrans.location.z = 20
+            #     spectator.set_transform(specTrans)
+            # count+=1
             # print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
             # for veh in vehicle_actor_list:
             #     print(veh,get_speed(veh))
-
+            
             if (LEAD_SPAWN):
 
                 cmd=Agent.run_step(False)

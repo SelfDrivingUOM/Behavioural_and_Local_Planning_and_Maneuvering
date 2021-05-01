@@ -55,11 +55,13 @@ TRAFFIC_LIGHT_CHECK_DISTANCE    = 35      # Distance to detect traffic lights (m
 BP_LOOKAHEAD_BASE               = 8.0     # Base distance to create lattice paths (m)
 OVERTAKE_LOOKAHEAD_BASE         = 1.5     # Base distance to create lattice paths (m) when in overtake state
 FOLLOW_LEAD_RANGE               = 12       # Range to follow lead vehicles (m)
+FOLLOW_LEAD_RANGE_DEFAULT       = 12
+FOLLOW_LEAD_LANE_CHANGE         = 15
 OVERTAKE_RANGE                  = 15      # Range to overtake vehicles (m)
 DEBUG_STATE_MACHINE             = False   # Set this to true to see all function outputs in state machine. This is better for full debug
 ONLY_STATE_DEBUG                = False    # Set this to true to see current state of state machine
 UNSTRUCTURED                    = True    # Set this to True to behave according to the unstructured walkers
-TRAFFIC_LIGHT                   = True   # Set this to True to on traffic lights 
+TRAFFIC_LIGHT                   = False   # Set this to True to on traffic lights 
 FOLLOW_LANE_OFFSET              = 0.1     # Path goal point offset in follow lane  (m)
 DECELERATE_OFFSET               = 0.1     # Path goal point offset in decelerate state (m) 
 Z                               = 1.843102
@@ -211,20 +213,18 @@ class BehaviouralPlanner:
         obstacle_actors = vehicles_static + vehicles_dynamic
         all_obstacle_actors = vehicles_static + vehicles_dynamic + walkers
         # all_lanes           = stat_veh_lanes+dyn_veh_lanes
-        # if(closest_vehicle!=None):
-        #     print(get_speed(closest_vehicle))
-        #     ######checking lane
-        #     ego_waypoint = self._map.get_waypoint(self._ego_vehicle.get_transform().location,project_to_road=True)
-        #     ego_lane = ego_waypoint.lane_id
-        #     lead_waypoint = self._map.get_waypoint(closest_vehicle.get_transform().location,project_to_road=True)
-        #     lead_lane = lead_waypoint.lane_id
-        #     print("ego",ego_lane)    
-        #     print("lead",lead_lane)    
-        #     draw_bound_box_actor(closest_vehicle,self._world,0,0,0)
-        #     self._world.debug.draw_box(bounding_box,transform.rotation,1, carla.Color(255,0,0,0),0.001)
-        # else:
-        #     print("No lead vehicle")
+        if(closest_vehicle!=None):
+            lead_waypoint = self._map.get_waypoint(closest_vehicle.get_transform().location,project_to_road=True)
+            lead_lane = lead_waypoint.lane_id
 
+            if ((ego_lane!=goal_lane) and (goal_lane==lead_lane) and not self._intersection_state):
+                FOLLOW_LEAD_RANGE = FOLLOW_LEAD_LANE_CHANGE
+            else:
+                FOLLOW_LEAD_RANGE = FOLLOW_LEAD_RANGE_DEFAULT
+        else:
+            FOLLOW_LEAD_RANGE = FOLLOW_LEAD_RANGE_DEFAULT
+    
+    
         ###########################################################################################
 
         ########################## Ego-vehicle information #######################################
@@ -424,7 +424,8 @@ class BehaviouralPlanner:
 
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
             self._best_index_from_decelerate = best_index
-            best_index = self._lp._num_paths//2
+            if best_index is None:
+                best_index = self._lp._num_paths//2
             debug_print(paths,self._world,best_index)
 
             intersection,triangle_points, junc_bx_pts = self.is_approaching_intersection(closest_index,ego_state, ego_waypoint)
@@ -1885,6 +1886,7 @@ class BehaviouralPlanner:
 
                     if(sel_traffic_light!= None):
                         self._world.debug.draw_line(ego_location, sel_traffic_light.get_location(), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=0.05)
+                        
 
                     if sel_traffic_light is not None:
                         if debug:
