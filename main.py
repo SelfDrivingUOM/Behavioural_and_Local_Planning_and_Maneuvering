@@ -30,7 +30,6 @@ PATH_SELECT_WEIGHT     = 10               #
 A_MAX                  = 5                # m/s^2
 SLOW_SPEED             = 0                # m/s
 STOP_LINE_BUFFER       = 1.5              # m
-LEAD_VEHICLE_SPEED     = 15                # m/s
 LEAD_VEHICLE_LOOKAHEAD = 20.0             # m
 LP_FREQUENCY_DIVISOR   = 1                # Frequency divisor tdo make the 
                                           # local planner operate at a lower
@@ -57,13 +56,19 @@ NUMBER_OF_STUDENT_IN_ROWS    = 10
 NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
 SPAWN_POINT = 35#189#26  #36 ##20/40-best
-END_POINT   = 92 #0     #119
+END_POINT   = 259 #0     #119
 # global_path_points_set = [60,130,62,301,32,[32,28],[31,17],17]
 # global_path_points_set = [126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
-global_path_points_set = [35,39,98,146,113,284,142,[278,114],[279,115],56,126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
+global_path_points_set = [35,39,98,146,113,284,142,[278,114],[279,115],56,126,[7,72],[5,71],150,[150,87],[158,88],88, 92,218,79,[79,81],[80,82],82,224,193,263,259]
 # global_path_points_set = [179, 258]
+# global_path_points_set = [193, 259]
 LEAD_SPAWN  = False
-spawn_wpt_parked = 50
+spawn_wpt_parked = 540
+LEAD_VEHICLE_SPEED     = 15                # m/s
+
+OVERTAKE_SPAWN = True
+spawn_wpt_parked_ovt =550 
+OVERTAKE_VEHICLE_SPEED     = 15                # m/s
 
 OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
@@ -71,6 +76,7 @@ spawn_wpt_overtake_wlker = -20
 NAVIGATION_SPAWN = False
 WALKER_SPAWN =  False
 DANGER_CAR   = False
+PRINT_SPAWN_POINTS = True
 
 Z           = 1.843102
 
@@ -158,7 +164,7 @@ from global_route_planner_dao import GlobalRoutePlannerDAO
 from carla import ColorConverter as cc
 import controller2d
 import local_planner
-if (LEAD_SPAWN or DANGER_CAR):
+if (LEAD_SPAWN or DANGER_CAR or OVERTAKE_SPAWN):
     from basic_agent.basic_agent import BasicAgent
 # import ogm_generator
 from local_planner import get_closest_index
@@ -819,6 +825,9 @@ def game_loop(args):
         world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=200 , y=0,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
         world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=0 , y=200,z=0), thickness=0.5, color=carla.Color(r=0, g=255, b=0), life_time=-1.)
 
+        if PRINT_SPAWN_POINTS:
+            misc.spawn_pts_print(world_map,world.world)
+
         spectator = world.world.get_spectator()
         specTrans = world.player.get_transform()
         specTrans.rotation.pitch = -90
@@ -1005,10 +1014,6 @@ def game_loop(args):
 
         if (NAVIGATION_SPAWN):
             spawn_pts=world_map.get_spawn_points()
-            # print(spawn_pts)
-            for i in range (len(spawn_pts)):
-                p = world_map.get_spawn_points()[i]
-                world.world.debug.draw_string(p.location, str(i), draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
             
             spawn_pts.remove(start_point)
             for i in range (len(spawn_pts)):
@@ -1344,7 +1349,7 @@ def game_loop(args):
         
         # raise Exception
 
-        time.sleep(20)
+        # time.sleep(10)
     
         # sleep_time_start= time.time()
         # while(time.time()-sleep_time_start<30):
@@ -1414,11 +1419,9 @@ def game_loop(args):
             # print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
             # for veh in vehicle_actor_list:
             #     print(veh,get_speed(veh))
-            
             if (LEAD_SPAWN):
-
-                cmd=Agent.run_step(False)
-                send_control_command(leading_vehicle,cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+                cmd_lead=Agent.run_step(False)
+                send_control_command(leading_vehicle,cmd_lead.throttle,cmd_lead.steer,cmd_lead.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
 
             if (NAVIGATION_SPAWN):
                 for j in range (len(actor_list)):
@@ -1485,8 +1488,34 @@ def game_loop(args):
             if frame % LP_FREQUENCY_DIVISOR == 0:
                 
                 ego_state = [current_x, current_y, current_yaw]
+                _,closest_index=get_closest_index(waypoints_np,ego_state)
+                if (OVERTAKE_SPAWN):
+                    #spwaning a ovetake vehicle
+                    if (closest_index>=spawn_wpt_parked_ovt-40):
+                        if (closest_index==spawn_wpt_parked_ovt-40):
+                            x_ovt=waypoints[spawn_wpt_parked_ovt].transform.location.x
+                            y_ovt=waypoints[spawn_wpt_parked_ovt].transform.location.y 
+                            z_ovt=1
 
-                local_waypoints = bp.state_machine(ego_state,current_timestamp,prev_timestamp,current_speed)
+                            blueprint_library = client.get_world().get_blueprint_library()
+                            my_car_bp = blueprint_library.filter("model3")[0]
+
+                            overtake_vehicle_tansform=carla.Transform(carla.Location(x=x_ovt, y=y_ovt, z=z_ovt),carla.Rotation(yaw= waypoints[spawn_wpt_parked_ovt].transform.rotation.yaw,pitch=waypoints[spawn_wpt_parked_ovt].transform.rotation.pitch))
+                            overtake_vehicle=world.world.spawn_actor(my_car_bp, overtake_vehicle_tansform)
+                            actor_list.append(overtake_vehicle)
+                            overtake_agent=BasicAgent(overtake_vehicle,OVERTAKE_VEHICLE_SPEED)
+                            # Agent.set_destination(world.world,world_map.get_spawn_points()[50])
+                            if OVERTAKE_VEHICLE_SPEED>0:
+                                overtake_agent.set_path(route[spawn_wpt_parked_ovt:])
+                        cmd_overtake=overtake_agent.run_step(False)
+                        send_control_command(overtake_vehicle,cmd_overtake.throttle,cmd_overtake.steer,cmd_overtake.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+                    
+                    else:
+                        overtake_vehicle = None
+
+                else:
+                    overtake_vehicle = None
+                local_waypoints = bp.state_machine(ego_state,current_timestamp,prev_timestamp,current_speed,overtake_vehicle)
                 # print(len(local_waypoints),len(local_waypoints[0]))
 
 

@@ -162,7 +162,7 @@ class Environment():
     #     else:
     #         return actors_y[0],return_actors[0]
 
-    def get_actors(self,in_radius,paths,middle_path_idx, intersection_state, intersection_waypoint):
+    def get_actors(self,in_radius,paths,middle_path_idx, intersection_state, intersection_waypoint,overtake_vehicle):
         
         # if(self.first_time):
         # 
@@ -171,7 +171,9 @@ class Environment():
 
         # self.first_time = False
         #print(np.shape(paths))
-        vehicles = self.vehicles
+        vehicles = np.array(self.vehicles)
+        if not (overtake_vehicle is None):
+            vehicles=np.append(vehicles,overtake_vehicle) 
         walkers  = self.walkers
         # for w in (walkers ):
         #         draw_bound_box_actor(w,self.world,0,255,0)
@@ -320,9 +322,7 @@ class Environment():
         dist_static = None
 
         dynamic_closest = None
-        static_closest = None
-
-        vehicles = np.array(vehicles)
+ 
         walkers = np.array(walkers)
         walkers_y = None
         walkers_x = None

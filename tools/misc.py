@@ -186,6 +186,13 @@ def draw_bound_box_actor(obstacle_actor,world, r, g, b):
         bounding_box.location += transform.location
         world.debug.draw_box(bounding_box,transform.rotation,0.2,carla.Color(r=r, g=g,b=b),0.01)
 
+def spawn_pts_print(world_map,world):
+
+    spawn_pts=world_map.get_spawn_points()
+    for i in range (len(spawn_pts)):
+        p = world_map.get_spawn_points()[i]
+        world.debug.draw_string(p.location, str(i), draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+            
 
 
 # ==============================================================================
