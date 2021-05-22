@@ -204,7 +204,7 @@ class Controller2D(object):
                 brake_output    = 0
             else:
                 throttle_output = 0
-                brake_output    = -2*val
+                brake_output    = -5*val
 
 
             ######################################################

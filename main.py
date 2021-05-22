@@ -55,30 +55,35 @@ ONLY_HIGWAY =  0
 NUMBER_OF_STUDENT_IN_ROWS    = 10
 NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
-SPAWN_POINT = 35#189#26  #36 ##20/40-best
-END_POINT   = 259 #0     #119
+SPAWN_POINT = 224#189#26  #36 ##20/40-best
+END_POINT   = 117 #0     #119
 # global_path_points_set = [60,130,62,301,32,[32,28],[31,17],17]
 # global_path_points_set = [126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
-global_path_points_set = [35,39,98,146,113,284,142,[278,114],[279,115],56,126,[7,72],[5,71],150,[150,87],[158,88],88, 92,218,79,[79,81],[80,82],82,224,193,263,259]
-# global_path_points_set = [179, 258]
+# global_path_points_set = [112,[112,283],[113,284],142,[278,114],[279,115],56,126,[7,72],[5,71],150,87,91,218,[79,81],[80,82],224,263,259,48,[237,8],[236,9],145,99,220,119,252,[175,116],[181,117],117]
+global_path_points_set = [224,263,259,48,[237,8],[236,9],145,99,220,119,252,[175,116],[181,117],117]
+
+# global_path_points_set = [224, 263]
 # global_path_points_set = [193, 259]
 LEAD_SPAWN  = False
 spawn_wpt_parked = 540
 LEAD_VEHICLE_SPEED     = 15                # m/s
 
 OVERTAKE_SPAWN = True
-spawn_wpt_parked_ovt =550 
+spawn_wpt_parked_ovt = 410 
 OVERTAKE_VEHICLE_SPEED     = 15                # m/s
 
 OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
 
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  False
+WALKER_SPAWN =  True
 DANGER_CAR   = False
 PRINT_SPAWN_POINTS = True
 
 Z           = 1.843102
+
+jaywalking_ped = None
+school_ped = None
 
 
 import glob
@@ -822,8 +827,8 @@ def game_loop(args):
         world = World(client.get_world(), hud, args,SPAWN_POINT)
         world_map = world.world.get_map()
         clock = pygame.time.Clock()
-        world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=200 , y=0,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
-        world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=0 , y=200,z=0), thickness=0.5, color=carla.Color(r=0, g=255, b=0), life_time=-1.)
+        # world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=200 , y=0,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
+        # world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=0 , y=200,z=0), thickness=0.5, color=carla.Color(r=0, g=255, b=0), life_time=-1.)
 
         if PRINT_SPAWN_POINTS:
             misc.spawn_pts_print(world_map,world.world)
@@ -831,7 +836,7 @@ def game_loop(args):
         spectator = world.world.get_spectator()
         specTrans = world.player.get_transform()
         specTrans.rotation.pitch = -90
-        specTrans.rotation.yaw = 0
+        specTrans.rotation.yaw = 180
         specTrans.location.z = 20
         spectator.set_transform(specTrans)
 
@@ -1079,10 +1084,10 @@ def game_loop(args):
         #################################################
         #############  Walker spawn  ####################
         #################################################
-        if (WALKER_SPAWN):
+        # if (WALKER_SPAWN):
 
-            # school(client)
-            jaywalking(client)
+        #     school(client)
+        #     jaywalking(client)
 
             # NUMBER_OF_STUDENT_IN_ROWS    = 10
             # NUMBER_OF_STUDENT_IN_COLUMNS = 5
@@ -1094,7 +1099,7 @@ def game_loop(args):
             
 
             # for i in range(NUMBER_OF_STUDENT_IN_ROWS):
-            #     for j in range(i):
+            #  for j in range(i):
             #         walker_bp = random.choice(blueprintsWalkers)
             #         # walker_transform=carla.Transform(carla.Location(x=32-j, y=90+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
             #         # walker_transform=carla.Transform(carla.Location(x=40-j, y=0+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
@@ -1213,13 +1218,13 @@ def game_loop(args):
 
             if(i in lane_change_idx):
                 world.world.debug.draw_point(carla.Location(x=waypoints_np[i,0],y=waypoints_np[i,1],z=0.2), size=0.04,
-                    color=carla.Color(r=255, g=0, b=0), life_time=500,
+                    color=carla.Color(r=255, g=0, b=0), life_time=800,
                     persistent_lines=True)
             else:
                 world.world.debug.draw_point(carla.Location(x=waypoints_np[i,0],y=waypoints_np[i,1],z=0.2),size=0.04,
-                                    color=carla.Color(r=0, g=255, b=0), life_time=500,
+                                    color=carla.Color(r=0, g=255, b=0), life_time=800,
                                     persistent_lines=True)
-
+        
         # print(lane_changes , lane_changes.shape)
 
         #################################################
@@ -1355,7 +1360,7 @@ def game_loop(args):
         # while(time.time()-sleep_time_start<30):
         #     world.world.wait_for_tick()
         
-        # time.sleep(40)
+        # time.sleep(20)
 
         environment = Environment(world.world,world.player,world_map)
         ################################################################
@@ -1407,6 +1412,18 @@ def game_loop(args):
         #                        [-LENGTH/(2*(2**0.5)), WIDTH*(7**0.5)/(4)],
         #                        [ LENGTH/(2*(2**0.5)),-WIDTH*(7**0.5)/(4)]])
         count=0
+        # while True:
+        #     for event in pygame.event.get():
+        #         if event.type == pygame.QUIT:
+        #             return 
+        #         else:
+        #             pass
+
+        #     world.tick(clock)
+        #     world.render(display)
+        #     pygame.display.flip()
+        spawned_ped = False
+        spawned_scl = False
         while True:
             # if (count%50==0):
             
@@ -1435,9 +1452,14 @@ def game_loop(args):
             # lead_lane = lead_waypoint.lane_id   
             # print("lead",lead_lane)   
 
-            # ego_waypoint = world_map.get_waypoint(world.player.get_transform().location,project_to_road=True)
+            ego_waypoint = world_map.get_waypoint(world.player.get_transform().location,project_to_road=True)
+            print(ego_waypoint)
+            landmarks=ego_waypoint.get_landmarks(100, stop_at_junction=False)
+            print("landmarks",landmarks)
             # ego_lane = ego_waypoint.lane_id   
             # print("ego",ego_lane)   
+
+
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -1515,9 +1537,21 @@ def game_loop(args):
 
                 else:
                     overtake_vehicle = None
-                local_waypoints = bp.state_machine(ego_state,current_timestamp,prev_timestamp,current_speed,overtake_vehicle)
+
+                if (WALKER_SPAWN ):
+                    if (spawned_ped == False):
+                        jaywalking_ped,spawned_ped=jaywalking(client,ego_state)
+                    if (spawned_scl==False):
+                        school_ped,spawned_scl = school(client,ego_state)
+                    
+                else:
+                    jaywalking_ped = None
+                    school_ped=None
+
+                local_waypoints = bp.state_machine(ego_state,current_timestamp,prev_timestamp,current_speed,overtake_vehicle,jaywalking_ped,school_ped)
                 # print(len(local_waypoints),len(local_waypoints[0]))
 
+                
 
 
 
@@ -1628,13 +1662,15 @@ def game_loop(args):
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
+            
             # print(1/(toc - tic))
             if(toc-tic>SIMULATION_TIME_STEP):
                 continue
             else:
 
                 time.sleep(SIMULATION_TIME_STEP - (toc-tic))
-
+    
+        
     finally:
         if NO_VEHICLES>0:
             # Destroy Spawned Vehicels
