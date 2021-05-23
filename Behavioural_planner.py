@@ -52,18 +52,20 @@ EMERGENCY_STOP                  = 6
 dict_                           = ["FOLLOW_LANE","DECELERATE_TO_STOP","STAY_STOPPED","INTERSECTION","FOLLOW_LEAD_VEHICLE","OVERTAKE","EMERGENCY_STOP"]
 
 # important variables
-SPEED                           = 10      # Vehicle speed (m/s)
+SPEED_DEFAULT                   = 5
+SPEED_HIGHWAY                   = 8
+SPEED                           = 5      # Vehicle speed (m/s)
 TRAFFIC_LIGHT_CHECK_DISTANCE    = 35      # Distance to detect traffic lights (m)
 BP_LOOKAHEAD_BASE               = 8.0     # Base distance to create lattice paths (m)
 OVERTAKE_LOOKAHEAD_BASE         = 1.5     # Base distance to create lattice paths (m) when in overtake state
 FOLLOW_LEAD_RANGE               = 12       # Range to follow lead vehicles (m)
 FOLLOW_LEAD_RANGE_DEFAULT       = 12
-FOLLOW_LEAD_LANE_CHANGE         = 15
+FOLLOW_LEAD_LANE_CHANGE         = 18
 OVERTAKE_RANGE                  = 15      # Range to overtake vehicles (m)
 DEBUG_STATE_MACHINE             = False   # Set this to true to see all function outputs in state machine. This is better for full debug
-ONLY_STATE_DEBUG                = False    # Set this to true to see current state of state machine
+ONLY_STATE_DEBUG                = True    # Set this to true to see current state of state machine
 UNSTRUCTURED                    = True    # Set this to True to behave according to the unstructured walkers
-TRAFFIC_LIGHT                   = False   # Set this to True to on traffic lights 
+TRAFFIC_LIGHT                   = True   # Set this to True to on traffic lights 
 FOLLOW_LANE_OFFSET              = 0.1     # Path goal point offset in follow lane  (m)
 DECELERATE_OFFSET               = 0.1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      # Path goal point offset in decelerate state (m) 
 Z                               = 1.843102
@@ -165,6 +167,11 @@ class BehaviouralPlanner:
 
         self.lane_changes                   = lane_changes
         self.lane_change_ids                = lane_change_ids
+        ######Highway parameters################
+        self._hiway                         = False                         
+        self._speed                         = SPEED
+        self._tic_hi                        = 0
+        self._entered                       = 0
 
     ######################################################
     #####              State Machine                ######
@@ -215,6 +222,15 @@ class BehaviouralPlanner:
         walkers = list(walkers)
         obstacle_actors = vehicles_static + vehicles_dynamic
         all_obstacle_actors = vehicles_static + vehicles_dynamic + walkers
+        ###########################################################################################
+
+        ########################## Ego-vehicle information #######################################
+        ego_location = carla.Location(x=ego_state[0], y=ego_state[1], z= Z )
+        ego_waypoint = self._map.get_waypoint(ego_location,project_to_road = True, lane_type = carla.LaneType.Driving)
+        ego_lane = ego_waypoint.lane_id
+        # print("speed", ego_speed)
+        ##########################################################################################
+
         # all_lanes           = stat_veh_lanes+dyn_veh_lanes
 
         if(closest_vehicle!=None):
@@ -228,25 +244,45 @@ class BehaviouralPlanner:
                 
         else:
             FOLLOW_LEAD_RANGE = FOLLOW_LEAD_RANGE_DEFAULT
+        
+        #######Changing speed in highway#################
+        print("speed",self._speed)
+        if ((self._intersection_state and ((self.junc_id==943) or (self.junc_id==1260))) and (self._hiway==False)):
+                self._tic_hi = time.time()
+                self._hiway = not self._hiway
+                self._entered +=1
             
-        # #######Changing speed in highway#################
-        # if (self._intersection_state):
-        #     if ((self.junc_id==943) or (self.junc_id==1260)):
-        #         SPEED=15
+        elif (((time.time()-self._tic_hi)>10) and (self._tic_hi!=0) and (self._entered==1) and (self._state==FOLLOW_LANE)):
+            # if (self._speed == SPEED_HIGHWAY):
+            #     self._speed = SPEED_DEFAULT
+            # else:
+            #     self._speed = SPEED_HIGHWAY
+            self._speed = SPEED_HIGHWAY
+            self._hiway = not self._hiway
+            self._tic_hi = 0
+
+
+        elif (self._entered==2):
+            self._entered =0
+            self._speed = SPEED_DEFAULT
+
+        # else:
+        #     self._speed = SPEED_DEFAULT
+        
+
+        
+
+        #     prev_junc_id = self.junc_id
+        # elif ((self._intersection_state and ((self.junc_id==943) or (self.junc_id==1260))) and (self._hiway==True)):
+        #     if (self.junc_iddq!=prev_junc_id):
+        #         SPEED= SPEED_DEFAULT
+        #         self._hiway= False
+       
         
 
             
     
-        ###########################################################################################
-
-        ########################## Ego-vehicle information #######################################
-        ego_location = carla.Location(x=ego_state[0], y=ego_state[1], z= Z )
-        ego_waypoint = self._map.get_waypoint(ego_location,project_to_road = True, lane_type = carla.LaneType.Driving)
-        ego_lane = ego_waypoint.lane_id
-        ego_speed = get_speed(self._ego_vehicle)
-        # print("speed", ego_speed)
-        ##########################################################################################
-
+        
         ########################## Making the emergency stop array ################################
         """
         Have considered only one meter distance from the centre of ego-vehicle to the 
@@ -275,7 +311,7 @@ class BehaviouralPlanner:
             self._goal_index = goal_index
             # Set the goal state by getting the location and giving derired speed
             self._goal_state = self._waypoints[goal_index]
-            self._goal_state[2] = SPEED
+            self._goal_state[2] = self._speed
 
             # self.num_layers = (goal_index - closest_index)//5
         
@@ -617,7 +653,6 @@ class BehaviouralPlanner:
                         self._collission_actor = closest_vehicle
                         self._state   = STAY_STOPPED
                         self._collission_index = min_collision
-                        print("LANE BLOCKED")
                     
                     # elif(self._intersection_state):
                     #     self._state   = INTERSECTION
@@ -668,7 +703,7 @@ class BehaviouralPlanner:
             self._goal_index = goal_index
             self._goal_state = self._waypoints[goal_index]
             # self.num_layers = (goal_index - closest_index)//5
-            self._goal_state[2] = SPEED
+            self._goal_state[2] = self._speed
 
             goal_location = carla.Location(x=self._goal_state[0], y=self._goal_state[1], z= Z )
             goal_waypoint = self._map.get_waypoint(goal_location,project_to_road=True)
@@ -816,9 +851,9 @@ class BehaviouralPlanner:
             self._goal_state = self._waypoints[goal_index]
 
             if self._overtakeStage == 4:
-                self._goal_state[2] = SPEED + (get_speed(self._overtakeVeh)*self._overtakeSpeedFactor)
+                self._goal_state[2] = self._speed + (get_speed(self._overtakeVeh)*self._overtakeSpeedFactor)
             else:
-                self._goal_state[2] = SPEED + get_speed(self._overtakeVeh)
+                self._goal_state[2] = self._speed + get_speed(self._overtakeVeh)
             print("Closest speed",get_speed(self._overtakeVeh))
 
             # self.num_layers = (goal_index - closest_index)//5
@@ -1461,7 +1496,7 @@ class BehaviouralPlanner:
             ###########################################################################
             if(dist_closest < rangeThreshold):
                 if (best_index is None):
-                    print("range best index")
+                    # print("range best index")
                     return True
                 else:
                     return False
@@ -1472,16 +1507,16 @@ class BehaviouralPlanner:
                 return False         
 
         elif(best_index is None):
-            print("best index none")
+            # print("best index none")
             if (not(min_collision_actor is None)):
                 type_id = min_collision_actor.type_id
                 blue_print_library = self._world.get_blueprint_library()
                 blue_print = blue_print_library.find(type_id)
                 if (blue_print.has_tag('walker')):
-                    print("walker")
+                    # print("walker")
                     return False
                 else:
-                    print("best index")
+                    # print("best index")
                     return True
 
             else:
@@ -1859,10 +1894,10 @@ class BehaviouralPlanner:
         # if the closest vehicle is not in the same lane of the ego vehicle, no need to overtaking
         # if current ego speed is greater than that of the leading vehicle, we need to overtake 
         # print(closest_vehicle)
-        if (not(closest_vehicle is None)) and (check_lane_closest(closest_vehicle, self._ego_vehicle, self._map)) and (current_speed < SPEED):
+        if (not(closest_vehicle is None)) and (check_lane_closest(closest_vehicle, self._ego_vehicle, self._map)) and (current_speed < self._speed):
             # if the ego vehicle on an intersection, zebra crossing, or the lane markings does not allow overtaking...
             # ... we should not overtake
-            can_overtake_, self._frwd_buffer_wpts, self._frwd_buffer_ego_wpts = can_we_overtake(self._ego_vehicle, closest_vehicle, self._map, self._world,self._waypoints,SPEED,self._environment,self._overtakeSpeedFactor)
+            can_overtake_, self._frwd_buffer_wpts, self._frwd_buffer_ego_wpts = can_we_overtake(self._ego_vehicle, closest_vehicle, self._map, self._world,self._waypoints,self._speed,self._environment,self._overtakeSpeedFactor)
 
         if can_overtake_:
             self._overtakeVeh = closest_vehicle

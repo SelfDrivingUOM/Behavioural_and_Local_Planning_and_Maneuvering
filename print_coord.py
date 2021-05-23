@@ -44,7 +44,7 @@ import carla
 
 _HOST_ = '127.0.0.1'
 _PORT_ = 2000
-_SLEEP_TIME_ = 0.01
+_SLEEP_TIME_ = 0.2
 
 
 def main():

@@ -48,27 +48,32 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
 NO_AGENT_VEHICLES = 0
-NO_VEHICLES =  0
-NO_WALKERS  =  0
+NO_VEHICLES =  250
+NO_WALKERS  =  30
 ONLY_HIGWAY =  0
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
 NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
-SPAWN_POINT = 224#189#26  #36 ##20/40-best
-END_POINT   = 117 #0     #119
 # global_path_points_set = [60,130,62,301,32,[32,28],[31,17],17]
 # global_path_points_set = [126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
 # global_path_points_set = [112,[112,283],[113,284],142,[278,114],[279,115],56,126,[7,72],[5,71],150,87,91,218,[79,81],[80,82],224,263,259,48,[237,8],[236,9],145,99,220,119,252,[175,116],[181,117],117]
-global_path_points_set = [224,263,259,48,[237,8],[236,9],145,99,220,119,252,[175,116],[181,117],117]
+# global_path_points_set = [229,80,82,224,263,259,48,[237,8],[236,9],145,99,220,119,252,[175,116],[181,117],117]
+# global_path_points_set = [45,163,273,162,256,197,226]
+# global_path_points_set=[9,145,99,220,119,252,[175,116],[181,117],117]
 
 # global_path_points_set = [224, 263]
 # global_path_points_set = [193, 259]
+global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],216,24,[23,228],45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+
+SPAWN_POINT = global_path_points_set[0]#189#26  #36 ##20/40-best
+END_POINT   = global_path_points_set[-1]    #0     #119
+
 LEAD_SPAWN  = False
 spawn_wpt_parked = 540
 LEAD_VEHICLE_SPEED     = 15                # m/s
 
-OVERTAKE_SPAWN = True
+OVERTAKE_SPAWN = False
 spawn_wpt_parked_ovt = 410 
 OVERTAKE_VEHICLE_SPEED     = 15                # m/s
 
@@ -76,7 +81,7 @@ OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
 
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  True
+WALKER_SPAWN =  False
 DANGER_CAR   = False
 PRINT_SPAWN_POINTS = True
 
@@ -1452,10 +1457,7 @@ def game_loop(args):
             # lead_lane = lead_waypoint.lane_id   
             # print("lead",lead_lane)   
 
-            ego_waypoint = world_map.get_waypoint(world.player.get_transform().location,project_to_road=True)
-            print(ego_waypoint)
-            landmarks=ego_waypoint.get_landmarks(100, stop_at_junction=False)
-            print("landmarks",landmarks)
+            # ego_waypoint = world_map.get_waypoint(world.player.get_transform().location,project_to_road=True)
             # ego_lane = ego_waypoint.lane_id   
             # print("ego",ego_lane)   
 
