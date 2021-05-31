@@ -62,8 +62,8 @@ OVERTAKE_LOOKAHEAD_BASE         = 1.5     # Base distance to create lattice path
 FOLLOW_LEAD_RANGE               = 12       # Range to follow lead vehicles (m)
 FOLLOW_LEAD_LANE_CHANGE         = 18
 OVERTAKE_RANGE                  = 15      # Range to overtake vehicles (m)
-DEBUG_STATE_MACHINE             = False   # Set this to true to see all function outputs in state machine. This is better for full debug
-ONLY_STATE_DEBUG                = True    # Set this to true to see current state of state machine
+DEBUG_STATE_MACHINE             = True   # Set this to true to see all function outputs in state machine. This is better for full debug
+ONLY_STATE_DEBUG                = False    # Set this to true to see current state of state machine
 UNSTRUCTURED                    = True    # Set this to True to behave according to the unstructured walkers
 TRAFFIC_LIGHT                   = True   # Set this to True to on traffic lights 
 FOLLOW_LANE_OFFSET              = 0.25     # Path goal point offset in follow lane  (m)
@@ -78,8 +78,8 @@ HEADING_CHECK_LOOKAHEAD         = 10      # Lookahead to identify the turning di
 JUNCTION_HEADING_CHECK_ANGLE    = 20      # To identify the turning direction (degrees)     
 GET_ACTOR_RANGE                 = 40      # Radius to filter actors
 DIST_WALKER_INTERSECTION        = 40      # Dont decrease this unless you make the velocity planner correct (m)
-WALKER_DIST_RANGE_BASE          = 4       # Minimum walker detection distance in unsrtuctured  (m)
-WALKER_DIST_RANGE_MAX           = 8      # Maximum walker detection distance in unsrtuctured  (m)
+WALKER_DIST_RANGE_BASE          = 6       # Minimum walker detection distance in unsrtuctured  (m)
+WALKER_DIST_RANGE_MAX           = 10      # Maximum walker detection distance in unsrtuctured  (m)
 LANE_WIDTH_WALKERS              = 2       # Width of checking walkers for botth left and right (m)
 LEAD_SPEED_THRESHOLD            = 0.5     # Threshold to stop when there is a lead vehicle
 
@@ -275,8 +275,8 @@ class BehaviouralPlanner:
 
         self._overtake_range   = OVERTAKE_RANGE + self._speed - SPEED_DEFAULT
 
-        print("Follow",self._follow_lead_range)
-        print("over", self._overtake_range)
+        # print("Follow",self._follow_lead_range)
+        # print("over", self._overtake_range)
         if self._follow_lead_range == FOLLOW_LEAD_LANE_CHANGE+6:
             print("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwrewkeflllllllllllllllllllllllllllll")
 
@@ -757,14 +757,16 @@ class BehaviouralPlanner:
     
             if (emergency_min_collision!=1):
                 self._state   = EMERGENCY_STOP
+                print("intersection emergency")
 
             elif(walker_collide):
                 self._prev_lookahead = self._lookahead
                 self._collission_actor = col_walker
                 self._state   = DECELERATE_TO_STOP
                 self._collission_index = min_collision
+                print("intersection emergency")
 
-            if(lane_path_blcked_folwLead):   
+            elif(lane_path_blcked_folwLead):   
                 if((not need_to_stop) and (closest_vehicle!=None)) :
                     self._collission_actor = closest_vehicle
                     self._state   = FOLLOW_LEAD_VEHICLE
@@ -1144,6 +1146,7 @@ class BehaviouralPlanner:
             return local_waypoints
         
         elif(self._state == EMERGENCY_STOP):
+            print("EMERGENCY_STOPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP")
             self._state = STAY_STOPPED
 
 

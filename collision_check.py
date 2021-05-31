@@ -288,13 +288,13 @@ class CollisionChecker:
                     
                     ellipse_check = (np.square((obs_points[:,0]-path_points[:,0]).reshape(int(theta_points.size),1)*np.cos(theta_points)-(obs_points[:,1]-path_points[:,1]).reshape(int(theta_points.size),1)*np.sin(theta_points))/self.A**2 + \
                                     np.square((obs_points[:,0]-path_points[:,0]).reshape(int(theta_points.size),1)*np.sin(theta_points)+(obs_points[:,1]-path_points[:,1]).reshape(int(theta_points.size),1)*np.cos(theta_points))/self.B**2 ) - 1
-                    if (paths.shape[0]==1):
-                        print("obs",obs_points[:,0])
-                        print("obs",obs_points[:,1])
-                        print("path",path_points[:,0])
-                        print("path",path_points[:,1])
-                        print("theta",theta_points)
-                        print("ellipse",ellipse_check)
+                    # if (paths.shape[0]==1):
+                    #     print("obs",obs_points[:,0])
+                    #     print("obs",obs_points[:,1])
+                    #     print("path",path_points[:,0])
+                    #     print("path",path_points[:,1])
+                    #     print("theta",theta_points)
+                    #     print("ellipse",ellipse_check)
 
 
                     if(np.any(ellipse_check<0)):
@@ -385,7 +385,7 @@ class CollisionChecker:
                         print("EMERGEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
                         closest_min_obj    = min_objs[np.argmin(np.array(mins))]
                         draw_bound_box_actor_emerg(closest_min_obj,world,0,255,255)
-                        raise Exception
+                        # raise Exception
 
         ############################################################################
 
