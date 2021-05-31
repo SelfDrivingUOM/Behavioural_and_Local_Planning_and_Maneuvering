@@ -49,7 +49,7 @@ INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
 NO_AGENT_VEHICLES = 0
 NO_VEHICLES =  250
-NO_WALKERS  =  30
+NO_WALKERS  =  0
 ONLY_HIGWAY =  0
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
@@ -65,13 +65,15 @@ NUMBER_OF_STUDENT_IN_COLUMNS = 5
 # global_path_points_set = [224, 263]
 # global_path_points_set = [193, 259]
 global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],216,24,[23,228],45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set =[45,163,273,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set =[225,77,168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 
 SPAWN_POINT = global_path_points_set[0]#189#26  #36 ##20/40-best
 END_POINT   = global_path_points_set[-1]    #0     #119
 
 LEAD_SPAWN  = False
-spawn_wpt_parked = 540
-LEAD_VEHICLE_SPEED     = 15                # m/s
+spawn_wpt_parked = 0
+LEAD_VEHICLE_SPEED     = 0                # m/s
 
 OVERTAKE_SPAWN = False
 spawn_wpt_parked_ovt = 410 
@@ -81,9 +83,10 @@ OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
 
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  False
+WALKER_SPAWN =  True
 DANGER_CAR   = False
 PRINT_SPAWN_POINTS = True
+SPECTATOR = False
 
 Z           = 1.843102
 
@@ -838,11 +841,13 @@ def game_loop(args):
         if PRINT_SPAWN_POINTS:
             misc.spawn_pts_print(world_map,world.world)
 
+
+
         spectator = world.world.get_spectator()
         specTrans = world.player.get_transform()
         specTrans.rotation.pitch = -90
-        specTrans.rotation.yaw = 180
-        specTrans.location.z = 20
+        specTrans.rotation.yaw += 90
+        specTrans.location.z = 50
         spectator.set_transform(specTrans)
 
     ###################################################################
@@ -1058,8 +1063,8 @@ def game_loop(args):
             
         if (LEAD_SPAWN):    
             #spwaning a leading vehicle
-            x_lead=waypoints[spawn_wpt_parked].transform.location.x
-            y_lead=waypoints[spawn_wpt_parked].transform.location.y 
+            x_lead=29.191#waypoints[spawn_wpt_parked].transform.location.x
+            y_lead=-127.26#waypoints[spawn_wpt_parked].transform.location.y 
             z_lead=1.843102
             #1.4203450679814286772
 
@@ -1365,7 +1370,7 @@ def game_loop(args):
         # while(time.time()-sleep_time_start<30):
         #     world.world.wait_for_tick()
         
-        # time.sleep(20)
+        time.sleep(5)
 
         environment = Environment(world.world,world.player,world_map)
         ################################################################
@@ -1430,14 +1435,15 @@ def game_loop(args):
         spawned_ped = False
         spawned_scl = False
         while True:
-            # if (count%50==0):
-            
-            #     specTrans = world.player.get_transform()
-            #     specTrans.rotation.pitch = -90
-            #     specTrans.rotation.yaw = 0
-            #     specTrans.location.z = 20
-            #     spectator.set_transform(specTrans)
-            # count+=1
+            if SPECTATOR:
+                if (count%30==0):
+                
+                    specTrans = world.player.get_transform()
+                    specTrans.rotation.pitch = -90
+                    specTrans.rotation.yaw += 90
+                    specTrans.location.z = 50
+                    spectator.set_transform(specTrans)
+                count+=1
             # print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
             # for veh in vehicle_actor_list:
             #     print(veh,get_speed(veh))

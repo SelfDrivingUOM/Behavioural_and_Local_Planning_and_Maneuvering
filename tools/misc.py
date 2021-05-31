@@ -186,6 +186,21 @@ def draw_bound_box_actor(obstacle_actor,world, r, g, b):
         bounding_box.location += transform.location
         world.debug.draw_box(bounding_box,transform.rotation,0.2,carla.Color(r=r, g=g,b=b),0.01)
 
+def draw_bound_box_actor_emerg(obstacle_actor,world, r, g, b):
+    if (obstacle_actor!=None):
+        transform = obstacle_actor.get_transform()
+        bounding_box = obstacle_actor.bounding_box
+        bounding_box.location += transform.location
+        world.debug.draw_box(bounding_box,transform.rotation,0.2,carla.Color(r=r, g=g,b=b),500)
+
+def draw_emergency_box(obstacle_actor,world, r, g, b,emerg_loc,emerg_yaw):
+    if (obstacle_actor!=None):
+        transform = obstacle_actor.get_transform()
+        bounding_box = obstacle_actor.bounding_box
+        bounding_box.location += emerg_loc
+        rot= carla.Rotation(pitch=transform.rotation.pitch,yaw = emerg_yaw, roll= transform.rotation.roll )
+        world.debug.draw_box(bounding_box,rot,0.2,carla.Color(r=r, g=g,b=b),0.01)
+
 def spawn_pts_print(world_map,world):
 
     spawn_pts=world_map.get_spawn_points()

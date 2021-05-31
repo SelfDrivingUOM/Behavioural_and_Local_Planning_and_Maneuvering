@@ -8,7 +8,7 @@ def jaywalking(client,ego_state):
     head = 135#-135
 
     dist = np.linalg.norm([ego_state[0]-x_walk2,ego_state[1]-y_walk2])
-    if (dist<50):
+    if (dist<40):
         blueprint_library = client.get_world().get_blueprint_library()
         blueprintsWalkers = blueprint_library.filter("walker.pedestrian.*")
 

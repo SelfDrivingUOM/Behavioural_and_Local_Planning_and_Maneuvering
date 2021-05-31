@@ -62,8 +62,10 @@ def main():
             spec.set_transform(t)
 
             p=t
-            p.location.z=0
+            p.location.z=22
             world.debug.draw_string(p.location,'X', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=0.1,persistent_lines=True)
+            world.debug.draw_line(p.location,carla.Location(x=p.location.x+1 , y=p.location.y,z=p.location.z), thickness=0.1, color=carla.Color(r=255, g=0, b=0), life_time=0.1)
+            world.debug.draw_line(p.location,carla.Location(x=p.location.x , y=p.location.y+1,z=p.location.z), thickness=0.1, color=carla.Color(r=0, g=255, b=0), life_time=0.1)
             crd=p
             crd.location.x=crd.location.x+0.7
             crd.location.crd=p.location.y+0.7
