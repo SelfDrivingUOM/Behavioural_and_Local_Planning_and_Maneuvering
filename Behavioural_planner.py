@@ -62,12 +62,12 @@ OVERTAKE_LOOKAHEAD_BASE         = 1.5     # Base distance to create lattice path
 FOLLOW_LEAD_RANGE               = 12       # Range to follow lead vehicles (m)
 FOLLOW_LEAD_LANE_CHANGE         = 18
 OVERTAKE_RANGE                  = 15      # Range to overtake vehicles (m)
-DEBUG_STATE_MACHINE             = True   # Set this to true to see all function outputs in state machine. This is better for full debug
+DEBUG_STATE_MACHINE             = False   # Set this to true to see all function outputs in state machine. This is better for full debug
 ONLY_STATE_DEBUG                = False    # Set this to true to see current state of state machine
 UNSTRUCTURED                    = True    # Set this to True to behave according to the unstructured walkers
 TRAFFIC_LIGHT                   = True   # Set this to True to on traffic lights 
-FOLLOW_LANE_OFFSET              = 0.25     # Path goal point offset in follow lane  (m)
-DECELERATE_OFFSET               = 0.25                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      # Path goal point offset in decelerate state (m) 
+FOLLOW_LANE_OFFSET              = 0.2     # Path goal point offset in follow lane  (m)
+DECELERATE_OFFSET               = 0.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      # Path goal point offset in decelerate state (m) 
 Z                               = 1.843102
 
 # normal variables
@@ -301,6 +301,23 @@ class BehaviouralPlanner:
         draw_emergency_box(self._ego_vehicle,self._world, 255, 255, 255,emerg_loc,emerg_yaw)
         ###########################################################################################
 
+        ##########################################################################################
+        if self._intersection_state:
+                next_wpt = ego_waypoint
+                next_wpt=next_wpt.next(0.2)
+                while True:
+                    if ((len(next_wpt) == 1) and(next_wpt[0].left_lane_marking.type==carla.LaneMarkingType.NONE) and (next_wpt[0].right_lane_marking.type==carla.LaneMarkingType.NONE) ):
+                        break
+                    else:
+                        next_wpt=next_wpt[0].next(0.2)
+                        # self._world.debug.draw_string(next_wpt[0].transform.location, 'X', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=500,persistent_lines=True)
+                next_wpt=next_wpt[0]
+
+                distance_to_intersection = (((next_wpt.transform.location.x-ego_state[0])**2)+((next_wpt.transform.location.y-ego_state[1])**2))**0.5
+        else:
+            distance_to_intersection = 0
+        ##########################################################################################
+
 
         if  (self._state == FOLLOW_LANE):
             self._previous_state = self._state
@@ -339,7 +356,7 @@ class BehaviouralPlanner:
             # print(self.lane_changes,self.lane_change_ids)
             collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
             emergency_collision_check_array,emergency_min_collision,emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
-            print("emergency",emergency_min_collision,emg_min_collision_actor)
+          
             draw_bound_box_actor_emerg(emg_min_collision_actor,self._world, 0,255,0)
 
             # Calculate the index of the best feasible path
@@ -469,7 +486,7 @@ class BehaviouralPlanner:
 
             collision_check_array,min_collision, min_collision_actor = self._lp._collision_checker.collision_check_static(paths, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)   
             emergency_collision_check_array,emergency_min_collision,emg_min_collision_actor = self._lp._collision_checker.collision_check_static(emergency_array, all_obstacle_actors,self._world,goal_index,self.lane_changes,self.lane_change_ids,dyn_veh_lanes,lane_change_dyn_veh,dyn_lane_chng_dist)
-            print("emergency",emergency_min_collision,emg_min_collision_actor)
+         
             draw_bound_box_actor_emerg(emg_min_collision_actor,self._world, 0,255,0)
             best_index = self._lp._collision_checker.select_best_path_index(paths, collision_check_array, self._goal_state,self._waypoints,ego_state)
             self._best_index_from_decelerate = best_index
@@ -480,10 +497,22 @@ class BehaviouralPlanner:
             intersection,triangle_points, junc_bx_pts = self.is_approaching_intersection(closest_index,ego_state, ego_waypoint)
             # intersection,triangle_points, junc_bx_pts = self.is_approaching_intersection(max(self._collission_index,1),ego_state, ego_waypoint)
             self._intersection_state = intersection
+            # if (self._intersection_state):
+                # int_min_col_idx=48
+                # dist_to_junc_prev = float('inf')
+                # for pth_idx in range(len(paths[best_index][0])):
+                #     dist_to_junc = (((next_wpt.transform.location.x-paths[best_index][0][pth_idx])**2)+((next_wpt.transform.location.y-paths[best_index][1][pth_idx])**2))**0.5
+                #     if (dist_to_junc<dist_to_junc_prev):
+                #         int_min_col_idx=pth_idx
+                #         dist_to_junc_prev =dist_to_junc
+                # print(int_min_col_idx)
+
+
+
 
             walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state, ego_lane, paths,best_index,y_vec,min_collision,walkers_y,walkers_x,mid_path_len,intersection,triangle_points,junc_bx_pts)
             
-            local_waypoints = self._lp._velocity_planner.decelerate_profile(paths[best_index],current_speed,min_collision)
+            local_waypoints = self._lp._velocity_planner.decelerate_profile(paths[best_index],current_speed,min_collision,distance_to_intersection,self._intersection_state)
 
             red_light = self.is_light_red_or_no_light(self._traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)  
             if(type(red_light) == type("str")):

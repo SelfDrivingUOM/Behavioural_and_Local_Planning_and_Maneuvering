@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 
 # This work is licensed under the terms of the MIT license.
 # For a copy, see <https://opensource.org/licenses/MIT>.
@@ -157,7 +157,7 @@ class VelocityPlanner:
         return profile
 
     # Computes a trapezoidal profile for decelerating to stop.
-    def decelerate_profile(self, path, start_speed,collission_idx): 
+    def decelerate_profile(self, path, start_speed,collission_idx,distance_to_intersection,intersection): 
         """Computes the velocity profile for the local path to decelerate to a
         stop.
         
@@ -212,32 +212,63 @@ class VelocityPlanner:
         cum_dists = np.cumsum(dists)
         path_length = cum_dists[-1]
         # print(collission_idx)
-        a_path  = (start_speed**2) / (2*(cum_dists[collission_idx-1]-self._stop_line_buffer))
-        # print(path_length,cum_dists.shape,a_path)
-        
-        ##This should be changed according to situ.
+        if intersection:
+            min_dist_junc=min(cum_dists[collission_idx-1],distance_to_intersection)
+            a_path  = (start_speed**2) / (2*min_dist_junc-self._stop_line_buffer)
+            ##This should be changed according to situ.
 
-        # print(cum_dists[collission_idx-1],a_path,self._a_max)
-        if(cum_dists[collission_idx-1]<self._stop_line_buffer+0.5):
+            # print(cum_dists[collission_idx-1],a_path,self._a_max)
+            # if(cum_dists[collission_idx-1]<self._stop_line_buffer+0.5):
+            if (a_path >self._a_max):
 
-            profile = np.append(path[:2],np.array([-100*np.ones(path.shape[1])]),axis = 0)
+                profile = np.append(path[:2],np.array([-100*np.ones(path.shape[1])]),axis = 0)
 
-        # elif(a_path >self._a_max):
-        #         ### this should be implemented seprately in the EMERGENCY STOP STATE
-        #     profile = np.append(path[:2],np.array([-100*np.ones(path.shape[1])]),axis = 0)
+            # elif(a_path >self._a_max):
+            #         ### this should be implemented seprately in the EMERGENCY STOP STATE
+            #     profile = np.append(path[:2],np.array([-100*np.ones(path.shape[1])]),axis = 0)
 
+            else:
+
+                velo =  np.sqrt((start_speed**2 )-(2*a_path*cum_dists))
+
+                velo[min_dist_junc- cum_dists <self._stop_line_buffer] = 0
+                if (min_dist_junc==distance_to_intersection):
+                    velo[1]=velo[1]*1.1
+                    velo = np.append(velo[1:],np.array([0,0]))
+                else:
+                    velo = np.append(velo[1:],np.array([0,0]))
+
+                # print(path.shape,velo.shape)
+                profile = np.append(path[:2],np.array([velo]),axis = 0)
+                # profile = np.append(path[:2],np.zeros((1,path.shape[1])),axis = 0)            
         else:
+            a_path  = (start_speed**2) / (2*(cum_dists[collission_idx-1]-self._stop_line_buffer))
+            print(a_path,cum_dists[collission_idx-1],collission_idx)
+            
+            ##This should be changed according to situ.
 
-            velo =  np.sqrt((start_speed**2 )-(2*a_path*cum_dists))
+            # print(cum_dists[collission_idx-1],a_path,self._a_max)
+            # if(cum_dists[collission_idx-1]<self._stop_line_buffer+0.5):
+            if (a_path >self._a_max):
 
-            velo[cum_dists[collission_idx-1] - cum_dists <self._stop_line_buffer] = 0
+                profile = np.append(path[:2],np.array([-100*np.ones(path.shape[1])]),axis = 0)
 
-            velo = np.append(velo[1:],np.array([0,0]))
+            # elif(a_path >self._a_max):
+            #         ### this should be implemented seprately in the EMERGENCY STOP STATE
+            #     profile = np.append(path[:2],np.array([-100*np.ones(path.shape[1])]),axis = 0)
 
-            # print(path.shape,velo.shape)
-            profile = np.append(path[:2],np.array([velo]),axis = 0)
-            # profile = np.append(path[:2],np.zeros((1,path.shape[1])),axis = 0)
-    
+            else:
+
+                velo =  np.sqrt((start_speed**2 )-(2*a_path*cum_dists))
+
+                velo[cum_dists[collission_idx-1] - cum_dists <self._stop_line_buffer] = 0
+
+                velo = np.append(velo[1:],np.array([0,0]))
+
+                # print(path.shape,velo.shape)
+                profile = np.append(path[:2],np.array([velo]),axis = 0)
+                # profile = np.append(path[:2],np.zeros((1,path.shape[1])),axis = 0)
+        
 
 
             # print(profile)

@@ -27,9 +27,9 @@ CIRCLE_OFFSETS         = [-1.0, 1.0, 3.0] # m
 CIRCLE_RADII           = [1.8, 1.8, 1.8]  # m
 TIME_GAP               = 1.0              # s
 PATH_SELECT_WEIGHT     = 10               #
-A_MAX                  = 5                # m/s^2
+A_MAX                  = 2                # m/s^2
 SLOW_SPEED             = 0                # m/s
-STOP_LINE_BUFFER       = 1.5              # m
+STOP_LINE_BUFFER       = 0              # m
 LEAD_VEHICLE_LOOKAHEAD = 20.0             # m
 LP_FREQUENCY_DIVISOR   = 1                # Frequency divisor tdo make the 
                                           # local planner operate at a lower
@@ -48,8 +48,8 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
 NO_AGENT_VEHICLES = 0
-NO_VEHICLES =  0
-NO_WALKERS  =  300
+NO_VEHICLES =  200
+NO_WALKERS  =  50
 ONLY_HIGWAY =  0
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
