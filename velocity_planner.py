@@ -213,7 +213,7 @@ class VelocityPlanner:
         path_length = cum_dists[-1]
         # print(collission_idx)
         if intersection:
-            min_dist_junc=min(cum_dists[collission_idx-1],distance_to_intersection)
+            min_dist_junc=min(cum_dists[collission_idx-1],distance_to_intersection+0.01)
             a_path  = (start_speed**2) / (2*min_dist_junc-self._stop_line_buffer)
             ##This should be changed according to situ.
 

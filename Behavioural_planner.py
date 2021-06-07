@@ -81,6 +81,8 @@ DIST_WALKER_INTERSECTION        = 40      # Dont decrease this unless you make t
 WALKER_DIST_RANGE_BASE          = 6       # Minimum walker detection distance in unsrtuctured  (m)
 WALKER_DIST_RANGE_MAX           = 10      # Maximum walker detection distance in unsrtuctured  (m)
 LANE_WIDTH_WALKERS              = 2       # Width of checking walkers for botth left and right (m)
+LANE_WIDTH_INTERSECTION         = 2
+LANE_WIDTH_DEFAULT              = 2
 LEAD_SPEED_THRESHOLD            = 0.5     # Threshold to stop when there is a lead vehicle
 
 
@@ -181,7 +183,7 @@ class BehaviouralPlanner:
     #####              State Machine                ######
     ######################################################
 
-    def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed,overtake_vehicle,jaywalking_ped,school_ped):
+    def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed,overtake_vehicle,lane_change_vehicle,jaywalking_ped,school_ped):
         """
         param   : ego_state         : List containing location and heading of ego- vehicle
                                       [x coordinate of ego vehicle (m), y coordinate of ego vehicle (m), yaw of ego vehicle (degrees)]
@@ -220,7 +222,7 @@ class BehaviouralPlanner:
         # print("lookahead", self._lookahead)
         ################## Get list of actors seperately #########################################
         vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x,stat_veh_lanes,dyn_veh_lanes,ego_lane,goal_lane,dyn_lane_chng_dist,lane_change_dyn_veh = self._environment.get_actors(GET_ACTOR_RANGE,\
-        self._paths,self._lp._num_paths//2,  self._intersection_state, self._checking_wpt_intersection,overtake_vehicle,jaywalking_ped,school_ped )
+        self._paths,self._lp._num_paths//2,  self._intersection_state, self._checking_wpt_intersection,overtake_vehicle,lane_change_vehicle,jaywalking_ped,school_ped )
         vehicles_static = list(vehicles_static)
         vehicles_dynamic = list(vehicles_dynamic)
         walkers = list(walkers)
@@ -256,6 +258,7 @@ class BehaviouralPlanner:
         elif (self._entered==2):
             self._entered = 0
             self._speed = SPEED
+            
 
         ###########Changing follow lead vehicle ranges########################
         if(closest_vehicle!=None):
@@ -265,10 +268,10 @@ class BehaviouralPlanner:
                 self._follow_lead_range = FOLLOW_LEAD_LANE_CHANGE + (self._speed - SPEED_DEFAULT)*2
                 
             else:
-                self._follow_lead_range = FOLLOW_LEAD_RANGE+ (self._speed - SPEED_DEFAULT)*2
+                self._follow_lead_range = FOLLOW_LEAD_RANGE#+ (self._speed - SPEED_DEFAULT)*2
                 
         else:
-            self._follow_lead_range = FOLLOW_LEAD_RANGE+ (self._speed - SPEED_DEFAULT)*2
+            self._follow_lead_range = FOLLOW_LEAD_RANGE#+ (self._speed - SPEED_DEFAULT)*2
                 
 
         ############# Changing overtake range in highway#################
@@ -277,9 +280,7 @@ class BehaviouralPlanner:
 
         # print("Follow",self._follow_lead_range)
         # print("over", self._overtake_range)
-        if self._follow_lead_range == FOLLOW_LEAD_LANE_CHANGE+6:
-            print("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwrewkeflllllllllllllllllllllllllllll")
-
+    
         ########################ewe## Making the emergency stop array ################################
         """
         Have considered only one meter distance from the centre of ego-vehicle to the 
@@ -1600,7 +1601,13 @@ class BehaviouralPlanner:
                 : actor                 : Walker actor relevant to the collision
                 : min_collision         : Least local collision index from all the paths in paths array
         """ 
-         
+        if self._intersection_state:
+            LANE_WIDTH_WALKERS = LANE_WIDTH_INTERSECTION
+        else:
+            LANE_WIDTH_WALKERS = LANE_WIDTH_DEFAULT
+
+
+
         WALKER_DIST_RANGE = min(WALKER_DIST_RANGE_MAX,WALKER_DIST_RANGE_BASE + 1*self._open_loop_speed)
         
         if UNSTRUCTURED:     

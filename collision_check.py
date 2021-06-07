@@ -364,20 +364,20 @@ class CollisionChecker:
                     trans_ep_pts = (rot@ep_pts)+(paths[llll,:2,n].reshape((2,1)))
                     loc_center = carla.Location(x=paths[llll,0,n] , y=paths[llll,1,n],z=1.83)
                     # world.debug.draw_string(loc_center, '*', draw_shadow=False,color=carla.Color(r=R[llll], g=G[llll] , b=B[llll] ), life_time=3,persistent_lines=True)
-                    if (paths.shape[0]==1):
-                        world.debug.draw_string(loc_center, '*', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=500,persistent_lines=True)
-                    else:
-                        world.debug.draw_string(loc_center, '*', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=0.1,persistent_lines=True)
+                    # if (paths.shape[0]==1):
+                    #     world.debug.draw_string(loc_center, '*', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=500,persistent_lines=True)
+                    # else:
+                    #     world.debug.draw_string(loc_center, '*', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=0.1,persistent_lines=True)
 
                     for pt in trans_ep_pts.T:
                         loc=carla.Location(x=pt[0] , y=pt[1],z=0)
                         # world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=R[llll], g=G[llll] , b=B[llll]), life_time=3,persistent_lines=True)
                         if (paths.shape[0]==1):
-                            world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=500,persistent_lines=True)
+                            # world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=500,persistent_lines=True)
                             dd = True
 
                         else:
-                            world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=0.1,persistent_lines=True)
+                            # world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=0.1,persistent_lines=True)
                             dd= False
                     if dd:
                         print(np.array(mins))

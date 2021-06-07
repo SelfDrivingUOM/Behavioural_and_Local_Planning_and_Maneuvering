@@ -161,7 +161,7 @@ def debug_print(paths,world,best_index,life = 0.1):
 
 				loc=carla.Location(x=x , y=y,z=0)
 				#print(loc)
-				world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=life,persistent_lines=True)
+				world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=life,persistent_lines=True)
 			else:
 				x=path[0][i]
 				y=path[1][i]
@@ -169,7 +169,7 @@ def debug_print(paths,world,best_index,life = 0.1):
 
 				loc=carla.Location(x=x , y=y,z=0)
 				#print(loc)
-				world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=life,persistent_lines=True)
+				world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=life,persistent_lines=True)
 
 def draw_bound_box(obstacle_actors,world,r,g,b):
     for vehi in obstacle_actors:

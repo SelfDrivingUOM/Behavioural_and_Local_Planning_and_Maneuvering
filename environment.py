@@ -164,7 +164,7 @@ class Environment():
     #     else:
     #         return actors_y[0],return_actors[0]
 
-    def get_actors(self,in_radius,paths,middle_path_idx, intersection_state, intersection_waypoint,overtake_vehicle,jaywalking_ped,school_ped):
+    def get_actors(self,in_radius,paths,middle_path_idx, intersection_state, intersection_waypoint,overtake_vehicle,lane_change_vehicle,jaywalking_ped,school_ped):
         
         # if(self.first_time):
         # 
@@ -177,6 +177,8 @@ class Environment():
         walkers = np.array(self.walkers)
         if not (overtake_vehicle is None):
             vehicles=np.append(vehicles,overtake_vehicle) 
+        if not (lane_change_vehicle is None):
+            vehicles=np.append(vehicles,lane_change_vehicle) 
         if not (jaywalking_ped is None):
             walkers=np.append(walkers,jaywalking_ped) 
         if not (school_ped is None):

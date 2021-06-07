@@ -80,6 +80,9 @@ class Controller2D(object):
         self.vars.create_var("last_error",0)
         self.vars.create_var("tot_error",0)
 
+        self._throttle_mean      = np.zeros(3,)
+        self._brake_mean         = np.zeros(3,)
+
     def update_values(self, x, y, yaw, speed, timestamp, frame,velocity,beta,d_shi):
         self._current_x         = x
         self._current_y         = y
@@ -103,6 +106,14 @@ class Controller2D(object):
     def get_commands(self):
         return self._set_throttle, self._set_steer, self._set_brake
 
+    # def set_throttle(self, input_throttle):
+    #     # Clamp the throttle command to valid bounds
+    #     self._throttle_mean = self._throttle_mean[1:]
+    #     self._throttle_mean = np.append(self._throttle_mean,np.array([input_throttle]))
+    #     throttle = np.mean(self._throttle_mean)
+    #     throttle           = np.fmax(np.fmin(throttle, 1.0), 0.0)
+    #     self._set_throttle = throttle
+
     def set_throttle(self, input_throttle):
         # Clamp the throttle command to valid bounds
         throttle           = np.fmax(np.fmin(input_throttle, 1.0), 0.0)
@@ -117,6 +128,16 @@ class Controller2D(object):
         # Clamp the steering command to valid bounds
         brake           = np.fmax(np.fmin(input_brake, 1.0), 0.0)
         self._set_brake = brake
+    
+
+    # def set_brake(self, input_brake):
+    #     # Clamp the brake command to valid bounds
+    #     self._brake_mean = self._brake_mean[1:]
+    #     self._brake_mean = np.append(self._brake_mean,np.array([input_brake]))
+    #     brake = np.mean(self._brake_mean)
+    #     brake           = np.fmax(np.fmin(brake, 1.0), 0.0)
+    #     self._set_brake = brake
+
 
     def update_controls(self):
         ######################################################
@@ -182,9 +203,9 @@ class Controller2D(object):
             ######################################################
             ######################################################
            
-            Kp = 1
-            Kd = 2
-            Ki = 0
+            Kp = 2  #1 Gershom values
+            Kd = 0.1    #2
+            Ki = 0.02   #0
 
             delta_t = t - self.vars.t_previous
 
