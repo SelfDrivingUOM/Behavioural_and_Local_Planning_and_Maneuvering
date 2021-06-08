@@ -80,8 +80,8 @@ class Controller2D(object):
         self.vars.create_var("last_error",0)
         self.vars.create_var("tot_error",0)
 
-        self._throttle_mean      = np.zeros(3,)
-        self._brake_mean         = np.zeros(3,)
+        self._throttle_mean      = np.zeros(40,)
+        self._brake_mean         = np.zeros(10,)
 
     def update_values(self, x, y, yaw, speed, timestamp, frame,velocity,beta,d_shi):
         self._current_x         = x
@@ -203,8 +203,8 @@ class Controller2D(object):
             ######################################################
             ######################################################
            
-            Kp = 2  #1 Gershom values
-            Kd = 0.1    #2
+            Kp = 2#0.4#2  #1 Gershom values
+            Kd = 0.1#0.8#0.1    #2
             Ki = 0.02   #0
 
             delta_t = t - self.vars.t_previous

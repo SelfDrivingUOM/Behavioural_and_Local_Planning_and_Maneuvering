@@ -129,9 +129,11 @@ class CollisionChecker:
             # Tranform Obstacle boundary points to world frame
             temp = np.linalg.inv(Rot_mat)@temp.T + trans
             temp = temp[:2,:].T.reshape(8,2)
-            for ll in range(8):
-                loc = carla.Location(x=temp[ll,0],y=temp[ll,1],z=0)
-                world.debug.draw_string(loc, 'Z', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=0.1,persistent_lines=True)
+
+            ########ZZZ printing for collision actors############
+            # for ll in range(8):
+            #     loc = carla.Location(x=temp[ll,0],y=temp[ll,1],z=0)
+            #     world.debug.draw_string(loc, 'Z', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=0.1,persistent_lines=True)
             
             # vertically stack set of obstacle boundary point by number of points in local path considered that has risk of colliding with the obstacle
             temp = np.vstack((temp,)*len(dict_obs[list(dict_obs.keys())[i]]))
@@ -382,7 +384,6 @@ class CollisionChecker:
                     if dd:
                         print(np.array(mins))
                         print(min_objs)
-                        print("EMERGEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
                         closest_min_obj    = min_objs[np.argmin(np.array(mins))]
                         draw_bound_box_actor_emerg(closest_min_obj,world,0,255,255)
                         # raise Exception

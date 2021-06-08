@@ -48,7 +48,7 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
 NO_AGENT_VEHICLES = 0
-NO_VEHICLES =  200
+NO_VEHICLES =  150
 NO_WALKERS  =  50
 ONLY_HIGWAY =  0
 
@@ -64,10 +64,13 @@ NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
 # global_path_points_set = [224, 263]
 # global_path_points_set = [193, 259]
-global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],216,24,[23,228],45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
-# global_path_points_set =[18,213,45,163,273,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set =[45,163,273,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 # global_path_points_set =[225,77,168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
-# global_path_points_set =[24,[24,230],[228,23],45]
+# global_path_points_set =[157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set   = [25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+
+
 
 SPAWN_POINT = global_path_points_set[0]#189#26  #36 ##20/40-best
 END_POINT   = global_path_points_set[-1]    #0     #119
@@ -79,11 +82,11 @@ global_path_points_set_lead =[24,[24,230],[228,23],45,159]
 LEAD_SPAWN_POINT = global_path_points_set_lead[0]
 LEAD_END_POINT = global_path_points_set_lead[-1]
 
-LANE_CHANGE_VEHICLE = False
+LANE_CHANGE_VEHICLE = True
 LANE_CHANGE_SPEED = 20
-global_path_points_set_lane_change =[24,[24,230],[228,23],45,159]
-LANE_CHANGE_SPAWN_POINT = global_path_points_set_lead[0]
+global_path_points_set_lane_change =[24,[24,230],[228,23],45,159,269]
 LANE_CHANGE_END_POINT = global_path_points_set_lead[-1]
+spw_pt_lane_change = 8
 
 
 OVERTAKE_SPAWN = True
@@ -93,6 +96,16 @@ global_path_points_set_ovr =[155,195]
 OVR_X = 207
 OVR_Y = -28
 
+DANGER_CAR   = True
+DANGER_CAR_SPAWN = 55
+DANGER_CAR_END = 285
+global_path_points_set_danger=[DANGER_CAR_SPAWN,DANGER_CAR_END]
+spwn_waypoint_danger = 15
+DANGER_SPEED  = 15
+DIST_DANGER = 80
+DANGER_THROTTLE = 1.2
+DIST_125 = 15
+
 
 
 OVERTAKE_WALKERS = False
@@ -100,8 +113,8 @@ spawn_wpt_overtake_wlker = -20
 
 NAVIGATION_SPAWN = False
 WALKER_SPAWN =  True
-DANGER_CAR   = False
-PRINT_SPAWN_POINTS = False
+
+PRINT_SPAWN_POINTS = True
 SPECTATOR = False
 
 Z           = 1.843102
@@ -114,6 +127,11 @@ import glob
 import os
 import sys
 import time
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.axis([0, 10, 0, 1])
 # ==============================================================================
 # -- Find CARLA module ----------------------------------------------------------
 # ==============================================================================
@@ -193,7 +211,7 @@ from global_route_planner_dao import GlobalRoutePlannerDAO
 from carla import ColorConverter as cc
 import controller2d
 import local_planner
-if (LEAD_SPAWN or DANGER_CAR or OVERTAKE_SPAWN):
+if (LEAD_SPAWN or DANGER_CAR or OVERTAKE_SPAWN or LANE_CHANGE_VEHICLE):
     from basic_agent.basic_agent import BasicAgent
 # import ogm_generator
 from local_planner import get_closest_index
@@ -1022,22 +1040,7 @@ def game_loop(args):
 
         start_point = world_map.get_spawn_points()[SPAWN_POINT]
         end_point = world_map.get_spawn_points()[END_POINT]
-        # print(start_point)
-        #environment = Environment(world.world,world_map,world.player)
-        
-
-        # blueprint_library = client.get_world().get_blueprint_library()
-        # walker_bp = blueprint_library.filter("model3")[0]
-
-        # walker_transform=carla.Transform(carla.Location(x=-175, y=88, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
-        # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
-
-        
-        # spawn_new(world.world,NO_VEHICLES)
-
-        # route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
-        # waypoints = np.array(route)[:,0]
-        # waypoints = genarate_global_path(global_path_points_set,world_map)
+       
         route = genarate_global_path(global_path_points_set,world_map)
         waypoints = np.array(route)[:,0]
         waypoints_np = np.empty((0,3))
@@ -1390,7 +1393,7 @@ def game_loop(args):
         # while(time.time()-sleep_time_start<30):
         #     world.world.wait_for_tick()
         
-        time.sleep(5)
+        time.sleep(10)
 
         environment = Environment(world.world,world.player,world_map)
         ################################################################
@@ -1466,10 +1469,26 @@ def game_loop(args):
         lane_change_vehicle = None
         route_lane_change = genarate_global_path(global_path_points_set_lane_change,world_map)
         waypoints_lane_change = np.array(route_lane_change)[:,0]
-        LANE_CHANGE_X =  waypoints_lane_change[0].transform.location.x
-        LANE_CHANGE_Y =  waypoints_lane_change[0].transform.location.y  
+        LANE_CHANGE_X =  waypoints_lane_change[spw_pt_lane_change].transform.location.x
+        LANE_CHANGE_Y =  waypoints_lane_change[spw_pt_lane_change].transform.location.y  
 
+        danger_spawned = False
+        danger_vehicle = None
+        danger_route = genarate_global_path(global_path_points_set_danger,world_map)
+        waypoints_danger = np.array(danger_route)[:,0]
+        DANGER_X =  waypoints_danger[spwn_waypoint_danger].transform.location.x
+        DANGER_Y =  waypoints_danger[spwn_waypoint_danger].transform.location.y  
+
+        i_plt=0
         while True:
+            
+            # y = np.random.random()
+            # plt.scatter(i_plt, y)
+            # # plt.pause(0.05)
+
+            # plt.show()
+            # i_plt+=1
+
             if SPECTATOR:
                 if (count%30==0):
                 
@@ -1479,7 +1498,6 @@ def game_loop(args):
                     specTrans.location.z = 50
                     spectator.set_transform(specTrans)
                 count+=1
-            # print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
             # for veh in vehicle_actor_list:
             #     print(veh,get_speed(veh))
             if (LEAD_SPAWN):
@@ -1491,9 +1509,7 @@ def game_loop(args):
                     cmd=agent_list[j].run_step(False)
                     send_control_command(actor_list[j],cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
             
-            if (DANGER_CAR):
-                cmd=danger_car_agent.danger_step(False)
-                send_control_command(danger_vehicle,0.20,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+           
             # lead_waypoint = world_map.get_waypoint(leading_vehicle.get_transform().location,project_to_road=True)
             # lead_lane = lead_waypoint.lane_id   
             # print("lead",lead_lane)   
@@ -1594,46 +1610,57 @@ def game_loop(args):
             
                 if (LANE_CHANGE_VEHICLE):  
                     dist_lane_change = (((ego_state[0]-LANE_CHANGE_X)**2)+((ego_state[1]-LANE_CHANGE_Y)**2))**0.5  
-                    if (dist_lane_change<40 and lane_change_spawned==False):
+                    if (dist_lane_change<23 and lane_change_spawned==False):
                         #spwaning a leading vehicle
                         x_lane_change=LANE_CHANGE_X
                         y_lane_change=LANE_CHANGE_Y
-                        z_lane_change=Z
+                        z_lane_change=0.2
                         #1.4203450679814286772
 
                         blueprint_library = client.get_world().get_blueprint_library()
                         my_car_bp = blueprint_library.filter("model3")[0]
 
-                        lane_change_tansform=carla.Transform(carla.Location(x=x_lane_change, y=y_lane_change, z=z_lane_change),carla.Rotation(yaw= waypoints_lane_change[0].transform.rotation.yaw,pitch=waypoints_lane_change[0].transform.rotation.pitch))
-                        lane_change_vehicle=world.world.spawn_actor(my_car_bp, world_map.get_spawn_points()[LANE_CHANGE_SPAWN_POINT])
+                        lane_change_tansform=carla.Transform(carla.Location(x=x_lane_change, y=y_lane_change, z=z_lane_change),carla.Rotation(yaw= waypoints_lane_change[spw_pt_lane_change].transform.rotation.yaw,pitch=waypoints_lane_change[spw_pt_lane_change].transform.rotation.pitch))
+                        lane_change_vehicle=world.world.spawn_actor(my_car_bp, lane_change_tansform)
                         actor_list.append(lane_change_vehicle)
                         lane_change_agent=BasicAgent(lane_change_vehicle,LANE_CHANGE_SPEED)
                         # Agent.set_destination(world.world,world_map.get_spawn_points()[50])
                         if LANE_CHANGE_SPEED>0:
                             # Agent.set_path(route[spawn_wpt_parked:])
-                            lane_change_agent.set_path(route_lane_change[0:])
+                            lane_change_agent.set_path(route_lane_change[spw_pt_lane_change:])
                         lane_change_spawned = True
 
                     if lane_change_spawned== True:
                         cmd_lane_change=lane_change_agent.run_step(False)
                         send_control_command(lane_change_vehicle,cmd_lane_change.throttle,cmd_lane_change.steer,cmd_lane_change.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
                 
-                if (DANGER_CAR):                
-                    strt = 69
-                    x_lead = spawn_pts[strt].location.x
-                    y_lead = spawn_pts[strt].location.y
-                    z_lead = 1.843102
+                if (DANGER_CAR):   
+                    dist_danger = (((ego_state[0]-DANGER_X)**2)+((ego_state[1]-DANGER_Y)**2))**0.5  
+                    dist_fixd_spwnpt = (((ego_state[0]-spawn_pts[125].location.x)**2)+((ego_state[1]-spawn_pts[125].location.y)**2))**0.5  
 
-                    danger_route = genarate_global_path([strt,95],world_map)
+                    # if (dist_danger<DIST_DANGER and danger_spawned==False):
+                    if (dist_fixd_spwnpt<DIST_125 and danger_spawned==False):
+                        x_danger = DANGER_X
+                        y_danger = DANGER_Y
+                        z_danger = 0.2
 
-                    blueprint_library = client.get_world().get_blueprint_library()
-                    danger_car_bp = blueprint_library.filter("model3")[0]
+                    
+                        blueprint_library = client.get_world().get_blueprint_library()
+                        danger_car_bp = blueprint_library.filter("model3")[0]
 
-                    danger_vehicle_tansform=carla.Transform(carla.Location(x=x_lead, y=y_lead, z=z_lead),carla.Rotation(yaw= 180,pitch=0))
-                    danger_vehicle=world.world.spawn_actor(danger_car_bp, danger_vehicle_tansform)
-                    actor_list.append(danger_vehicle)
-                    danger_car_agent=BasicAgent(danger_vehicle,100)
-                    danger_car_agent.set_path(danger_route)
+                        danger_vehicle_tansform=carla.Transform(carla.Location(x=x_danger, y=y_danger, z=z_danger),carla.Rotation(yaw= waypoints_danger[0].transform.rotation.yaw,pitch= waypoints_danger[0].transform.rotation.pitch))
+                        danger_vehicle=world.world.spawn_actor(danger_car_bp, danger_vehicle_tansform)
+                        actor_list.append(danger_vehicle)
+                        danger_car_agent=BasicAgent(danger_vehicle,100)
+                        
+
+                        if DANGER_SPEED>0:
+                            danger_car_agent.set_path(danger_route[spwn_waypoint_danger:])
+                        danger_spawned = True
+
+                    if danger_spawned== True:
+                        cmd_danger=danger_car_agent.danger_step(False)
+                        send_control_command(danger_vehicle,DANGER_THROTTLE,cmd_danger.steer,cmd_danger.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
 
 
 
@@ -1648,7 +1675,7 @@ def game_loop(args):
                     jaywalking_ped = None
                     school_ped=None
 
-                local_waypoints = bp.state_machine(ego_state,current_timestamp,prev_timestamp,current_speed,overtake_vehicle,lane_change_vehicle,jaywalking_ped,school_ped)
+                local_waypoints = bp.state_machine(ego_state,current_timestamp,prev_timestamp,current_speed,overtake_vehicle,lane_change_vehicle,danger_vehicle,jaywalking_ped,school_ped)
                 # print(len(local_waypoints),len(local_waypoints[0]))
 
                 
