@@ -62,8 +62,8 @@ OVERTAKE_LOOKAHEAD_BASE         = 1.5     # Base distance to create lattice path
 FOLLOW_LEAD_RANGE               = 12       # Range to follow lead vehicles (m)
 FOLLOW_LEAD_LANE_CHANGE         = 18
 OVERTAKE_RANGE                  = 15      # Range to overtake vehicles (m)
-DEBUG_STATE_MACHINE             = False   # Set this to true to see all function outputs in state machine. This is better for full debug
-ONLY_STATE_DEBUG                = True    # Set this to true to see current state of state machine
+DEBUG_STATE_MACHINE             = True   # Set this to true to see all function outputs in state machine. This is better for full debug
+ONLY_STATE_DEBUG                = False    # Set this to true to see current state of state machine
 UNSTRUCTURED                    = True    # Set this to True to behave according to the unstructured walkers
 TRAFFIC_LIGHT                   = True   # Set this to True to on traffic lights 
 FOLLOW_LANE_OFFSET              = 0.2     # Path goal point offset in follow lane  (m)
@@ -661,9 +661,9 @@ class BehaviouralPlanner:
 
             elif(red_light == "NTL"):
                 #time.sleep(2.0)
-                c=0
-                for i in range(1000000):          # this is to wait in intersections which has no traffic lights
-                    c=c+i
+                # c=0
+                # for i in range(1000000):          # this is to wait in intersections which has no traffic lights
+                #     c=c+i
                 print("Delay")
                 self._stopped = True
                 self._state   = INTERSECTION

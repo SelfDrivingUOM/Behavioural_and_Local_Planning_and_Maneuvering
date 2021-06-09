@@ -64,7 +64,12 @@ NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
 # global_path_points_set = [224, 263]
 # global_path_points_set = [193, 259]
+
+
+
+
 global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+#global_path_points_set =[25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 # global_path_points_set =[45,163,273,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 # global_path_points_set =[225,77,168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 # global_path_points_set =[157,74,109,288,[54,260],[53,253],253]
@@ -1621,7 +1626,7 @@ def game_loop(args):
                         my_car_bp = blueprint_library.filter("model3")[0]
 
                         lane_change_tansform=carla.Transform(carla.Location(x=x_lane_change, y=y_lane_change, z=z_lane_change),carla.Rotation(yaw= waypoints_lane_change[spw_pt_lane_change].transform.rotation.yaw,pitch=waypoints_lane_change[spw_pt_lane_change].transform.rotation.pitch))
-                        lane_change_vehicle=world.world.spawn_actor(my_car_bp, lane_change_tansform)
+                        lane_change_vehicle=world.world.try_spawn_actor(my_car_bp, lane_change_tansform)
                         actor_list.append(lane_change_vehicle)
                         lane_change_agent=BasicAgent(lane_change_vehicle,LANE_CHANGE_SPEED)
                         # Agent.set_destination(world.world,world_map.get_spawn_points()[50])
@@ -1632,7 +1637,7 @@ def game_loop(args):
 
                     if lane_change_spawned== True:
                         cmd_lane_change=lane_change_agent.run_step(False)
-                        send_control_command(lane_change_vehicle,cmd_lane_change.throttle,cmd_lane_change.steer,cmd_lane_change.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+                        send_control_command(lane_change_vehicle,cmd_lane_change.throttle+0.2,cmd_lane_change.steer,cmd_lane_change.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
                 
                 if (DANGER_CAR):   
                     dist_danger = (((ego_state[0]-DANGER_X)**2)+((ego_state[1]-DANGER_Y)**2))**0.5  
