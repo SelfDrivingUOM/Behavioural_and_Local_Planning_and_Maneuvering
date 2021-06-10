@@ -50,8 +50,8 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
 NO_AGENT_VEHICLES = 0
-NO_VEHICLES =  0
-NO_WALKERS  =  0
+NO_VEHICLES =  50
+NO_WALKERS  =  150
 ONLY_HIGWAY =  0
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
@@ -69,8 +69,10 @@ NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
 
 
+#global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 
-global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+global_path_points_set =[226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+
 #global_path_points_set =[25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 # global_path_points_set =[45,163,273,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 # global_path_points_set =[225,77,168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
@@ -1704,7 +1706,7 @@ def game_loop(args):
 
                     if lane_change_spawned== True:
                         cmd_lane_change=lane_change_agent.run_step(False)
-                        send_control_command(lane_change_vehicle,cmd_lane_change.throttle+0.2,cmd_lane_change.steer,cmd_lane_change.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+                        send_control_command(lane_change_vehicle,cmd_lane_change.throttle,cmd_lane_change.steer,cmd_lane_change.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
                 
                 if (DANGER_CAR):   
                     dist_danger = (((ego_state[0]-DANGER_X)**2)+((ego_state[1]-DANGER_Y)**2))**0.5  
@@ -1738,7 +1740,7 @@ def game_loop(args):
 
                 if (WALKER_SPAWN ):
                     if (spawned_ped == False):
-                        jaywalking_ped,spawned_ped=jaywalking(client,ego_state,vehicle_id_list)
+                        jaywalking_ped,spawned_ped=jaywalking(client,ego_state,vehicle_id_list,all_id)
                 
                     if (spawned_scl==False):
                         school_ped,spawned_scl = school(client,ego_state)
