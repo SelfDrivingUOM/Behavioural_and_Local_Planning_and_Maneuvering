@@ -230,8 +230,7 @@ class BehaviouralPlanner:
         self._lookahead = (BP_LOOKAHEAD_BASE*(1-self._isOvertake)) + ((OVERTAKE_LOOKAHEAD_BASE + self._overtakeLookahead)*self._isOvertake) + (BP_LOOKAHEAD_TIME * open_loop_speed)
         # print("lookahead", self._lookahead)
         ################## Get list of actors seperately #########################################
-        vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x,stat_veh_lanes,dyn_veh_lanes,ego_lane,goal_lane,dyn_lane_chng_dist,stat_lane_chng_dist,lane_change_dyn_veh,lane_change_stat_veh = self._environment.get_actors(GET_ACTOR_RANGE,\
-        self._paths,self._lp._num_paths//2,  self._intersection_state, self._checking_wpt_intersection,overtake_vehicle,jaywalking_ped,school_ped )
+        vehicles_static, vehicles_dynamic, walkers, closest_vehicle, x_vec, y_vec, walkers_y, walkers_x,stat_veh_lanes,dyn_veh_lanes,ego_lane,goal_lane,dyn_lane_chng_dist,stat_lane_chng_dist,lane_change_dyn_veh,lane_change_stat_veh = self._environment.get_actors(GET_ACTOR_RANGE,self._paths,self._lp._num_paths//2,  self._intersection_state, self._checking_wpt_intersection,overtake_vehicle,lane_change_vehicle,danger_vehicle,jaywalking_ped,school_ped )
         vehicles_static = list(vehicles_static)
         vehicles_dynamic = list(vehicles_dynamic)
         walkers = list(walkers)
