@@ -472,7 +472,8 @@ class CollisionChecker:
                 # print((path_x-waypoints_x).shape)
                 sum_ = np.square(path_x - waypoints_x) + np.square(path_y - waypoints_y)
                 min_dist = np.sqrt(np.min(sum_,axis=1))
-                sum_=np.sum(min_dist)
+                exp_ = np.exp(np.arange(3*min_dist.shape[0],0,-3)/10)
+                sum_=np.sum(min_dist*exp_)
                 centerline_score.append(sum_)
                 
             centerline_score = np.reshape(np.array(centerline_score),goal_score.shape)   
