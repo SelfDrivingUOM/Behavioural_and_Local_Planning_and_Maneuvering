@@ -103,7 +103,8 @@ def is_within_distance_ahead(target_transform, current_transform, max_distance):
     forward_vector = np.array([fwd.x, fwd.y])
     d_angle = math.degrees(math.acos(np.clip(np.dot(forward_vector, target_vector) / norm_target, -1., 1.)))
 
-    return d_angle < 90.0
+    
+    return d_angle < 10.0
 
 
 def compute_magnitude_angle(target_location, current_location, orientation):
@@ -167,7 +168,7 @@ def debug_print(paths,world,best_index,life = 0.1):
 
 				loc=carla.Location(x=x , y=y,z=0)
 				#print(loc)
-				world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=life,persistent_lines=True)
+				world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=life,persistent_lines=True)
 			else:
 				x=path[0][i]
 				y=path[1][i]
@@ -175,7 +176,7 @@ def debug_print(paths,world,best_index,life = 0.1):
 
 				loc=carla.Location(x=x , y=y,z=0)
 				#print(loc)
-				world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=life,persistent_lines=True)
+				world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=0, g=255, b=255), life_time=life,persistent_lines=True)
 
 def draw_bound_box(obstacle_actors,world,r,g,b):
     for vehi in obstacle_actors:
@@ -190,14 +191,14 @@ def draw_bound_box_actor(obstacle_actor,world, r, g, b):
         transform = obstacle_actor.get_transform()
         bounding_box = obstacle_actor.bounding_box
         bounding_box.location += transform.location
-        world.debug.draw_box(bounding_box,transform.rotation,0.2,carla.Color(r=r, g=g,b=b),0.01)
+        world.debug.draw_box(bounding_box,transform.rotation,0.1,carla.Color(r=r, g=g,b=b),0.03)
 
 def draw_bound_box_actor_emerg(obstacle_actor,world, r, g, b):
     if (obstacle_actor!=None):
         transform = obstacle_actor.get_transform()
         bounding_box = obstacle_actor.bounding_box
         bounding_box.location += transform.location
-        world.debug.draw_box(bounding_box,transform.rotation,0.2,carla.Color(r=r, g=g,b=b),500)
+        world.debug.draw_box(bounding_box,transform.rotation,0.1,carla.Color(r=r, g=g,b=b),20)
 
 def draw_emergency_box(obstacle_actor,world, r, g, b,emerg_loc,emerg_yaw):
     if (obstacle_actor!=None):
@@ -205,7 +206,7 @@ def draw_emergency_box(obstacle_actor,world, r, g, b,emerg_loc,emerg_yaw):
         bounding_box = obstacle_actor.bounding_box
         bounding_box.location += emerg_loc
         rot= carla.Rotation(pitch=transform.rotation.pitch,yaw = emerg_yaw, roll= transform.rotation.roll )
-        world.debug.draw_box(bounding_box,rot,0.2,carla.Color(r=r, g=g,b=b),0.01)
+        world.debug.draw_box(bounding_box,rot,0.1,carla.Color(r=r, g=g,b=b),0.01)
 
 def spawn_pts_print(world_map,world):
 

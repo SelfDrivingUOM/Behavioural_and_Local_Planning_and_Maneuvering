@@ -134,9 +134,11 @@ class CollisionChecker:
             # Tranform Obstacle boundary points to world frame
             temp = np.linalg.inv(Rot_mat)@temp.T + trans
             temp = temp[:2,:].T.reshape(8,2)
-            for ll in range(8):
-                loc = carla.Location(x=temp[ll,0],y=temp[ll,1],z=0)
-                world.debug.draw_string(loc, 'Z', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=0.1,persistent_lines=True)
+
+            ########ZZZ printing for collision actors############
+            # for ll in range(8):
+            #     loc = carla.Location(x=temp[ll,0],y=temp[ll,1],z=0)
+            #     world.debug.draw_string(loc, 'Z', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=0.1,persistent_lines=True)
             
             # vertically stack set of obstacle boundary point by number of points in local path considered that has risk of colliding with the obstacle
             temp = np.vstack((temp,)*len(dict_obs[list(dict_obs.keys())[i]]))
@@ -384,25 +386,24 @@ class CollisionChecker:
                     trans_ep_pts = (rot@ep_pts)+(paths[llll,:2,n].reshape((2,1)))
                     loc_center = carla.Location(x=paths[llll,0,n] , y=paths[llll,1,n],z=1.83)
                     # world.debug.draw_string(loc_center, '*', draw_shadow=False,color=carla.Color(r=R[llll], g=G[llll] , b=B[llll] ), life_time=3,persistent_lines=True)
-                    if (paths.shape[0]==1):
-                        world.debug.draw_string(loc_center, '*', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=500,persistent_lines=True)
-                    else:
-                        world.debug.draw_string(loc_center, '*', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=0.1,persistent_lines=True)
+                    # if (paths.shape[0]==1):
+                    #     world.debug.draw_string(loc_center, '*', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=500,persistent_lines=True)
+                    # else:
+                    #     world.debug.draw_string(loc_center, '*', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=0.1,persistent_lines=True)
 
                     for pt in trans_ep_pts.T:
                         loc=carla.Location(x=pt[0] , y=pt[1],z=0)
                         # world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=R[llll], g=G[llll] , b=B[llll]), life_time=3,persistent_lines=True)
                         if (paths.shape[0]==1):
-                            world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=500,persistent_lines=True)
+                            # world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=500,persistent_lines=True)
                             dd = True
 
                         else:
-                            world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=0.1,persistent_lines=True)
+                            # world.debug.draw_string(loc, '*', draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=0.1,persistent_lines=True)
                             dd= False
                     if dd:
                         print(np.array(mins))
                         print(min_objs)
-                        print("EMERGEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
                         closest_min_obj    = min_objs[np.argmin(np.array(mins))]
                         draw_bound_box_actor_emerg(closest_min_obj,world,0,255,255)
                         # raise Exception

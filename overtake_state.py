@@ -42,7 +42,7 @@ def check_lane_closest(closest_vehicle, ego_vehicle,_map):
     
 def can_we_overtake(ego_vehicle, closest_vehicle,_map,_world,glb_wpts,desired_speed, environment,speedFactor):
     canOveretake = False
-    rear_buffer = 5   # 5
+    rear_buffer = 5 + desired_speed  # 5
     closest_veh_speed = get_speed(closest_vehicle)
     ##############################################################################
     # Find the distance to closest vehicle using the global wapypoint 

@@ -2,13 +2,17 @@ import carla
 import random
 import numpy as np
 
-def jaywalking(client,ego_state):
+def jaywalking(client,ego_state,vehicle_id_list):
     x_walk2=-14 # 33 near scl
     y_walk2=-93#126
     head = 135#-135
 
     dist = np.linalg.norm([ego_state[0]-x_walk2,ego_state[1]-y_walk2])
     if (dist<40):
+        print('\ndestroying %d vehicles' % len(vehicle_id_list))
+        client.apply_batch([carla.command.DestroyActor(x) for x in vehicle_id_list])
+
+        
         blueprint_library = client.get_world().get_blueprint_library()
         blueprintsWalkers = blueprint_library.filter("walker.pedestrian.*")
 
@@ -40,6 +44,7 @@ def jaywalking(client,ego_state):
 
         walkers=np.array([walker])
         spawned = True
+
 
         return walkers,spawned
 

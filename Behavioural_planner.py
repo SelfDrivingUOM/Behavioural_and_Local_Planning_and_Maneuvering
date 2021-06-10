@@ -66,8 +66,8 @@ DEBUG_STATE_MACHINE             = False   # Set this to true to see all function
 ONLY_STATE_DEBUG                = False    # Set this to true to see current state of state machine
 UNSTRUCTURED                    = True    # Set this to True to behave according to the unstructured walkers
 TRAFFIC_LIGHT                   = True   # Set this to True to on traffic lights 
-FOLLOW_LANE_OFFSET              = 0.25     # Path goal point offset in follow lane  (m)
-DECELERATE_OFFSET               = 0.25                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      # Path goal point offset in decelerate state (m) 
+FOLLOW_LANE_OFFSET              = 0.2     # Path goal point offset in follow lane  (m)
+DECELERATE_OFFSET               = 0.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      # Path goal point offset in decelerate state (m) 
 Z                               = 1.843102
 
 # normal variables
@@ -81,6 +81,8 @@ DIST_WALKER_INTERSECTION        = 40      # Dont decrease this unless you make t
 WALKER_DIST_RANGE_BASE          = 6       # Minimum walker detection distance in unsrtuctured  (m)
 WALKER_DIST_RANGE_MAX           = 10      # Maximum walker detection distance in unsrtuctured  (m)
 LANE_WIDTH_WALKERS              = 2       # Width of checking walkers for botth left and right (m)
+LANE_WIDTH_INTERSECTION         = 3
+LANE_WIDTH_DEFAULT              = 2
 LEAD_SPEED_THRESHOLD            = 0.5     # Threshold to stop when there is a lead vehicle
 
 
@@ -181,7 +183,7 @@ class BehaviouralPlanner:
     #####              State Machine                ######
     ######################################################
 
-    def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed,overtake_vehicle,jaywalking_ped,school_ped):
+    def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed,overtake_vehicle,lane_change_vehicle,danger_vehicle,jaywalking_ped,school_ped):
         """
         param   : ego_state         : List containing location and heading of ego- vehicle
                                       [x coordinate of ego vehicle (m), y coordinate of ego vehicle (m), yaw of ego vehicle (degrees)]
@@ -207,6 +209,15 @@ class BehaviouralPlanner:
         if (TRAFFIC_LIGHT == False):
             for junc_id in self._traffic_lights .keys():
                 self.traffic_light_green(self._traffic_lights[junc_id])
+
+        # if school_ped is not None:
+        (self._traffic_lights[53][1]).set_state(carla.TrafficLightState.Red)
+        (self._traffic_lights[53][2]).set_state(carla.TrafficLightState.Green)  ## Our traffic
+        (self._traffic_lights[53][0]).set_state(carla.TrafficLightState.Red)
+        (self._traffic_lights[53][3]).set_state(carla.TrafficLightState.Red)
+            
+
+            
 
         if(self._collission_actor!=None):
             draw_bound_box_actor(self._collission_actor,self._world,255,0,0)
@@ -256,19 +267,20 @@ class BehaviouralPlanner:
         elif (self._entered==2):
             self._entered = 0
             self._speed = SPEED
+            
 
         ###########Changing follow lead vehicle ranges########################
         if(closest_vehicle!=None):
             lead_waypoint = self._map.get_waypoint(closest_vehicle.get_transform().location,project_to_road=True)
             lead_lane = lead_waypoint.lane_id
             if ((ego_lane!=goal_lane) and (goal_lane==lead_lane) and not self._intersection_state):
-                self._follow_lead_range = FOLLOW_LEAD_LANE_CHANGE + (self._speed - SPEED_DEFAULT)*2
+                self._follow_lead_range = FOLLOW_LEAD_LANE_CHANGE + 5+(self._speed - SPEED_DEFAULT)
                 
             else:
-                self._follow_lead_range = FOLLOW_LEAD_RANGE+ (self._speed - SPEED_DEFAULT)*2
+                self._follow_lead_range = FOLLOW_LEAD_RANGE#+ (self._speed - SPEED_DEFAULT)*2+20
                 
         else:
-            self._follow_lead_range = FOLLOW_LEAD_RANGE+ (self._speed - SPEED_DEFAULT)*2
+            self._follow_lead_range = FOLLOW_LEAD_RANGE#+ (self._speed - SPEED_DEFAULT)*2+20
                 
 
         ############# Changing overtake range in highway#################
@@ -277,9 +289,7 @@ class BehaviouralPlanner:
 
         # print("Follow",self._follow_lead_range)
         # print("over", self._overtake_range)
-        if self._follow_lead_range == FOLLOW_LEAD_LANE_CHANGE+6:
-            print("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwrewkeflllllllllllllllllllllllllllll")
-
+    
         ########################ewe## Making the emergency stop array ################################
         """
         Have considered only one meter distance from the centre of ego-vehicle to the 
@@ -298,8 +308,25 @@ class BehaviouralPlanner:
 
         emerg_loc = carla.Location(x=emergency_loc[0]+ego_state[0],y=emergency_loc[1]+ego_state[1],z=self._ego_vehicle.get_transform().location.z)
         emerg_yaw = self._ego_vehicle.get_transform().rotation.yaw
-        draw_emergency_box(self._ego_vehicle,self._world, 255, 255, 255,emerg_loc,emerg_yaw)
+        # draw_emergency_box(self._ego_vehicle,self._world, 255, 255, 255,emerg_loc,emerg_yaw)
         ###########################################################################################
+
+        ##########################################################################################
+        if self._intersection_state:
+                next_wpt = ego_waypoint
+                next_wpt=next_wpt.next(0.2)
+                while True:
+                    if ((len(next_wpt) == 1) and(next_wpt[0].left_lane_marking.type==carla.LaneMarkingType.NONE) and (next_wpt[0].right_lane_marking.type==carla.LaneMarkingType.NONE) ):
+                        break
+                    else:
+                        next_wpt=next_wpt[0].next(0.2)
+                        # self._world.debug.draw_string(next_wpt[0].transform.location, 'X', draw_shadow=False,color=carla.Color(r=255, g=255, b=255), life_time=500,persistent_lines=True)
+                next_wpt=next_wpt[0]
+
+                distance_to_intersection = (((next_wpt.transform.location.x-ego_state[0])**2)+((next_wpt.transform.location.y-ego_state[1])**2))**0.5
+        else:
+            distance_to_intersection = 0
+        ##########################################################################################
 
 
         if  (self._state == FOLLOW_LANE):
@@ -480,10 +507,22 @@ class BehaviouralPlanner:
             intersection,triangle_points, junc_bx_pts = self.is_approaching_intersection(closest_index,ego_state, ego_waypoint)
             # intersection,triangle_points, junc_bx_pts = self.is_approaching_intersection(max(self._collission_index,1),ego_state, ego_waypoint)
             self._intersection_state = intersection
+            # if (self._intersection_state):
+                # int_min_col_idx=48
+                # dist_to_junc_prev = float('inf')
+                # for pth_idx in range(len(paths[best_index][0])):
+                #     dist_to_junc = (((next_wpt.transform.location.x-paths[best_index][0][pth_idx])**2)+((next_wpt.transform.location.y-paths[best_index][1][pth_idx])**2))**0.5
+                #     if (dist_to_junc<dist_to_junc_prev):
+                #         int_min_col_idx=pth_idx
+                #         dist_to_junc_prev =dist_to_junc
+                # print(int_min_col_idx)
+
+
+
 
             walker_collide,col_walker,min_collision = self.check_walkers(self._map,walkers,ego_state, ego_lane, paths,best_index,y_vec,min_collision,walkers_y,walkers_x,mid_path_len,intersection,triangle_points,junc_bx_pts)
             
-            local_waypoints = self._lp._velocity_planner.decelerate_profile(paths[best_index],current_speed,min_collision)
+            local_waypoints = self._lp._velocity_planner.decelerate_profile(paths[best_index],current_speed,min_collision,distance_to_intersection,self._intersection_state)
 
             red_light = self.is_light_red_or_no_light(self._traffic_lights,ego_location,ego_waypoint,goal_waypoint,ego_state)  
             if(type(red_light) == type("str")):
@@ -622,9 +661,9 @@ class BehaviouralPlanner:
 
             elif(red_light == "NTL"):
                 #time.sleep(2.0)
-                c=0
-                for i in range(1000000):          # this is to wait in intersections which has no traffic lights
-                    c=c+i
+                # c=0
+                # for i in range(1000000):          # this is to wait in intersections which has no traffic lights
+                #     c=c+i
                 print("Delay")
                 self._stopped = True
                 self._state   = INTERSECTION
@@ -1571,7 +1610,13 @@ class BehaviouralPlanner:
                 : actor                 : Walker actor relevant to the collision
                 : min_collision         : Least local collision index from all the paths in paths array
         """ 
-         
+        if self._intersection_state:
+            LANE_WIDTH_WALKERS = LANE_WIDTH_INTERSECTION
+        else:
+            LANE_WIDTH_WALKERS = LANE_WIDTH_DEFAULT
+
+
+
         WALKER_DIST_RANGE = min(WALKER_DIST_RANGE_MAX,WALKER_DIST_RANGE_BASE + 1*self._open_loop_speed)
         
         if UNSTRUCTURED:     
@@ -1600,7 +1645,7 @@ class BehaviouralPlanner:
 
             for d in danger_walkers:
                 walk = d[0]
-                draw_bound_box_actor(walk,self._world,255,255,255)
+                draw_bound_box_actor(walk,self._world,255,255,0)
 
             if(len(danger_walkers)==0):
                 return False,None,min_collision
@@ -1968,10 +2013,10 @@ class BehaviouralPlanner:
                                 sel_magnitude, min_angle, sel_traffic_light.id))
 
                         if (sel_traffic_light.state == carla.TrafficLightState.Red or sel_traffic_light.state == carla.TrafficLightState.Yellow):
-                            self._world.debug.draw_box(carla.BoundingBox(sel_traffic_light.get_location(),carla.Vector3D(0.5,0.5,2)),sel_traffic_light.get_transform().rotation, thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=0.1)
+                            self._world.debug.draw_box(carla.BoundingBox(sel_traffic_light.get_location(),carla.Vector3D(0.5,0.5,2)),sel_traffic_light.get_transform().rotation, thickness=0.2, color=carla.Color(r=255, g=0, b=0), life_time=0.1)
                             return True
                         else:
-                            self._world.debug.draw_box(carla.BoundingBox(sel_traffic_light.get_location(),carla.Vector3D(0.5,0.5,2)),sel_traffic_light.get_transform().rotation, thickness=0.5, color=carla.Color(r=0, g=255, b=0), life_time=0.1)
+                            self._world.debug.draw_box(carla.BoundingBox(sel_traffic_light.get_location(),carla.Vector3D(0.5,0.5,2)),sel_traffic_light.get_transform().rotation, thickness=0.2, color=carla.Color(r=0, g=255, b=0), life_time=0.1)
 
                 else:
                     # No traffic lights in the intersection
