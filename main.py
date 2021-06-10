@@ -1,12 +1,14 @@
 from __future__ import print_function
+
+from networkx.exception import ExceededMaxIterations
 from tools import misc
 from os_carla import WINDOWS
-from os_carla import YASINTHA_WINDOWS
+from os_carla import YASINTHA_WINDOWS,GERSHOM_WINDOWS
 from scenarios.school import school
 from scenarios.Jaywalking import jaywalking
 
 ITER_FOR_SIM_TIMESTEP  = 100     # no. iterations to compute approx sim timestep
-WAIT_TIME_BEFORE_START = 0       # game seconds (time before controller start)
+WAIT_TIME_BEFORE_START = 5       # game seconds (time before controller start)
 TOTAL_RUN_TIME         = 100.00  # game seconds (total runtime before sim end)
 TOTAL_FRAME_BUFFER     = 300     # number of frames to buffer after total runtime
 SIMULATION_TIME_STEP   = 0.034
@@ -48,9 +50,9 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
 NO_AGENT_VEHICLES = 0
-NO_VEHICLES =  0
-NO_WALKERS  =  300
-ONLY_HIGWAY =  0
+NO_VEHICLES =  200
+NO_WALKERS  =  0
+ONLY_HIGWAY =  False
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
 NUMBER_OF_STUDENT_IN_COLUMNS = 5
@@ -82,13 +84,13 @@ OVERTAKE_VEHICLE_SPEED     = 15                # m/s
 OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
 
-NAVIGATION_SPAWN = False
-WALKER_SPAWN =  True
-DANGER_CAR   = False
-PRINT_SPAWN_POINTS = True
-SPECTATOR = False
+NAVIGATION_SPAWN    = False
+WALKER_SPAWN        =  True
+DANGER_CAR          = False
+PRINT_SPAWN_POINTS  = True
+SPECTATOR           = False
 
-Z           = 1.843102
+Z                   = 1.843102
 
 jaywalking_ped = None
 school_ped = None
@@ -141,6 +143,26 @@ elif YASINTHA_WINDOWS:
 
         except IndexError:
             pass
+elif GERSHOM_WINDOWS:
+    try:
+        sys.path.append(glob.glob('D:/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+    except IndexError:
+        pass
+
+    if (NAVIGATION_SPAWN):
+
+        try:
+            sys.path.append('D:/WindowsNoEditor/PythonAPI/carla/')
+
+        except IndexError:
+            pass
+
+        try:
+            sys.path.append('D:/WindowsNoEditor/PythonAPI/carla/agents/navigation')
+
+        except IndexError:
+            pass
+
 else:
     try:
         sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
@@ -305,8 +327,10 @@ def get_actor_display_name(actor, truncate=250):
     return (name[:truncate - 1] + u'\u2026') if len(name) > truncate else name
 
 def remove_dup_wp(wp):
-    waypoints = np.empty((0,3))
-    waypoints = np.append(waypoints,wp[0].reshape((1,3)),axis=0)
+
+    # print(wp.shape)
+    waypoints = np.empty((0,wp.shape[1]))
+    waypoints = np.append(waypoints,wp[0].reshape((1,wp.shape[1])),axis=0)
     dist = 0
     for i in range(wp.shape[0]-1):
         # print(lane_change_points)
@@ -315,11 +339,40 @@ def remove_dup_wp(wp):
 
             continue
         else:
-            waypoints = np.append(waypoints,wp[i+1].reshape((1,3)),axis=0)
+            waypoints = np.append(waypoints,wp[i+1].reshape((1,wp.shape[1])),axis=0)
             dist = 0
     return waypoints
     
+def remove_dup_wp_lc(wp,lane_change_lane_ids):
 
+    # print(wp.shape)
+
+    lane_change_ids = np.empty((0,3))
+    waypoints = np.empty((0,wp.shape[1]))
+    waypoints = np.append(waypoints,wp[0].reshape((1,wp.shape[1])),axis=0)
+    dist = 0
+    idx = 0
+
+    lane_change_ids = np.append(lane_change_ids,np.array([lane_change_lane_ids[idx]]),axis = 0)
+
+    for i in range(wp.shape[0]-1):
+        # print(lane_change_points)
+        dist += np.linalg.norm(wp[i+1,:2]-wp[i,:2])
+        if (dist<0.5):
+
+            continue
+        else:
+
+            if(dist<5):
+                # print("brr")
+                lane_change_ids = np.append(lane_change_ids,np.array([lane_change_lane_ids[idx]]),axis = 0)
+            else:
+                idx+=1
+                lane_change_ids = np.append(lane_change_ids,np.array([lane_change_lane_ids[idx]]),axis = 0)
+            waypoints = np.append(waypoints,wp[i+1].reshape((1,wp.shape[1])),axis=0)
+            dist = 0
+    # print(lane_change_ids.shape)
+    return waypoints,lane_change_ids
 
 def find_angle(vect1, vect2): #(x,y)
     vect1 = np.array([vect1[0],vect1[1],0]) # (x y 0)
@@ -336,7 +389,7 @@ def find_angle(vect1, vect2): #(x,y)
 def add_lane_change_waypoints(waypoints,lp,velocity,world,map_):
     updated_waypoints = np.empty((0,3))
     updated_waypoints = np.append(updated_waypoints,waypoints[0].reshape((1,3)),axis=0)
-    lane_changes =[]
+    lane_changes =np.zeros((0,2))
     lanechange_laneid = []
     i=0
     count= 0
@@ -352,8 +405,12 @@ def add_lane_change_waypoints(waypoints,lp,velocity,world,map_):
             # world.debug.draw_string(carla.Location(x=waypoints[i,0],y=waypoints[i,1],z=0), 'H', draw_shadow=False,
             #         color=carla.Color(r=0, g=0, b=255), life_time=500,
             #         persistent_lines=True)
-            lane_changes.append(waypoints[i,:2])
-            lanechange_laneid.append(wp_1.lane_id)
+
+            lane_changes = np.append(lane_changes,np.array([waypoints[i,:2]]),axis = 0)
+  
+
+
+            lanechange_laneid.append([wp_1.lane_id,wp_1.section_id,wp_1.road_id])
             start_index = i
             end_index = i+10
             count+=1
@@ -389,13 +446,16 @@ def add_lane_change_waypoints(waypoints,lp,velocity,world,map_):
             # print(path_wp.shape)
             updated_waypoints = np.append(updated_waypoints,path_wp.T,axis=0)
 
+            # print(path_wp.shape)
             i+=10
-
+            lane_changes = np.append(lane_changes,path_wp[:2,:].T,axis=0)
         else:
             updated_waypoints = np.append(updated_waypoints,waypoints[i+1].reshape((1,3)),axis=0)
             i+=1
     lane_changes = np.array(lane_changes)
     lanechange_laneid = np.array(lanechange_laneid)
+
+    # print(lanechange_laneid.shape)
     return updated_waypoints,lane_changes,lanechange_laneid
 
 def genarate_global_path(globalPathPoints, world_map):
@@ -814,6 +874,7 @@ def get_lane_change_ids(lane_changes, waypoints):
         index.append(idx)
     # print(lane_changes.shape,waypoints.shape)
     index = np.array(index)
+
     return index
 
 def game_loop(args):
@@ -1222,6 +1283,9 @@ def game_loop(args):
 
         waypoints_np = remove_dup_wp(waypoints_np)
 
+        # print(lane_change_lane_ids,lane_change_lane_ids.shape)
+        lane_changes,lane_change_lane_ids = remove_dup_wp_lc(lane_changes,lane_change_lane_ids)
+        # print(lane_change_lane_ids,lane_change_lane_ids.shape)
         lane_change_idx = get_lane_change_ids(lane_changes,waypoints_np)
 
         for i in range (waypoints_np.shape[0]):
@@ -1234,7 +1298,10 @@ def game_loop(args):
                 world.world.debug.draw_point(carla.Location(x=waypoints_np[i,0],y=waypoints_np[i,1],z=0.2),size=0.04,
                                     color=carla.Color(r=0, g=255, b=0), life_time=800,
                                     persistent_lines=True)
+        # print(lane_change_lane_ids)
+        # print(lane_change_idx.shape)
         
+        # raise Exception
         # print(lane_changes , lane_changes.shape)
 
         #################################################
@@ -1370,7 +1437,7 @@ def game_loop(args):
         # while(time.time()-sleep_time_start<30):
         #     world.world.wait_for_tick()
         
-        time.sleep(5)
+        time.sleep(WAIT_TIME_BEFORE_START)
 
         environment = Environment(world.world,world.player,world_map)
         ################################################################

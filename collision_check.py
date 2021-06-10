@@ -2,7 +2,7 @@ import glob
 import os
 import sys
 import time
-from os_carla import WINDOWS,YASINTHA_WINDOWS
+from os_carla import WINDOWS,YASINTHA_WINDOWS,GERSHOM_WINDOWS
 from tools.misc import *
 
 # ==============================================================================
@@ -17,6 +17,11 @@ if WINDOWS:
 elif YASINTHA_WINDOWS:
     try:
         sys.path.append(glob.glob('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+    except IndexError:
+        pass
+elif GERSHOM_WINDOWS:
+    try:
+        sys.path.append(glob.glob('D:/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
     except IndexError:
         pass
 else:
@@ -164,8 +169,8 @@ class CollisionChecker:
             else:
                 return actors_x[0],return_actors[0]
 
-    def collision_check_static(self, paths, obstacle_actors, world,goal_index,lane_change_idx,lane_change_lane_ids,dyn_lanes,lane_change_dyn_vehicles,lane_change_dists):
-        lane_change_dyn_vehicles = np.array(lane_change_dyn_vehicles)
+    def collision_check_static(self, paths, obstacle_actors, world,goal_index,lane_change_idx,lane_change_lane_ids,dyn_lanes,stat_lanes,lane_change_dyn_vehicles,lane_change_stat_vehicles,dyn_lane_change_dists,stat_lane_change_dists):
+        
         """,all_lanes,ego_lane,goal_lane
             Inputs
                 paths           -   Numpy array containing the paths provide by the local planner.
@@ -191,6 +196,8 @@ class CollisionChecker:
                 closest_colln_index   - minimum index of path point considering all local paths at which collision witha an obstacle takes place.
                                         If no collions the index of the last point(furthest point) of a local path is returned.
         """
+
+        lane_change_dyn_vehicles = np.array(lane_change_dyn_vehicles)
         ##############################################################################
             #   TODO:
             #       min_ set for 48 should be extarcted from paths shape
@@ -203,17 +210,30 @@ class CollisionChecker:
         mins = []
         min_objs = []
         obstacle_actors = np.array(obstacle_actors)
-        # print(goal_index,lane_change_idx,np.any(lane_change_idx==goal_index),dyn_lanes,dyn_vehicles)
+
+
+        # -- Collission check within the lane change -- #
+
         if(np.any(lane_change_idx==goal_index)):
+            print("puka")
             if(dyn_lanes.size!=0):
                 # print('lane hari')
-                if(np.any(dyn_lanes==lane_change_lane_ids[lane_change_idx==goal_index])):
-                    print(goal_index,lane_change_idx,np.any(lane_change_idx==goal_index),dyn_lanes,lane_change_dyn_vehicles,lane_change_dists)
+                if(np.any(np.all(dyn_lanes==lane_change_lane_ids[lane_change_idx==goal_index],axis = 1))):
+                    # print(goal_index,lane_change_idx,np.any(lane_change_idx==goal_index),dyn_lanes,lane_change_dyn_vehicles,lane_change_dists)
                     # print(143)
                     collision_check_array = np.array([False]*paths.shape[0])
-                    closest_min_obj = lane_change_dyn_vehicles[np.argmin(lane_change_dists)]
+                    closest_min_obj = lane_change_dyn_vehicles[np.argmin(dyn_lane_change_dists)]
                     closest_colln_index = 48
-                    
+
+                    return collision_check_array, closest_colln_index, closest_min_obj
+            
+            if(stat_lanes.size!=0):
+                if( np.any(np.all(stat_lanes==lane_change_lane_ids[lane_change_idx==goal_index],axis = 1))):
+                    print("huththoooo")
+                    collision_check_array = np.array([False]*paths.shape[0])
+                    closest_min_obj = lane_change_stat_vehicles[np.argmin(stat_lane_change_dists)]
+                    closest_colln_index = 48
+
                     return collision_check_array, closest_colln_index, closest_min_obj
 
 

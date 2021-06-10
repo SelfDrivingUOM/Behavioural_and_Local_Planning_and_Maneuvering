@@ -7,7 +7,7 @@ import glob
 import os
 import sys
 import time
-from os_carla import WINDOWS, YASINTHA_WINDOWS
+from os_carla import WINDOWS, YASINTHA_WINDOWS, GERSHOM_WINDOWS
 # ==============================================================================
 # -- Find CARLA module ---------------------------------------------------------
 # ==============================================================================
@@ -20,6 +20,12 @@ if WINDOWS:
 elif YASINTHA_WINDOWS:
     try:
         sys.path.append(glob.glob('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+    except IndexError:
+        pass
+    
+elif GERSHOM_WINDOWS:
+    try:
+        sys.path.append(glob.glob('D:/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
     except IndexError:
         pass
     
@@ -66,6 +72,7 @@ class Controller2D(object):
         self._conv_rad_to_steer  = 180.0 / 60.0 / np.pi
         self._pi                 = np.pi
         self._2pi                = 2.0 * np.pi
+        self._throttle_mean      = np.zeros(40,)
 
         # self.lateral_control = MPC(-80000,-100000,1000,1800,1.4,1.4,0.001,35,15,np.pi/3,0.0344)
         # self.lateral_control = NMPC(1.4,1.4,800,80000,0.1,35,15,np.pi/3,0.07)  #0.034
@@ -105,7 +112,9 @@ class Controller2D(object):
 
     def set_throttle(self, input_throttle):
         # Clamp the throttle command to valid bounds
+        self._throttle_mean = self._throttle_mean[1:]
         throttle           = np.fmax(np.fmin(input_throttle, 1.0), 0.0)
+        throttle = np.mean(np.append(self._throttle_mean,np.array([throttle])))
         self._set_throttle = throttle
 
     def set_steer(self, input_steer_in_rad):
@@ -182,9 +191,9 @@ class Controller2D(object):
             ######################################################
             ######################################################
            
-            Kp = 2
-            Kd = 0.1
-            Ki = 0.02
+            Kp = 0.5
+            Kd = 0.2
+            Ki = 0
 
             delta_t = t - self.vars.t_previous
 

@@ -7,7 +7,7 @@ import sys
 import glob
 
 
-LANE_CHANGE_DIST = 10
+LANE_CHANGE_DIST = 15
 
 if WINDOWS:
     try:
@@ -194,6 +194,7 @@ class Environment():
         return_walkers = []
         vehicle_lanes = []
         vehicle_sections = []
+        veh_road_data = []
 
         vehicle_locs = []
         vehicle_front_locs = np.empty((0,2),dtype=np.float32)
@@ -227,6 +228,8 @@ class Environment():
                 vehicle_lanes.append(ego_lane)
                 vehicle_sections.append(ego_section)
 
+                veh_road_data.append([ego_lane,ego_section,ego_waypoint.road_id])
+
                 vehicle_locs.append([10000,10000])
                 vehicle_front_locs = np.append(vehicle_front_locs,np.array([[100000,100000]]),axis=0)
                 vehicle_backk_locs = np.append(vehicle_backk_locs,np.array([[100000,100000]]),axis=0)
@@ -241,6 +244,9 @@ class Environment():
 
                 vehicle_lane = vehicle_waypoint.lane_id
                 vehicle_section = vehicle_waypoint.section_id
+                vehicle_road    = vehicle_waypoint.road_id
+
+                veh_road_data.append([vehicle_lane,vehicle_section,vehicle_road])
 
                 vehicle_lanes.append(vehicle_lane)
                 vehicle_sections.append(vehicle_section)
@@ -393,13 +399,13 @@ class Environment():
             if (type(paths) == type(None)):
                 crit_1 = np.logical_and(dist_dynamic<in_radius**2, ego_lane == vehicle_lanes)
                 crit_2 = dist_dynamic<LANE_CHANGE_DIST**2
-                
+
                 dyns = vehicles[crit_1]                
                 return_dynamic_vehicles = return_dynamic_vehicles[crit_1]
                 
                 dyn_lane_chng_dist = dist_dynamic[crit_2] 
-                lane_change_dyn_veh = vehicles[crit_2]
 
+                lane_change_dyn_veh = vehicles[crit_2]
 
                 # dyns = vehicles[np.logical_and(dist_dynamic<in_radius**2, np.logical_and(ego_lane == vehicle_lanes,ego_section == vehicle_sections))]                
                 # return_dynamic_vehicles = return_dynamic_vehicles[np.logical_and(dist_dynamic<in_radius**2, np.logical_and(ego_lane == vehicle_lanes,ego_section == vehicle_sections))]
@@ -408,12 +414,14 @@ class Environment():
             else:
                 crit_1 = np.logical_and(dist_dynamic<in_radius**2,np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))
                 crit_2 = dist_dynamic<LANE_CHANGE_DIST**2
-                
+
                 dyns = vehicles[crit_1]
                 return_dynamic_vehicles = return_dynamic_vehicles[crit_1]
                 
-                dyn_lane_chng_dist = dist_dynamic[crit_2] 
+                dyn_lane_chng_dist = dist_dynamic[crit_2]
+
                 lane_change_dyn_veh = vehicles[crit_2]
+
                 # vehicles_in_ego = np.logical_and(ego_lane == vehicle_lanes,ego_section==vehicle_sections)
                 # vehicles_in_goal = np.logical_and(goal_lane == vehicle_lanes,goal_section == vehicle_sections)
 
@@ -469,11 +477,18 @@ class Environment():
                 stats = vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
                 return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes)]
 
+                crit_3 = dist_static<LANE_CHANGE_DIST**2
+                stat_lane_chng_dist = dist_static[crit_3]
+                lane_change_stat_veh = vehicles[crit_3]
+
                 # stats = vehicles[np.logical_and(dist_static<in_radius**2, np.logical_and(ego_lane == vehicle_lanes,ego_section == vehicle_sections))]
                 # return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, np.logical_and(ego_lane == vehicle_lanes,ego_section == vehicle_sections))]
 
                 # print("paths = None ",return_static_vehicles)
             else:
+
+
+
                 # print(np.logical_and(dist_static<in_radius**2, ego_lane == vehicle_lanes),np.logical_and(dist_static<in_radius**2, goal_lane == vehicle_lanes))
                 # stats = vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
                 # return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
@@ -491,6 +506,10 @@ class Environment():
                 stats = vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
                 return_static_vehicles = return_static_vehicles[np.logical_and(dist_static<in_radius**2, np.logical_or(ego_lane == vehicle_lanes, goal_lane == vehicle_lanes))]
 
+                crit_3 = dist_static<LANE_CHANGE_DIST**2
+                stat_lane_chng_dist = dist_static[crit_3]
+                lane_change_stat_veh = vehicles[crit_3]
+                
             #print("stats", stats)
             dist_static,static_closest = self.in_front(rot,loc,stats,return_static_vehicles)
             return_static_vehicles = vehicles[stat_temp<in_radius**2]
@@ -643,12 +662,12 @@ class Environment():
                     # closest_vehicle = vehicles[dyn_idx][0]
                     # closest_vehicle = vehicles[stat_idx][0]
                     closest_vehicle = temp_
-        
-        return_stat_lanes = vehicle_lanes[stat_temp<LANE_CHANGE_DIST**2] 
-        return_dyn_lanes  = vehicle_lanes[dist_temp<LANE_CHANGE_DIST**2]
+        veh_road_data = np.array(veh_road_data)
+        return_stat_lanes = veh_road_data[stat_temp<LANE_CHANGE_DIST**2] 
+        return_dyn_lanes  = veh_road_data[dist_temp<LANE_CHANGE_DIST**2]
 
         # print(return_dynamic_vehicles)
-        return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,y_vec,walkers_y,walkers_x,return_stat_lanes,return_dyn_lanes,ego_lane,goal_lane,dyn_lane_chng_dist,lane_change_dyn_veh
+        return return_static_vehicles, return_dynamic_vehicles, return_walkers,closest_vehicle,x_vec,y_vec,walkers_y,walkers_x,return_stat_lanes,return_dyn_lanes,ego_lane,goal_lane,dyn_lane_chng_dist,stat_lane_chng_dist,lane_change_dyn_veh,lane_change_stat_veh
 
 
     def get_overtake_actors(self, _waypoint, thresholdSqr, ego_actor):
