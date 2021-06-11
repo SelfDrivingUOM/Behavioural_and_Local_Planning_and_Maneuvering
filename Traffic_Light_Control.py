@@ -21,12 +21,16 @@ class TrafficLightControl(object):
         self._traffic_lights = traffic_lights
         self._ego_light = None
         self.set_time = None
-
+        self.changed = False
+    
     def update_data(self,junc_id,ego_light,current_time):
         
         if(self._junc_id is not None):
-            for traffic_light in self._traffic_lights[self._junc_id]:
-                traffic_light.freeze(False)
+            if(self._junc_id != junc_id):
+                # print("ses")
+                for traffic_light in self._traffic_lights[self._junc_id]:
+                    traffic_light.freeze(False)
+                    traffic_light.set_state(carla.TrafficLightState.Red)
 
         self._junc_id = junc_id
         self._ego_light = ego_light
@@ -35,11 +39,20 @@ class TrafficLightControl(object):
         
     def parse_events(self,simulation_time):
 
-        if(self.set_time is not None):
-            if(simulation_time-self.set_time >2):
+        if(self.set_time is not None and self.changed == True):
+           
+            # print(simulation_time-self.set_time)
+            if(simulation_time-self.set_time >5):
+                self.changed = False
                 if(self._junc_id is not None):
+                    # print("Mmmmmm")
                     for traffic_light in self._traffic_lights[self._junc_id]:
+                        if(traffic_light == self._ego_light):
+                            # print("Hmm")
+                            traffic_light.set_state(carla.TrafficLightState.Red)    
                         traffic_light.freeze(False)
+                        traffic_light.set_state(carla.TrafficLightState.Yellow)
+                        # print(traffic_light.state)
                 self._junc_id = None
                 self._junc_id = None
                 self._ego_light = None
@@ -49,7 +62,7 @@ class TrafficLightControl(object):
             for event in pygame.event.get():
                 if event.type == pygame.KEYUP:
                     if event.key == K_g:
-
+                        self.changed = True
                         for traffic_light in self._traffic_lights[self._junc_id]:
                             if traffic_light == self._ego_light:
                                 traffic_light.set_state(carla.TrafficLightState.Green)
@@ -58,7 +71,7 @@ class TrafficLightControl(object):
                                 traffic_light.set_state(carla.TrafficLightState.Red)
                                 traffic_light.freeze(True)
                     elif event.key == K_y:
-                    
+                        self.changed = True
                         for traffic_light in self._traffic_lights[self._junc_id]:
                             if traffic_light == self._ego_light:
                                 traffic_light.set_state(carla.TrafficLightState.Yellow)
@@ -68,7 +81,7 @@ class TrafficLightControl(object):
                                 traffic_light.freeze(True)
 
                     elif event.key == K_r:
-                        
+                        self.changed = True
                         for traffic_light in self._traffic_lights[self._junc_id]:
                             if traffic_light == self._ego_light:
                                 traffic_light.set_state(carla.TrafficLightState.Red)

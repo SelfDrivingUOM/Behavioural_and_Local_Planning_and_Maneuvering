@@ -674,9 +674,8 @@ class World(object):
             if actor is not None:
                 actor.destroy()
 
-# ==============================================================================
-# -- HUD -----------------------------------------------------------------------
-# ==============================================================================
+
+
 class HUD(object):
     def __init__(self, width, height):
         self.dim = (width, height)
@@ -688,36 +687,78 @@ class HUD(object):
         mono = pygame.font.match_font(mono)
         self._font_mono = pygame.font.Font(mono, 12 if os.name == 'nt' else 14)
         self._notifications = FadingText(font, (width, 40), (0, height - 40))
+        # self.help = HelpText(pygame.font.Font(mono, 16), width, height)
         self.server_fps = 0
         self.frame = 0
         self.simulation_time = 0
         self._show_info = True
         self._info_text = []
         self._server_clock = pygame.time.Clock()
-
+        self.speed_queue = collections.deque(np.zeros(200))
+        self.acceleration_queue = collections.deque(np.zeros(200))
+        self.past_time = 0
+        self.v_t = 0
+        self.v_t_1 = 0
+    
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
         self.server_fps = self._server_clock.get_fps()
         self.frame = timestamp.frame
+        self.past_time = self.simulation_time
         self.simulation_time = timestamp.elapsed_seconds
-
+        
     def tick(self, world, clock):
         self._notifications.tick(world, clock)
         if not self._show_info:
             return
         t = world.player.get_transform()
+
         v = world.player.get_velocity()
         c = world.player.get_control()
-        # vehicles = world.world.get_actors().filter('vehicle.*')
+
+
+        self.v_t_1 = self.v_t
+        self.v_t = v
+
+        if(self.v_t_1 == 0):
+            self.v_t_1 = self.v_t
+        #####################################################################
+        #####################################################################
+        ## both speed and acceleration is scaled by 20
+        self.speed_queue.popleft()
+        self.speed_queue.append(math.sqrt(v.x**2 + v.y**2 + v.z**2)/10)          
+        self.acceleration_queue.popleft()
+        self.acceleration_queue.append((1/(self.simulation_time-self.past_time))*math.sqrt((self.v_t.x-self.v_t_1.x)**2+(self.v_t.y-self.v_t_1.y)**2+(self.v_t.z-self.v_t_1.z)**2))
+        #####################################################################
+        #####################################################################
+
+        vehicles = world.world.get_actors().filter('vehicle.*')
         self._info_text = [
             'Server:  % 16.0f FPS' % self.server_fps,
             'Client:  % 16.0f FPS' % clock.get_fps(),
             '',
-            'Vehicle: % 20s' % get_actor_display_name(world.player, truncate=20),
-            'Map:     % 20s' % world.map.name,
             'Simulation time: % 12s' % datetime.timedelta(seconds=int(self.simulation_time)),
             '',
+            'Speed:   % 15.0f m/s' % (math.sqrt(v.x**2 + v.y**2 + v.z**2)),
+            'Accelero: (%5.1f,%5.1f,%5.1f)' % (((self.v_t.x-self.v_t_1.x)**2)/(self.simulation_time-self.past_time),((self.v_t.y-self.v_t_1.y)**2)/(self.simulation_time-self.past_time),((self.v_t.z-self.v_t_1.z)**2)/(self.simulation_time-self.past_time)),
+            'Location:% 20s' % ('(% 5.1f, % 5.1f)' % (t.location.x, t.location.y)),
             '']
+        # self._info_text = [
+        #     'Server:  % 16.0f FPS' % self.server_fps,
+        #     'Client:  % 16.0f FPS' % clock.get_fps(),
+        #     '',
+        #     'Vehicle: % 20s' % get_actor_display_name(world.player, truncate=20),
+        #     'Map:     % 20s' % world.map.name,
+        #     'Simulation time: % 12s' % datetime.timedelta(seconds=int(self.simulation_time)),
+        #     '',
+        #     'Speed:   % 15.0f km/h' % (3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2)),
+        #     u'Compass:% 17.0f\N{DEGREE SIGN} % 2s' % (compass, heading),
+        #     'Accelero: (%5.1f,%5.1f,%5.1f)' % (world.imu_sensor.accelerometer),
+        #     'Gyroscop: (%5.1f,%5.1f,%5.1f)' % (world.imu_sensor.gyroscope),
+        #     'Location:% 20s' % ('(% 5.1f, % 5.1f)' % (t.location.x, t.location.y)),
+        #     'GNSS:% 24s' % ('(% 2.6f, % 3.6f)' % (world.gnss_sensor.lat, world.gnss_sensor.lon)),
+        #     'Height:  % 18.0f m' % t.location.z,
+        #     '']
         if isinstance(c, carla.VehicleControl):
             self._info_text += [
                 ('Throttle:', c.throttle, 0.0, 1.0),
@@ -731,17 +772,19 @@ class HUD(object):
             self._info_text += [
                 ('Speed:', c.speed, 0.0, 5.556),
                 ('Jump:', c.jump)]
-
-        # if len(vehicles) > 1:
-        #     self._info_text += ['Nearby vehicles:']
-        #     distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
-        #     vehicles = [(distance(x.get_location()), x) for x in vehicles if x.id != world.player.id]
-        #     for d, vehicle in sorted(vehicles):
-        #         if d > 200.0:
-        #             break
-        #         vehicle_type = get_actor_display_name(vehicle, truncate=22)
-        #         self._info_text.append('% 4dm %s' % (d, vehicle_type))
-
+        # self._info_text += [
+        #     '',
+        #     'Collision:',
+        #     collision,
+        #     '',
+        #     'Number of vehicles: % 8d' % len(vehicles)]
+        self._info_text += [
+            '',
+            'Speed plot (ms-1):',
+            list(self.speed_queue),
+            'Acc. plot (ms-2):',
+            list(self.acceleration_queue)]
+        
     def toggle_info(self):
         self._show_info = not self._show_info
 
@@ -752,6 +795,7 @@ class HUD(object):
         self._notifications.set_text('Error: %s' % text, (255, 0, 0))
 
     def render(self, display):
+        temp_var = True
         if self._show_info:
             info_surface = pygame.Surface((220, self.dim[1]))
             info_surface.set_alpha(100)
@@ -763,11 +807,35 @@ class HUD(object):
                 if v_offset + 18 > self.dim[1]:
                     break
                 if isinstance(item, list):
-                    if len(item) > 1:
-                        points = [(x + 8, v_offset + 8 + (1.0 - y) * 30) for x, y in enumerate(item)]
-                        pygame.draw.lines(display, (255, 136, 0), False, points, 2)
-                    item = None
-                    v_offset += 18
+                    if temp_var:
+                        temp_var = False
+                        if len(item) > 1:
+                            # points = [(x + 8, v_offset + 8 + (1.0 - y) * 30) for x, y in enumerate(item)]
+                            points = [(x + 8, v_offset + 80 + (1.0 - y) * 30) for x, y in enumerate(item)]
+                            pygame.draw.lines(display, (255, 136, 0), False, points, 2)
+
+                            # # speed = 10 line
+                            # axis_vel1 = [(x + 8, v_offset + 110 - 30) for x, y in enumerate(range(200))]
+                            # pygame.draw.lines(display, (255, 255, 255), False, axis_vel1, 1)
+                            # speed = 0 line
+                            axis_vel2 = [(x + 8, v_offset + 110) for x, y in enumerate(range(200))]
+                            pygame.draw.lines(display, (255, 255, 255), False, axis_vel2, 1)
+                        item = None
+                        v_offset += 18
+                    else:
+                        if len(item) > 1:
+                            # points = [(x + 8, v_offset + 8 + (1.0 - y) * 30) for x, y in enumerate(item)]
+                            points = [(x + 8, v_offset + 80 + 90 + (1.0 - y) * 30) for x, y in enumerate(item)]
+                            pygame.draw.lines(display, (255, 0, 0), False, points, 2)
+
+                            # # acc. = 10 line
+                            # axis_acc1 = [(x + 8, v_offset + 200 - 30) for x, y in enumerate(range(200))]
+                            # pygame.draw.lines(display, (255, 255, 255), False, axis_acc1, 1)
+                            # acc. = 0 line
+                            axis_acc2 = [(x + 8, v_offset + 200) for x, y in enumerate(range(200))]
+                            pygame.draw.lines(display, (255, 255, 255), False, axis_acc2, 1)
+                        item = None
+                        v_offset += 18
                 elif isinstance(item, tuple):
                     if isinstance(item[1], bool):
                         rect = pygame.Rect((bar_h_offset, v_offset + 8), (6, 6))
@@ -783,11 +851,16 @@ class HUD(object):
                         pygame.draw.rect(display, (255, 255, 255), rect)
                     item = item[0]
                 if item:  # At this point has to be a str.
-                    surface = self._font_mono.render(item, True, (255, 255, 255))
-                    display.blit(surface, (8, v_offset))
+                    if item == 'Acc. plot (ms-2):':
+                        surface = self._font_mono.render(item, True, (255, 255, 255))
+                        display.blit(surface, (8, v_offset + 95))
+                    else:
+                        surface = self._font_mono.render(item, True, (255, 255, 255))
+                        display.blit(surface, (8, v_offset))
                 v_offset += 18
         self._notifications.render(display)
-        
+        # self.help.render(display)
+
 
 # ==============================================================================
 # -- FadingText ----------------------------------------------------------------
