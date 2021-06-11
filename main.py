@@ -7,8 +7,10 @@ from os_carla import YASINTHA_WINDOWS,GERSHOM_WINDOWS
 from scenarios.school import school
 from scenarios.Jaywalking import jaywalking
 
+# from modified_manual_control.manual_control import KeyboardControl
+
 ITER_FOR_SIM_TIMESTEP  = 100     # no. iterations to compute approx sim timestep
-WAIT_TIME_BEFORE_START = 5       # game seconds (time before controller start)
+WAIT_TIME_BEFORE_START = 0       # game seconds (time before controller start)
 TOTAL_RUN_TIME         = 100.00  # game seconds (total runtime before sim end)
 TOTAL_FRAME_BUFFER     = 300     # number of frames to buffer after total runtime
 SIMULATION_TIME_STEP   = 0.034
@@ -69,9 +71,9 @@ NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
 
 
-#global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 
-global_path_points_set =[226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set =[226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 
 #global_path_points_set =[25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 # global_path_points_set =[45,163,273,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
@@ -267,7 +269,7 @@ import re
 import weakref
 from math import sin, cos, pi, sqrt
 import hull
-
+from pygame.locals import K_SPACE
 # from  import BasicAgent
 
 try:
@@ -786,6 +788,7 @@ class HUD(object):
                 v_offset += 18
         self._notifications.render(display)
         
+
 # ==============================================================================
 # -- FadingText ----------------------------------------------------------------
 # ==============================================================================

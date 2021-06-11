@@ -35,7 +35,7 @@ import carla
 import math
 
 from overtake_state import check_lane_closest, can_we_overtake
-
+from Traffic_Light_Control import TrafficLightControl
 ######################################################
 #####              GLOBAL VARIABLES             ######
 ######################################################
@@ -65,7 +65,7 @@ OVERTAKE_RANGE                  = 15      # Range to overtake vehicles (m)
 DEBUG_STATE_MACHINE             = False   # Set this to true to see all function outputs in state machine. This is better for full debug
 ONLY_STATE_DEBUG                = False    # Set this to true to see current state of state machine
 UNSTRUCTURED                    = True    # Set this to True to behave according to the unstructured walkers
-TRAFFIC_LIGHT                   = False   # Set this to True to on traffic lights 
+TRAFFIC_LIGHT                   = True   # Set this to True to on traffic lights 
 FOLLOW_LANE_OFFSET              = 0.2     # Path goal point offset in follow lane  (m)
 DECELERATE_OFFSET               = 0.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      # Path goal point offset in decelerate state (m) 
 Z                               = 1.843102
@@ -178,12 +178,16 @@ class BehaviouralPlanner:
 
         self._follow_lead_range             = FOLLOW_LEAD_RANGE + self._speed - SPEED_DEFAULT
         self._overtake_range                = OVERTAKE_RANGE + self._speed - SPEED_DEFAULT
-
+        self._traffic_light_controller      = TrafficLightControl(self._traffic_lights)
+        self.current_time                    = None
     ######################################################
     #####              State Machine                ######
     ######################################################
 
     def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed,overtake_vehicle,lane_change_vehicle,danger_vehicle,jaywalking_ped,school_ped):
+        
+        
+
         """
         param   : ego_state         : List containing location and heading of ego- vehicle
                                       [x coordinate of ego vehicle (m), y coordinate of ego vehicle (m), yaw of ego vehicle (degrees)]
@@ -204,10 +208,13 @@ class BehaviouralPlanner:
                                             local_waypoints[5]:
                                             returns [x5, y5, v5] (6th point in the local path)
         """
+        self.current_time = current_timestamp
+        self._traffic_light_controller.parse_events(self.current_time)
 
         # set map traffic lights green
         if (TRAFFIC_LIGHT == False):
-            for junc_id in self._traffic_lights .keys():
+            for junc_id in self._traffic_lights.keys():
+
                 self.traffic_light_green(self._traffic_lights[junc_id])
 
         # if school_ped is not None:
@@ -215,8 +222,7 @@ class BehaviouralPlanner:
         (self._traffic_lights[53][2]).set_state(carla.TrafficLightState.Green)  ## Our traffic
         (self._traffic_lights[53][0]).set_state(carla.TrafficLightState.Red)
         (self._traffic_lights[53][3]).set_state(carla.TrafficLightState.Red)
-            
-
+        
             
 
         if(self._collission_actor!=None):
@@ -1985,6 +1991,8 @@ class BehaviouralPlanner:
         if goal_waypoint is not None:
             if (self._intersection_state):
                 if self.junc_id in lights_list:
+
+                    
                     min_angle = 180.0
                     sel_magnitude = 0.0
                     sel_traffic_light = None
@@ -2005,8 +2013,9 @@ class BehaviouralPlanner:
                     # if(sel_traffic_light!= None):
                     #     self._world.debug.draw_line(ego_location, sel_traffic_light.get_location(), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=0.05)
                         
-
+                    
                     if sel_traffic_light is not None:
+                        self._traffic_light_controller.update_data(self.junc_id,sel_traffic_light,self.current_time)
                         if debug:
                             print('=== Magnitude = {} | Angle = {} | ID = {}'.format(
                                 sel_magnitude, min_angle, sel_traffic_light.id))
@@ -2032,6 +2041,8 @@ class BehaviouralPlanner:
 
     def traffic_light_green(self,lights_list):
         for traffic_light in lights_list:
+            # print(traffic_light.get_state())
             traffic_light.set_state(carla.TrafficLightState.Green)
             # traffic_light.set_green_time(self, 5000.0)
+
 
