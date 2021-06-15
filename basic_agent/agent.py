@@ -36,7 +36,7 @@ class Agent(object):
         :param vehicle: actor to apply to local planner logic onto
         """
         self._vehicle = vehicle
-        self._proximity_threshold = 10.0  # meters
+        self._proximity_threshold = 3.0  # meters
         self._local_planner = None
         self._world = self._vehicle.get_world()
         self._map = self._vehicle.get_world().get_map()
@@ -184,7 +184,10 @@ class Agent(object):
             if is_within_distance_ahead(target_vehicle.get_transform(),
                                         self._vehicle.get_transform(),
                                         self._proximity_threshold):
-                return (True, target_vehicle)
+                # return (True, target_vehicle)
+                # Changed for Overtake state debugging
+                return (False, None)
+
 
         return (False, None)
 

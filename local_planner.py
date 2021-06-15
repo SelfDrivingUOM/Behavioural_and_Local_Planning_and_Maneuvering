@@ -48,7 +48,7 @@ class LocalPlanner:
         self.number_of_layers = NUMBER_OF_LAYERS
         self.prev_goal_t=1000
         self.vals  = [0.0,0.0,0.000001]
-        self.LUT = np.load("../LUT.npz")["arr_0"]
+        self.LUT =np.load("../LUT.npz")["arr_0"]
         
     ######################################################
     # GOAL STATE COMPUTATION
@@ -376,7 +376,7 @@ def transform_paths(paths_np, ego_state):
     #change to num paths
     # paths_np = np.array(paths)
    
-    transformed_paths_np = np.empty((NUMBER_OF_PATHS,3,49))
+    transformed_paths_np = np.empty((paths_np.shape[0],3,49))
 
     transformed_paths_np[:,0,:] = ego_state[0] + (paths_np[:,0,:]*np.cos(ego_state[2])) - (paths_np[:,1,:]*np.sin(ego_state[2]))
     transformed_paths_np[:,1,:] = ego_state[1] + (paths_np[:,0,:]*np.sin(ego_state[2])) + (paths_np[:,1,:]*np.cos(ego_state[2]))

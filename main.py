@@ -1,9 +1,14 @@
 from __future__ import print_function
+
+from networkx.exception import ExceededMaxIterations
 from tools import misc
 from os_carla import WINDOWS
+from os_carla import YASINTHA_WINDOWS,GERSHOM_WINDOWS
+from scenarios.school import school
+from scenarios.Jaywalking import jaywalking
 
 ITER_FOR_SIM_TIMESTEP  = 100     # no. iterations to compute approx sim timestep
-WAIT_TIME_BEFORE_START = 0       # game seconds (time before controller start)
+WAIT_TIME_BEFORE_START = 2       # game seconds (time before controller start)
 TOTAL_RUN_TIME         = 100.00  # game seconds (total runtime before sim end)
 TOTAL_FRAME_BUFFER     = 300     # number of frames to buffer after total runtime
 SIMULATION_TIME_STEP   = 0.034
@@ -24,10 +29,9 @@ CIRCLE_OFFSETS         = [-1.0, 1.0, 3.0] # m
 CIRCLE_RADII           = [1.8, 1.8, 1.8]  # m
 TIME_GAP               = 1.0              # s
 PATH_SELECT_WEIGHT     = 10               #
-A_MAX                  = 5                # m/s^2
+A_MAX                  = 2                # m/s^2
 SLOW_SPEED             = 0                # m/s
-STOP_LINE_BUFFER       = 1.5              # m
-LEAD_VEHICLE_SPEED     = 1
+STOP_LINE_BUFFER       = 0              # m
 LEAD_VEHICLE_LOOKAHEAD = 20.0             # m
 LP_FREQUENCY_DIVISOR   = 1                # Frequency divisor tdo make the 
                                           # local planner operate at a lower
@@ -45,25 +49,99 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
+NO_AGENT_VEHICLES = 0
 NO_VEHICLES =  0
 NO_WALKERS  =  0
-
+ONLY_HIGWAY =  0
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
 NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
-SPAWN_POINT = 26  #36 ##20/40-best
-END_POINT   = 0     #119
+# global_path_points_set = [60,130,62,301,32,[32,28],[31,17],17]
+# global_path_points_set = [126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
+# global_path_points_set = [35,112,[112,283],[113,284],142,[278,114],[279,115],56,126,[7,72],[5,71],150,87,91,218,[79,81],[80,82],224,263,259,48,[237,8],[236,9],145,99,220,119,252,[175,116],[181,117],117]
+# global_path_points_set = [229,80,82,224,263,259,48,[237,8],[236,9],145,99,220,119,252,[175,116],[181,117],117]
+# global_path_points_set = [45,163,273,162,256,197,226]
+# global_path_points_set=[9,145,99,220,119,252,[175,116],[181,117],117]
+
+# global_path_points_set = [224, 263]
+# global_path_points_set = [193, 259]
+
+
+
+# global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104,253]
+
+# global_path_points_set =[226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+
+#global_path_points_set =[25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set =[45,163,273,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set =[225,77,168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set =[157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set   = [25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+
+
+
+SPAWN_POINT = global_path_points_set[0]#189#26  #36 ##20/40-best
+END_POINT   = global_path_points_set[-1]    #0     #119
 
 LEAD_SPAWN  = False
+spawn_wpt_parked = 0
+LEAD_VEHICLE_SPEED  = 20 
+global_path_points_set_lead =[24,[24,230],[228,23],45,159]
+LEAD_SPAWN_POINT = global_path_points_set_lead[0]
+LEAD_END_POINT = global_path_points_set_lead[-1]
+
+LANE_CHANGE_VEHICLE = False
+LANE_CHANGE_SPEED = 20
+global_path_points_set_lane_change =[24,[24,230],[228,23],45,159,269]
+LANE_CHANGE_END_POINT = global_path_points_set_lead[-1]
+spw_pt_lane_change = 8
+
+
+OVERTAKE_SPAWN = False
+spawn_wpt_parked_ovt = 30 
+OVERTAKE_VEHICLE_SPEED  = 15                # m/s
+global_path_points_set_ovr =[155,195]
+OVR_X = 207
+OVR_Y = -28
+
+DANGER_CAR   = False
+DANGER_CAR_SPAWN = 55
+DANGER_CAR_END = 285
+global_path_points_set_danger=[DANGER_CAR_SPAWN,DANGER_CAR_END]
+spwn_waypoint_danger = 15
+DANGER_SPEED  = 15
+DIST_DANGER = 80
+DANGER_THROTTLE = 1.2
+DIST_125 = 15
+
+
+
+OVERTAKE_WALKERS = False
+spawn_wpt_overtake_wlker = -20
+
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  True
+WALKER_SPAWN =  False
+
+PRINT_SPAWN_POINTS = True
+SPECTATOR = False
+
+Z                   = 1.843102
+
+jaywalking_ped = None
+school_ped = None
+
 
 import glob
 import os
 import sys
 import time
-import copy
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.axis([0, 10, 0, 1])
 # ==============================================================================
 # -- Find CARLA module ----------------------------------------------------------
 # ==============================================================================
@@ -87,6 +165,46 @@ if WINDOWS:
 
         except IndexError:
             pass
+elif YASINTHA_WINDOWS:
+
+    try:
+        sys.path.append(glob.glob('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+    except IndexError:
+        pass
+
+    if (NAVIGATION_SPAWN):
+
+        try:
+            sys.path.append('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/')
+
+        except IndexError:
+            pass
+
+        try:
+            sys.path.append('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/agents/navigation')
+
+        except IndexError:
+            pass
+elif GERSHOM_WINDOWS:
+    try:
+        sys.path.append(glob.glob('D:/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+    except IndexError:
+        pass
+
+    if (NAVIGATION_SPAWN):
+
+        try:
+            sys.path.append('D:/WindowsNoEditor/PythonAPI/carla/')
+
+        except IndexError:
+            pass
+
+        try:
+            sys.path.append('D:/WindowsNoEditor/PythonAPI/carla/agents/navigation')
+
+        except IndexError:
+            pass
+
 else:
     try:
         sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
@@ -123,13 +241,13 @@ from global_route_planner_dao import GlobalRoutePlannerDAO
 from carla import ColorConverter as cc
 import controller2d
 import local_planner
-if (LEAD_SPAWN):
+if (LEAD_SPAWN or DANGER_CAR or OVERTAKE_SPAWN or LANE_CHANGE_VEHICLE):
     from basic_agent.basic_agent import BasicAgent
 # import ogm_generator
 from local_planner import get_closest_index
 from environment import Environment
 from Behavioural_planner import BehaviouralPlanner
-from spawn import spawn
+# from spawn import spawn
 
 # from spawn_new import spawn_new
 from global_route_planner import GlobalRoutePlanner
@@ -183,6 +301,10 @@ def get_current_pose(transform):
     y = transform.location.y
     yaw = np.deg2rad(transform.rotation.yaw)
 
+    if(yaw>np.pi):
+        yaw-=2*np.pi
+    elif(yaw<-np.pi):
+        yaw+=2*np.pi
     return (x,y,yaw)
 
 def send_control_command(vehicle, throttle, steer, brake, 
@@ -194,7 +316,7 @@ def send_control_command(vehicle, throttle, steer, brake,
     throttle = np.fmax(np.fmin(throttle, 1.0), 0)
     brake = np.fmax(np.fmin(brake, 1.0), 0)
 
-    control = carla.VehicleControl(brake = brake , steer = float(steer),throttle = throttle)
+    control = carla.VehicleControl(brake = brake , steer = float(steer),throttle = throttle,hand_brake=hand_brake)
     vehicle.apply_control(control)
 
 def trace_route(start_waypoint, end_waypoint,sampling_resolution,vehicle,world):
@@ -247,17 +369,52 @@ def get_actor_display_name(actor, truncate=250):
     return (name[:truncate - 1] + u'\u2026') if len(name) > truncate else name
 
 def remove_dup_wp(wp):
-    waypoints = np.empty((0,3))
-    waypoints = np.append(waypoints,wp[0].reshape((1,3)),axis=0)
+
+    # print(wp.shape)
+    waypoints = np.empty((0,wp.shape[1]))
+    waypoints = np.append(waypoints,wp[0].reshape((1,wp.shape[1])),axis=0)
     dist = 0
     for i in range(wp.shape[0]-1):
+        # print(lane_change_points)
         dist += np.linalg.norm(wp[i+1,:2]-wp[i,:2])
         if (dist<0.5):
+
             continue
         else:
-            waypoints = np.append(waypoints,wp[i+1].reshape((1,3)),axis=0)
+            waypoints = np.append(waypoints,wp[i+1].reshape((1,wp.shape[1])),axis=0)
             dist = 0
     return waypoints
+    
+def remove_dup_wp_lc(wp,lane_change_lane_ids):
+
+    # print(wp.shape)
+
+    lane_change_ids = np.empty((0,3))
+    waypoints = np.empty((0,wp.shape[1]))
+    waypoints = np.append(waypoints,wp[0].reshape((1,wp.shape[1])),axis=0)
+    dist = 0
+    idx = 0
+
+    lane_change_ids = np.append(lane_change_ids,np.array([lane_change_lane_ids[idx]]),axis = 0)
+
+    for i in range(wp.shape[0]-1):
+        # print(lane_change_points)
+        dist += np.linalg.norm(wp[i+1,:2]-wp[i,:2])
+        if (dist<0.5):
+
+            continue
+        else:
+
+            if(dist<5):
+                # print("brr")
+                lane_change_ids = np.append(lane_change_ids,np.array([lane_change_lane_ids[idx]]),axis = 0)
+            else:
+                idx+=1
+                lane_change_ids = np.append(lane_change_ids,np.array([lane_change_lane_ids[idx]]),axis = 0)
+            waypoints = np.append(waypoints,wp[i+1].reshape((1,wp.shape[1])),axis=0)
+            dist = 0
+    # print(lane_change_ids.shape)
+    return waypoints,lane_change_ids
 
 def find_angle(vect1, vect2): #(x,y)
     vect1 = np.array([vect1[0],vect1[1],0]) # (x y 0)
@@ -271,19 +428,36 @@ def find_angle(vect1, vect2): #(x,y)
     else:
         return np.arccos(v1_v2_dot)
 
-def add_lane_change_waypoints(waypoints,lp,velocity,world):
+def add_lane_change_waypoints(waypoints,lp,velocity,world,map_):
     updated_waypoints = np.empty((0,3))
     updated_waypoints = np.append(updated_waypoints,waypoints[0].reshape((1,3)),axis=0)
-
+    lane_changes =np.zeros((0,2))
+    lanechange_laneid = []
     i=0
+    count= 0
     while(True):
-        if(i==(waypoints.shape[0]-1)):
+        print(waypoints.shape[0])
+        print(i)
+        if(i==(waypoints.shape[0]-10)):
             break
+        wp_1 = map_.get_waypoint(carla.Location(x= waypoints[i+1,0],y = waypoints[i+1,1],z=0),project_to_road = True)
+        wp_2 = map_.get_waypoint(carla.Location(x= waypoints[i,0],y = waypoints[i,1],z=0),project_to_road = True)
 
-        if((np.linalg.norm(waypoints[i+1, :2]-waypoints[i,:2]) > 2) and (i > 6) and (i<waypoints.shape[0]-6)):
+        if((np.linalg.norm(waypoints[i+1, :2]-waypoints[i,:2]) > 2) and (i > 6) and (i<waypoints.shape[0]-6) and wp_1.lane_id != wp_2.lane_id and not(wp_1.is_junction or wp_2.is_junction)):
             
+
+            # world.debug.draw_string(carla.Location(x=waypoints[i,0],y=waypoints[i,1],z=0), 'H', draw_shadow=False,
+            #         color=carla.Color(r=0, g=0, b=255), life_time=500,
+            #         persistent_lines=True)
+
+            lane_changes = np.append(lane_changes,np.array([waypoints[i,:2]]),axis = 0)
+  
+
+
+            lanechange_laneid.append([wp_1.lane_id,wp_1.section_id,wp_1.road_id])
             start_index = i
             end_index = i+10
+            count+=1
 
             start_vector = (waypoints[start_index] - waypoints[start_index-1])
             start_vector[2] = 0
@@ -313,16 +487,73 @@ def add_lane_change_waypoints(waypoints,lp,velocity,world):
             path = paths[0]
             
             path_wp = np.vstack((path[:2],np.full((1,path.shape[1]),velocity)))
-
+            # print(path_wp.shape)
             updated_waypoints = np.append(updated_waypoints,path_wp.T,axis=0)
 
+            # print(path_wp.shape)
             i+=10
-
+            lane_changes = np.append(lane_changes,path_wp[:2,:].T,axis=0)
         else:
             updated_waypoints = np.append(updated_waypoints,waypoints[i+1].reshape((1,3)),axis=0)
             i+=1
+    lane_changes = np.array(lane_changes)
+    lanechange_laneid = np.array(lanechange_laneid)
 
-    return updated_waypoints
+    # print(lanechange_laneid.shape)
+    return updated_waypoints,lane_changes,lanechange_laneid
+
+def genarate_global_path(globalPathPoints, world_map):
+    # Setting up global router
+    dao = GlobalRoutePlannerDAO(world_map, HOP_RESOLUTION)
+    grp = GlobalRoutePlanner(dao)
+    grp.setup()
+
+    globalPath = []
+    globalPathLocations = []
+    spawnPoints = world_map.get_spawn_points()
+    # print(spawnPoints)
+    numberOfSpawnPts = len(spawnPoints)
+    for i in range(len(globalPathPoints)):
+        if type(globalPathPoints[i]) is list:
+            if len(globalPathPoints[i])==2:
+                if ((globalPathPoints[i][0]+1)>numberOfSpawnPts) or ((globalPathPoints[i][0]+1)<1) or ((globalPathPoints[i][1]+1)>numberOfSpawnPts) or ((globalPathPoints[i][1]+1)<1):
+                    print("Invalid Global path point at globalPathPoints list index %d (value out of range):" %i,globalPathPoints[i])
+                    raise Exception 
+                else:
+                    laneChangeLoc = carla.Location( x=(spawnPoints[globalPathPoints[i][0]].location.x+spawnPoints[globalPathPoints[i][1]].location.x)/2,
+                                                    y=(spawnPoints[globalPathPoints[i][0]].location.y+spawnPoints[globalPathPoints[i][1]].location.y)/2,
+                                                    z=(spawnPoints[globalPathPoints[i][0]].location.z+spawnPoints[globalPathPoints[i][1]].location.z)/2 )
+                    
+                    laneChangeLoc = (world_map.get_waypoint(laneChangeLoc,project_to_road=True,lane_type=carla.LaneType.Driving)).transform.location
+                    globalPathLocations.append([laneChangeLoc])
+            elif (len(globalPathPoints[i])==1):
+                globalPathLocations.append(globalPathPoints[i])
+            else:
+                print("Global path points are not defined properly")
+                raise Exception
+        else:
+            if ((globalPathPoints[i]+1)>numberOfSpawnPts) or ((globalPathPoints[i]+1)<1):
+                print("Invalid Global path point at globalPathPoints list index %d (value out of range):" %i,globalPathPoints[i])
+                raise Exception
+            else:
+                globalPathLocations.append(spawnPoints[globalPathPoints[i]].location)
+
+    for n in range(len(globalPathLocations)-1):
+        start = globalPathLocations[n]
+        end = globalPathLocations[n+1]
+        if (type(start) is list) and (type(end) is list):
+            continue
+        elif (type(start) is list):
+            start = start[0]
+        elif (type(end) is list):
+            end = end[0]
+        globalPath += grp.trace_route(start,end)
+
+    # waypoints = np.array(globalPath)[:,0]
+
+    # return waypoints
+    return globalPath
+
 
 ### ----- These functions are used for the Model Predictive Controller ----- ###
 def find_beta(vel,dir):
@@ -344,9 +575,8 @@ def find_beta(vel,dir):
 # -- World ---------------------------------------------------------------------
 # ==============================================================================
 class World(object):
-    def __init__(self, carla_world, hud, args,spawn_point):
+    def __init__(self, carla_world,spawn_point):
         self.world = carla_world
-        self.actor_role_name = args.rolename
         try:
             self.map = self.world.get_map()
         except RuntimeError as error:
@@ -354,27 +584,12 @@ class World(object):
             print('  The server could not send the OpenDRIVE (.xodr) file:')
             print('  Make sure it exists, has the same name of your town, and is correct.')
             sys.exit(1)
-        self.hud = hud
         self.player = None
-        self.camera_manager = None
-        self._weather_presets = find_weather_presets()
-        self._weather_index = 0
-        self._actor_filter = args.filter
-        self._gamma = args.gamma
         self.start(spawn_point)
-        self.world.on_tick(hud.on_world_tick)
-        self.recording_enabled = False
-        self.recording_start = 0
 
     def start(self,spawn_point):
-        self.player_max_speed = 1.589
-        self.player_max_speed_fast = 3.713
-        # Keep same camera config if the camera manager exists.
-        cam_index = self.camera_manager.index if self.camera_manager is not None else 0
-        cam_pos_index = self.camera_manager.transform_index if self.camera_manager is not None else 0
         # Get a random blueprint.
         blueprint = self.world.get_blueprint_library().filter("model3")[0]
-        blueprint.set_attribute('role_name', self.actor_role_name)
         if blueprint.has_attribute('color'):
             color = random.choice(blueprint.get_attribute('color').recommended_values)
             blueprint.set_attribute('color', color)
@@ -383,20 +598,8 @@ class World(object):
             blueprint.set_attribute('driver_id', driver_id)
         if blueprint.has_attribute('is_invincible'):
             blueprint.set_attribute('is_invincible', 'true')
-        # set the max speed
-        if blueprint.has_attribute('speed'):
-            self.player_max_speed = float(blueprint.get_attribute('speed').recommended_values[1])
-            self.player_max_speed_fast = float(blueprint.get_attribute('speed').recommended_values[2])
-        else:
-            print("No recommended values for 'speed' attribute")
-        # Spawn the player.
-        if self.player is not None:
-            spawn_point = self.player.get_transform()
-            spawn_point.location.z += 2.0
-            spawn_point.rotation.roll = 0.0
-            spawn_point.rotation.pitch = 0.0
-            self.destroy()
-            self.player = self.world.try_spawn_actor(blueprint, spawn_point)
+        
+        # Spawn the player.  
         while self.player is None:
             if not self.map.get_spawn_points():
                 print('There are no spawn points available in your map/town.')
@@ -404,312 +607,245 @@ class World(object):
                 sys.exit(1)
             spawn_point = self.map.get_spawn_points()[spawn_point]
             # spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
-            self.player = self.world.try_spawn_actor(blueprint, spawn_point)
+            spawn_loc = carla.Location(x=spawn_point.location.x +11,y=spawn_point.location.y -1.5,z=spawn_point.location.z)
+            spawn_tranform = carla.Transform(location=spawn_loc,rotation=spawn_point.rotation )
+            self.player = self.world.try_spawn_actor(blueprint, spawn_tranform)
             # self.player = spawned_player
-        # Set up the sensors.
-        self.camera_manager = CameraManager(self.player, self.hud, self._gamma)
-        self.camera_manager.transform_index = cam_pos_index
-        self.camera_manager.set_sensor(cam_index, notify=False)
-        actor_type = get_actor_display_name(self.player)
-        self.hud.notification(actor_type)
-
-    def next_weather(self, reverse=False):
-        self._weather_index += -1 if reverse else 1
-        self._weather_index %= len(self._weather_presets)
-        preset = self._weather_presets[self._weather_index]
-        self.hud.notification('Weather: %s' % preset[1])
-        self.player.get_world().set_weather(preset[0])
-
-    def toggle_radar(self):
-        if self.radar_sensor is None:
-            self.radar_sensor = RadarSensor(self.player)
-        elif self.radar_sensor.sensor is not None:
-            self.radar_sensor.sensor.destroy()
-            self.radar_sensor = None
-
-    def tick(self, clock):
-        self.hud.tick(self, clock)
-
-    def render(self, display):
-        self.camera_manager.render(display)
-        self.hud.render(display)
-
-    def destroy_sensors(self):
-        self.camera_manager.sensor.destroy()
-        self.camera_manager.sensor = None
-        self.camera_manager.index = None
-
-    def destroy(self):
-        actors = [
-            self.camera_manager.sensor,
-            self.player]
-        for actor in actors:
-            if actor is not None:
-                actor.destroy()
-
-# ==============================================================================
-# -- HUD -----------------------------------------------------------------------
-# ==============================================================================
-class HUD(object):
-    def __init__(self, width, height):
-        self.dim = (width, height)
-        font = pygame.font.Font(pygame.font.get_default_font(), 20)
-        font_name = 'courier' if os.name == 'nt' else 'mono'
-        fonts = [x for x in pygame.font.get_fonts() if font_name in x]
-        default_font = 'ubuntumono'
-        mono = default_font if default_font in fonts else fonts[0]
-        mono = pygame.font.match_font(mono)
-        self._font_mono = pygame.font.Font(mono, 12 if os.name == 'nt' else 14)
-        self._notifications = FadingText(font, (width, 40), (0, height - 40))
-        self.server_fps = 0
-        self.frame = 0
-        self.simulation_time = 0
-        self._show_info = True
-        self._info_text = []
-        self._server_clock = pygame.time.Clock()
-
-    def on_world_tick(self, timestamp):
-        self._server_clock.tick()
-        self.server_fps = self._server_clock.get_fps()
-        self.frame = timestamp.frame
-        self.simulation_time = timestamp.elapsed_seconds
-
-    def tick(self, world, clock):
-        self._notifications.tick(world, clock)
-        if not self._show_info:
-            return
-        t = world.player.get_transform()
-        v = world.player.get_velocity()
-        c = world.player.get_control()
-        # vehicles = world.world.get_actors().filter('vehicle.*')
-        self._info_text = [
-            'Server:  % 16.0f FPS' % self.server_fps,
-            'Client:  % 16.0f FPS' % clock.get_fps(),
-            '',
-            'Vehicle: % 20s' % get_actor_display_name(world.player, truncate=20),
-            'Map:     % 20s' % world.map.name,
-            'Simulation time: % 12s' % datetime.timedelta(seconds=int(self.simulation_time)),
-            '',
-            '']
-        if isinstance(c, carla.VehicleControl):
-            self._info_text += [
-                ('Throttle:', c.throttle, 0.0, 1.0),
-                ('Steer:', c.steer, -1.0, 1.0),
-                ('Brake:', c.brake, 0.0, 1.0),
-                ('Reverse:', c.reverse),
-                ('Hand brake:', c.hand_brake),
-                ('Manual:', c.manual_gear_shift),
-                'Gear:        %s' % {-1: 'R', 0: 'N'}.get(c.gear, c.gear)]
-        elif isinstance(c, carla.WalkerControl):
-            self._info_text += [
-                ('Speed:', c.speed, 0.0, 5.556),
-                ('Jump:', c.jump)]
-
-        # if len(vehicles) > 1:
-        #     self._info_text += ['Nearby vehicles:']
-        #     distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
-        #     vehicles = [(distance(x.get_location()), x) for x in vehicles if x.id != world.player.id]
-        #     for d, vehicle in sorted(vehicles):
-        #         if d > 200.0:
-        #             break
-        #         vehicle_type = get_actor_display_name(vehicle, truncate=22)
-        #         self._info_text.append('% 4dm %s' % (d, vehicle_type))
-
-    def toggle_info(self):
-        self._show_info = not self._show_info
-
-    def notification(self, text, seconds=2.0):
-        self._notifications.set_text(text, seconds=seconds)
-
-    def error(self, text):
-        self._notifications.set_text('Error: %s' % text, (255, 0, 0))
-
-    def render(self, display):
-        if self._show_info:
-            info_surface = pygame.Surface((220, self.dim[1]))
-            info_surface.set_alpha(100)
-            display.blit(info_surface, (0, 0))
-            v_offset = 4
-            bar_h_offset = 100
-            bar_width = 106
-            for item in self._info_text:
-                if v_offset + 18 > self.dim[1]:
-                    break
-                if isinstance(item, list):
-                    if len(item) > 1:
-                        points = [(x + 8, v_offset + 8 + (1.0 - y) * 30) for x, y in enumerate(item)]
-                        pygame.draw.lines(display, (255, 136, 0), False, points, 2)
-                    item = None
-                    v_offset += 18
-                elif isinstance(item, tuple):
-                    if isinstance(item[1], bool):
-                        rect = pygame.Rect((bar_h_offset, v_offset + 8), (6, 6))
-                        pygame.draw.rect(display, (255, 255, 255), rect, 0 if item[1] else 1)
-                    else:
-                        rect_border = pygame.Rect((bar_h_offset, v_offset + 8), (bar_width, 6))
-                        pygame.draw.rect(display, (255, 255, 255), rect_border, 1)
-                        f = (item[1] - item[2]) / (item[3] - item[2])
-                        if item[2] < 0.0:
-                            rect = pygame.Rect((bar_h_offset + f * (bar_width - 6), v_offset + 8), (6, 6))
-                        else:
-                            rect = pygame.Rect((bar_h_offset, v_offset + 8), (f * bar_width, 6))
-                        pygame.draw.rect(display, (255, 255, 255), rect)
-                    item = item[0]
-                if item:  # At this point has to be a str.
-                    surface = self._font_mono.render(item, True, (255, 255, 255))
-                    display.blit(surface, (8, v_offset))
-                v_offset += 18
-        self._notifications.render(display)
-        
-# ==============================================================================
-# -- FadingText ----------------------------------------------------------------
-# ==============================================================================
-class FadingText(object):
-    def __init__(self, font, dim, pos):
-        self.font = font
-        self.dim = dim
-        self.pos = pos
-        self.seconds_left = 0
-        self.surface = pygame.Surface(self.dim)
-
-    def set_text(self, text, color=(255, 255, 255), seconds=2.0):
-        text_texture = self.font.render(text, True, color)
-        self.surface = pygame.Surface(self.dim)
-        self.seconds_left = seconds
-        self.surface.fill((0, 0, 0, 0))
-        self.surface.blit(text_texture, (10, 11))
-
-    def tick(self, _, clock):
-        delta_seconds = 1e-3 * clock.get_time()
-        self.seconds_left = max(0.0, self.seconds_left - delta_seconds)
-        self.surface.set_alpha(500.0 * self.seconds_left)
-
-    def render(self, display):
-        display.blit(self.surface, self.pos)
-
-# ==============================================================================
-# -- CameraManager -------------------------------------------------------------
-# ==============================================================================
-class CameraManager(object):
-    def __init__(self, parent_actor, hud, gamma_correction):
-        self.sensor = None
-        self.surface = None
-        self._parent = parent_actor
-        self.hud = hud
-        self.recording = False
-        bound_y = 0.5 + self._parent.bounding_box.extent.y
-        Attachment = carla.AttachmentType
-        self._camera_transforms = [
-            (carla.Transform(carla.Location(x=-5.5, z=2.5), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
-            (carla.Transform(carla.Location(x=1.6, z=1.7)), Attachment.Rigid),
-            (carla.Transform(carla.Location(x=5.5, y=1.5, z=1.5)), Attachment.SpringArm),
-            (carla.Transform(carla.Location(x=-8.0, z=6.0), carla.Rotation(pitch=6.0)), Attachment.SpringArm),
-            (carla.Transform(carla.Location(x=-1, y=-bound_y, z=0.5)), Attachment.Rigid)]
-        self.transform_index = 1
-        self.sensors = [['sensor.camera.rgb', cc.Raw, 'Camera RGB', {}]]
-        world = self._parent.get_world()
-        bp_library = world.get_blueprint_library()
-        for item in self.sensors:
-            bp = bp_library.find(item[0])
-            if item[0].startswith('sensor.camera'):
-                bp.set_attribute('image_size_x', str(hud.dim[0]))
-                bp.set_attribute('image_size_y', str(hud.dim[1]))
-                if bp.has_attribute('gamma'):
-                    bp.set_attribute('gamma', str(gamma_correction))
-                for attr_name, attr_value in item[3].items():
-                    bp.set_attribute(attr_name, attr_value)
-            elif item[0].startswith('sensor.lidar'):
-                bp.set_attribute('range', '50')
-            item.append(bp)
-        self.index = None
 
 
-    def set_sensor(self, index, notify=True, force_respawn=False):
-        index = index % len(self.sensors)
-        needs_respawn = True if self.index is None else \
-            (force_respawn or (self.sensors[index][2] != self.sensors[self.index][2]))
-        if needs_respawn:
-            if self.sensor is not None:
-                self.sensor.destroy()
-                self.surface = None
-            self.sensor = self._parent.get_world().spawn_actor(
-                self.sensors[index][-1],
-                self._camera_transforms[self.transform_index][0],
-                attach_to=self._parent,
-                attachment_type=self._camera_transforms[self.transform_index][1])
-            # We need to pass the lambda a weak reference to self to avoid
-            # circular reference.
-            weak_self = weakref.ref(self)
-            self.sensor.listen(lambda image: CameraManager._parse_image(weak_self, image))
-        if notify:
-            self.hud.notification(self.sensors[index][2])
-        self.index = index
 
-    def toggle_recording(self):
-        self.recording = not self.recording
-        self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
+def get_lane_change_ids(lane_changes, waypoints):
+    index = []
+    for i in range(lane_changes.shape[0]):
+        dist_ = np.sum(np.square(waypoints[:,:2] - lane_changes[i]),axis = 1)
+        idx = np.argmin(dist_)
+        index.append(idx)
+    # print(lane_changes.shape,waypoints.shape)
+    index = np.array(index)
 
-    def render(self, display):
-        if self.surface is not None:
-            display.blit(self.surface, (0, 0))
-            
-    @staticmethod
-    def _parse_image(weak_self, image):
-        self = weak_self()
-        if not self:
-            return
-        if self.sensors[self.index][0].startswith('sensor.lidar'):
-            points = np.frombuffer(image.raw_data, dtype=np.dtype('f4'))
-            points = np.reshape(points, (int(points.shape[0] / 3), 3))
-            lidar_data = np.array(points[:, :2])
-            lidar_data *= min(self.hud.dim) / 100.0
-            lidar_data += (0.5 * self.hud.dim[0], 0.5 * self.hud.dim[1])
-            lidar_data = np.fabs(lidar_data)  # pylint: disable=E1111
-            lidar_data = lidar_data.astype(np.int32)
-            lidar_data = np.reshape(lidar_data, (-1, 2))
-            lidar_img_size = (self.hud.dim[0], self.hud.dim[1], 3)
-            lidar_img = np.zeros((lidar_img_size), dtype = int)
-            lidar_img[tuple(lidar_data.T)] = (255, 255, 255)
-            self.surface = pygame.surfarray.make_surface(lidar_img)
-        else:
-            image.convert(self.sensors[self.index][1])
-            array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-            array = np.reshape(array, (image.height, image.width, 4))
-            array = array[:, :, :3]
-            array = array[:, :, ::-1]
-            array = array[:, ::-1, :]
-            self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
-        if self.recording:
-            image.save_to_disk('_out/%08d' % image.frame)
-
+    return index
 
 def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
+    
     try:
         
         client = carla.Client(args.host, args.port)
         client.set_timeout(2.0)
 
         client.load_world("Town05")
-        # client.generate_opendrive_world("/home/selfdriving/carla-precompiled/CARLA_0.9.9/CarlaUE4/Content/Carla/Maps/OpenDrive/Town03.xodr")
 
-        display = pygame.display.set_mode(
-            (args.width, args.height),
-            pygame.HWSURFACE | pygame.DOUBLEBUF)
-
-        hud = HUD(args.width, args.height)
-        world = World(client.get_world(), hud, args,SPAWN_POINT)
-
-        spawn(NO_VEHICLES,NO_WALKERS,client,SPAWN_POINT)
-        # world = client.load_world('Town02')
-        
-        clock = pygame.time.Clock()
-
+        world = World(client.get_world(),SPAWN_POINT)
         world_map = world.world.get_map()
-        world.world.debug.draw_line(carla.Location(x=-50 , y=0,z=0),carla.Location(x=200 , y=0,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
-        world.world.debug.draw_line(carla.Location(x=0 , y=-50,z=0),carla.Location(x=0 , y=200,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
+        print("ego_id",world.player.id)
+        
+        with open('ego_id.txt','w') as file:
+            file.write(str(world.player.id))
+        # world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=200 , y=0,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
+        # world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=0 , y=200,z=0), thickness=0.5, color=carla.Color(r=0, g=255, b=0), life_time=-1.)
+
+        if PRINT_SPAWN_POINTS:
+            misc.spawn_pts_print(world_map,world.world)
+
+        lane_loc1=carla.Location(x=68.79,y=202.23,z=0.2)
+        lane_loc2=carla.Location(x=72.79,y=204.9,z=0.2)
+        lane_wpt1 =  world_map.get_waypoint(lane_loc1,project_to_road = True,lane_type = carla.LaneType.Driving)
+        lane_wpt2 =  world_map.get_waypoint(lane_loc2,project_to_road = True,lane_type = carla.LaneType.Driving)
+        world.world.debug.draw_string(lane_wpt1.transform.location,"X", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+        world.world.debug.draw_string(lane_wpt2.transform.location,"X", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+
+        print(lane_wpt1.transform.location)
+        print(lane_wpt2.transform.location)
+
+        lane_wpt1_loc = carla.Location(x=lane_wpt1.transform.location.x,y=lane_wpt1.transform.location.y,z=lane_wpt1.transform.location.z)
+        lane_wpt2_loc = carla.Location(x=lane_wpt2.transform.location.x,y=lane_wpt2.transform.location.y,z=lane_wpt2.transform.location.z)
+        global_path_points_set.insert(19,[lane_wpt1_loc])
+
+        global_path_points_set.insert(20,[lane_wpt2_loc])
+        print(global_path_points_set)
+
+
+        
+        lane_loc3=carla.Location(x=92.34,y=-204.33,z=0.2)
+        lane_loc4=carla.Location(x=87.79,y=-200.96,z=0.2)
+        lane_wpt3 =  world_map.get_waypoint(lane_loc3,project_to_road = True,lane_type = carla.LaneType.Driving)
+        lane_wpt4 =  world_map.get_waypoint(lane_loc4,project_to_road = True,lane_type = carla.LaneType.Driving)
+        world.world.debug.draw_string(lane_wpt3.transform.location,"X", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+        world.world.debug.draw_string(lane_wpt4.transform.location,"X", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+
+        print(lane_wpt3.transform.location)
+        print(lane_wpt4.transform.location)
+
+        lane_wpt3_loc = carla.Location(x=lane_wpt3.transform.location.x,y=lane_wpt3.transform.location.y,z=lane_wpt3.transform.location.z)
+        lane_wpt4_loc = carla.Location(x=lane_wpt4.transform.location.x,y=lane_wpt4.transform.location.y,z=lane_wpt4.transform.location.z)
+
+        global_path_points_set.insert(22,[lane_wpt3_loc])
+        global_path_points_set.insert(23,[lane_wpt4_loc])
+
+        loc_end=carla.Location(x=-134.56,y=-31.525,z=0.2)
+        # loc_end=carla.Location(x=-131.68,y=-34.19,z=0.2)
+
+        # endwpt =  world_map.get_waypoint(lane_loc3,project_to_road = True,lane_type = carla.LaneType.Sidewalk)
+
+        # global_path_points_set.append([loc_end])
+
+
+        spectator = world.world.get_spectator()
+        specTrans = world.player.get_transform()
+        specTrans.rotation.pitch = -90
+        specTrans.rotation.yaw += 90
+        specTrans.location.z = 50
+        spectator.set_transform(specTrans)
+
+    ###################################################################
+    #######  Spawn Vehicles and Actors using CARLA Traffic Manager  ###
+    ###################################################################
+        if (NO_VEHICLES >= 0) and (NO_WALKERS >= 0):
+            # Do common things related to spawning walkers and vehicles
+            logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
+            traffic_manager = client.get_trafficmanager(8000)
+            traffic_manager.global_percentage_speed_difference(30.0)
+
+            if NO_VEHICLES >= 0:
+                vehicle_id_list = []
+                vehicle_actor_list = []
+                number_of_vehicles_spwan = NO_VEHICLES
+
+                blueprints = world.world.get_blueprint_library().filter('vehicle.*')
+                blueprints = [x for x in blueprints if int(x.get_attribute('number_of_wheels')) == 4]
+                blueprints = [x for x in blueprints if not x.id.endswith('isetta')]
+                blueprints = [x for x in blueprints if not x.id.endswith('carlacola')]
+                blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
+                blueprints = [x for x in blueprints if not x.id.endswith('t2')]
+
+                spawn_points = world_map.get_spawn_points()
+                if ONLY_HIGWAY:
+                    # for_highway = [264,265,266,267,268,269,198,254,255,256,261,262,263,194,195,191,192,193,194,144,165,162,257,258,259,270,272,273,179,48,49,50,163,235,234,159,160,161] # 189,169
+                    for_highway = [259]#,189]
+                    spwn_highway = []
+                    for i in for_highway:
+                        if i == SPAWN_POINT:
+                            continue
+                        spwn_highway.append(spawn_points[i])
+                    spawn_points = spwn_highway
+                else:
+                    spawn_points.pop(SPAWN_POINT)
+                number_of_spawn_points = len(spawn_points)
+                
+                if number_of_vehicles_spwan < number_of_spawn_points:
+                    random.shuffle(spawn_points) # If Vehicle spawn is to be done in a randomly selected order
+                    # pass
+                elif number_of_vehicles_spwan > number_of_spawn_points:
+                    msg = 'requested %d vehicles, but could only find %d spawn points'
+                    logging.warning(msg, NO_VEHICLES, number_of_spawn_points)
+                    number_of_vehicles_spwan = number_of_spawn_points
+
+                batch = []
+                for n, transform in enumerate(spawn_points):
+                    if n >= number_of_vehicles_spwan:
+                        break
+                    blueprint = random.choice(blueprints)
+                    if blueprint.has_attribute('color'):
+                        color = random.choice(blueprint.get_attribute('color').recommended_values)
+                        blueprint.set_attribute('color', color)
+                    if blueprint.has_attribute('driver_id'):
+                        driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
+                        blueprint.set_attribute('driver_id', driver_id)
+                    blueprint.set_attribute('role_name', 'autopilot')
+                    
+                    batch.append(carla.command.SpawnActor(blueprint, transform).then(carla.command.SetAutopilot(carla.command.FutureActor, True, traffic_manager.get_port())))
+                
+                speeds_percen = [88.0]#,68.85]
+                for n, response in enumerate(client.apply_batch_sync(batch, False)):
+                    if response.error:
+                        logging.error(response.error)
+                    else:
+                        vehicle_id_list.append(response.actor_id)
+                        vehicle_actor_list.append(world.world.get_actor(response.actor_id))
+                        traffic_manager.distance_to_leading_vehicle(vehicle_actor_list[-1],2)
+                        # traffic_manager.auto_lane_change(vehicle_actor_list[-1], False)
+                        # traffic_manager.vehicle_percentage_speed_difference(vehicle_actor_list[-1],speeds_percen[n])
+                
+            if NO_WALKERS >= 0:
+                number_of_walkers_spwan = NO_WALKERS
+                blueprintsWalkers = world.world.get_blueprint_library().filter('walker.pedestrian.*')
+            
+                percentagePedestriansRunning  = 0.0         # how many pedestrians will run
+                percentagePedestriansCrossing = 0.0         # how many pedestrians will walk through the road
+                # 1. take all the random locations to spawn
+                spawn_points = []
+                for i in range(number_of_walkers_spwan):
+                    spawn_point = carla.Transform()
+                    loc = world.world.get_random_location_from_navigation()
+                    if (loc != None):
+                        spawn_point.location = loc
+                        spawn_points.append(spawn_point)
+                # 2. we spawn the walker object
+                batch = []
+                walker_speed = []
+                for spawn_point in spawn_points:
+                    walker_bp = random.choice(blueprintsWalkers)
+                    # set as not invincible
+                    if walker_bp.has_attribute('is_invincible'):
+                        walker_bp.set_attribute('is_invincible', 'false')
+                    # set the max speed
+                    if walker_bp.has_attribute('speed'):
+                        if (random.random() > percentagePedestriansRunning):
+                            # walking
+                            walker_speed.append(walker_bp.get_attribute('speed').recommended_values[1])
+                        else:
+                            # running
+                            walker_speed.append(walker_bp.get_attribute('speed').recommended_values[2])
+                    else:
+                        print("Walker has no speed")
+                        walker_speed.append(0.0)
+                    batch.append(carla.command.SpawnActor(walker_bp, spawn_point))
+                results = client.apply_batch_sync(batch, False)
+                walker_speed_temp = []
+                walkers_list = []
+                all_id = []
+                for i in range(len(results)):
+                    if results[i].error:
+                        logging.error(results[i].error)
+                    else:
+                        walkers_list.append({"id": results[i].actor_id})
+                        walker_speed_temp.append(walker_speed[i])
+                walker_speed = walker_speed_temp
+                # 3. we spawn the walker controller
+                batch = []
+                walker_controller_bp = world.world.get_blueprint_library().find('controller.ai.walker')
+                for i in range(len(walkers_list)):
+                    batch.append(carla.command.SpawnActor(walker_controller_bp, carla.Transform(), walkers_list[i]["id"]))
+                results = client.apply_batch_sync(batch, False)
+                for i in range(len(results)):
+                    if results[i].error:
+                        logging.error(results[i].error)
+                    else:
+                        walkers_list[i]["con"] = results[i].actor_id
+                # 4. we put altogether the walkers and controllers id to get the objects from their id
+                for i in range(len(walkers_list)):
+                    all_id.append(walkers_list[i]["con"])
+                    all_id.append(walkers_list[i]["id"])
+                all_actors = world.world.get_actors(all_id)
+
+                world.world.wait_for_tick()
+
+                world.world.set_pedestrians_cross_factor(percentagePedestriansCrossing)
+                for i in range(0, len(all_id), 2):
+                    # start walker
+                    all_actors[i].start()
+                    # set walk to random point
+                    all_actors[i].go_to_location(world.world.get_random_location_from_navigation())
+                    # max speed
+                    all_actors[i].set_max_speed(float(walker_speed[int(i/2)]))
+    ###################################################################
+
+        # Spawn Vehicles
+        # spawnedVehicleActorList, traffic_manager = spawn(NO_VEHICLES,NO_WALKERS,client,traffic_manager,world.world,SPAWN_POINT,ONLY_HIGWAY)
+        
+
         
         # w=world_map.get_spawn_points()
         # for i in range (len(w)):
@@ -719,37 +855,22 @@ def game_loop(args):
 
         start_point = world_map.get_spawn_points()[SPAWN_POINT]
         end_point = world_map.get_spawn_points()[END_POINT]
-        # print(start_point)
-        #environment = Environment(world.world,world_map,world.player)
-        
-
-        # blueprint_library = client.get_world().get_blueprint_library()
-        # walker_bp = blueprint_library.filter("model3")[0]
-
-        # walker_transform=carla.Transform(carla.Location(x=-175, y=88, z= 1.8314 ),carla.Rotation(yaw= 1.4203450679814286772))
-        # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
-
-        
-        # spawn_new(world.world,NO_VEHICLES)
-
-        route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
+       
+        route = genarate_global_path(global_path_points_set,world_map)
         waypoints = np.array(route)[:,0]
         waypoints_np = np.empty((0,3))
         vehicle_speed = 5
+        spawn_pts=world_map.get_spawn_points()
 
         if (NAVIGATION_SPAWN):
-            spawn_pts=world_map.get_spawn_points()
-            # print(spawn_pts)
-            # for i in range (len(spawn_pts)):
-            #     p = world_map.get_spawn_points()[i]
-            #     world.world.debug.draw_string(p.location, str(i), draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
             
-            '''spawn_pts.remove(start_point)
+            
+            spawn_pts.remove(start_point)
             for i in range (len(spawn_pts)):
                 #print(i,len(spawn_pts)-1-i)
                 if(i==SPAWN_POINT):
                     continue
-                if (i >= NO_VEHICLES):
+                if (i >= NO_AGENT_VEHICLES):
                     break 
                 else:
                     blueprint_library = world.world.get_blueprint_library()
@@ -766,68 +887,88 @@ def game_loop(args):
                     #debug=world.debug
 
                     #all_actor_list = world.get_actors()
-                    #vehicle_list = all_actor_list.filter("*vehicle*")'''
+                    #vehicle_list = all_actor_list.filter("*vehicle*")
                     
             
             
         #################################################
         #############  Lead spawn  ####################
         #################################################
-            
-            
+        route_lane_change = genarate_global_path(global_path_points_set_lead,world_map)
+        waypoints_lane_change = np.array(route_lane_change)[:,0]
+        LANE_CHANGE_X =  waypoints_lane_change[0].transform.location.x
+        LANE_CHANGE_Y =  waypoints_lane_change[0].transform.location.y 
             
         if (LEAD_SPAWN):    
             #spwaning a leading vehicle
-            x_lead=waypoints[10].transform.location.x
-            y_lead=waypoints[10].transform.location.y
-            z_lead=1.843102
+            x_lead=LANE_CHANGE_X#29.191#waypoints[spawn_wpt_parked].transform.location.x
+            y_lead=LANE_CHANGE_Y#-127.26#waypoints[spawn_wpt_parked].transform.location.y 
+            z_lead=Z
             #1.4203450679814286772
 
             blueprint_library = client.get_world().get_blueprint_library()
             my_car_bp = blueprint_library.filter("model3")[0]
 
-            lead_vehicle_tansform=carla.Transform(carla.Location(x=x_lead, y=y_lead, z=z_lead),carla.Rotation(yaw= waypoints[10].transform.rotation.yaw,pitch=waypoints[10].transform.rotation.pitch))
-            leading_vehicle=world.world.spawn_actor(my_car_bp, lead_vehicle_tansform)
+            lead_vehicle_tansform=carla.Transform(carla.Location(x=x_lead, y=y_lead, z=z_lead),carla.Rotation(yaw= waypoints_lane_change[0].transform.rotation.yaw,pitch=waypoints_lane_change[0].transform.rotation.pitch))
+            leading_vehicle=world.world.spawn_actor(my_car_bp, world_map.get_spawn_points()[LEAD_SPAWN_POINT])
             actor_list.append(leading_vehicle)
-            Agent=BasicAgent(leading_vehicle)
+            Agent=BasicAgent(leading_vehicle,LEAD_VEHICLE_SPEED)
             # Agent.set_destination(world.world,world_map.get_spawn_points()[50])
-            Agent.set_path(route[10:])
-            start_x, start_y, start_yaw = get_current_pose(leading_vehicle.get_transform())
+            if LEAD_VEHICLE_SPEED>0:
+                # Agent.set_path(route[spawn_wpt_parked:])
+                Agent.set_path(route_lane_change[0:])
 
+        if OVERTAKE_WALKERS:
+            x_overtake_walker=waypoints[spawn_wpt_overtake_wlker].transform.location.x + 1
+            y_overtake_walker=waypoints[spawn_wpt_overtake_wlker].transform.location.y + 1
+            z_overtake_walker=Z
+            #1.4203450679814286772
+            blueprintsWalkers = world.world.get_blueprint_library().filter("walker.pedestrian.*")[0]
+
+            overtake_walker_tansform = carla.Transform(carla.Location(x=x_overtake_walker, y=y_overtake_walker, z=z_overtake_walker),carla.Rotation(yaw= waypoints[spawn_wpt_overtake_wlker].transform.rotation.yaw,pitch=waypoints[spawn_wpt_overtake_wlker].transform.rotation.pitch))
+            overtake_walker = world.world.spawn_actor(blueprintsWalkers, overtake_walker_tansform)
 
 
         #################################################
         #############  Walker spawn  ####################
         #################################################
-        if (WALKER_SPAWN):
-            NUMBER_OF_STUDENT_IN_ROWS    = 10
-            NUMBER_OF_STUDENT_IN_COLUMNS = 6
+        # if (WALKER_SPAWN):
 
-            blueprint_library = client.get_world().get_blueprint_library()
-            blueprintsWalkers = world.world.get_blueprint_library().filter("walker.pedestrian.*")
-            #walker_bp = blueprint_library.filter("walker")[0]
+        #     school(client)
+        #     jaywalking(client)
+
+            # NUMBER_OF_STUDENT_IN_ROWS    = 10
+            # NUMBER_OF_STUDENT_IN_COLUMNS = 5
+
+            # blueprint_library = client.get_world().get_blueprint_library()
+            # blueprintsWalkers = world.world.get_blueprint_library().filter("walker.pedestrian.*")
+            # #walker_bp = blueprint_library.filter("walker")[0]
 
             
 
-            for i in range(NUMBER_OF_STUDENT_IN_ROWS):
-                for j in range(i):
-                    walker_bp = random.choice(blueprintsWalkers)
-                    # walker_transform=carla.Transform(carla.Location(x=32-j, y=90+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
-                    # walker_transform=carla.Transform(carla.Location(x=40-j, y=0+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
-                    walker_transform=carla.Transform(carla.Location(x=20-j, y=40+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+            # for i in range(NUMBER_OF_STUDENT_IN_ROWS):
+            #  for j in range(i):
+            #         walker_bp = random.choice(blueprintsWalkers)
+            #         # walker_transform=carla.Transform(carla.Location(x=32-j, y=90+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+            #         # walker_transform=carla.Transform(carla.Location(x=40-j, y=0+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+            #         # walker_transform=carla.Transform(carla.Location(x=20-j, y=40+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+            #         # walker_transform=carla.Transform(carla.Location(x=-15-j, y=8+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+            #         #########SCHOOL NEW################
+            #         walker_transform=carla.Transform(carla.Location(x=-150-j, y=90+(NUMBER_OF_STUDENT_IN_ROWS-i), z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
 
-                    walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
+            #         walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
-                    if(walker!=None):
+            #         if(walker!=None):
 
-                        walker_control = carla.WalkerControl()
-                        # walker_control.speed = 0.7+0.1*j
-                        # walker_heading = -90+(i+j-3)*2*((-1)**i)
-                        walker_control.speed = 0.3
-                        walker_heading = 0+(i+j-3)*2*((-1)**i)
-                        walker_rotation = carla.Rotation(0,walker_heading,0)
-                        walker_control.direction = walker_rotation.get_forward_vector()
-                        walker.apply_control(walker_control)
+            #             walker_control = carla.WalkerControl()
+            #             # walker_control.speed = 0.7+0.1*j
+            #             # walker_heading = -90+(i+j-3)*2*((-1)**i)
+            #             walker_control.speed = 0.1
+            #             # walker_heading = 0+(i+j-3)*2*((-1)**i)
+            #             walker_heading = -90+(i+j-3)*2*((-1)**i)
+            #             walker_rotation = carla.Rotation(0,walker_heading,0)
+            #             walker_control.direction = walker_rotation.get_forward_vector()
+            #             walker.apply_control(walker_control)
 
         '''if (WALKER_SPAWN):
             NUMBER_OF_STUDENT_IN_ROWS    = 10
@@ -857,11 +998,26 @@ def game_loop(args):
                         walker_control.direction = walker_rotation.get_forward_vector()
                         walker.apply_control(walker_control)'''
         
-        time.sleep(5)
-    
-        
-        # time.sleep(70)
-        environment = Environment(world.world,world.player,world_map)
+        # if (DANGER_CAR):
+        #     #spwaning a leading vehicle
+        #     spawn_pts=world_map.get_spawn_points()
+            
+        #     strt = 69
+        #     x_lead = spawn_pts[strt].location.x
+        #     y_lead = spawn_pts[strt].location.y
+        #     z_lead = 1.843102
+
+        #     danger_route = genarate_global_path([strt,95],world_map)
+
+        #     blueprint_library = client.get_world().get_blueprint_library()
+        #     danger_car_bp = blueprint_library.filter("model3")[0]
+
+        #     danger_vehicle_tansform=carla.Transform(carla.Location(x=x_lead, y=y_lead, z=z_lead),carla.Rotation(yaw= 180,pitch=0))
+        #     danger_vehicle=world.world.spawn_actor(danger_car_bp, danger_vehicle_tansform)
+        #     actor_list.append(danger_vehicle)
+        #     danger_car_agent=BasicAgent(danger_vehicle,100)
+        #     danger_car_agent.set_path(danger_route)
+
 
         ################################################################
         ############        Initializing Local Planner     #############
@@ -897,13 +1053,38 @@ def game_loop(args):
 
         for i in range(waypoints.shape[0]):
             waypoints_np = np.append(waypoints_np, np.array([[waypoints[i].transform.location.x, waypoints[i].transform.location.y, vehicle_speed]]),axis=0)
+        waypoints_np = np.append(waypoints_np, np.array([[loc_end.x, loc_end.y, 0]]),axis=0)
+        waypoints_np = remove_dup_wp(waypoints_np)
+
+        waypoints_np,lane_changes,lane_change_lane_ids = add_lane_change_waypoints(waypoints_np,lp,vehicle_speed, world.world,world_map)
 
         waypoints_np = remove_dup_wp(waypoints_np)
 
-        waypoints_np = add_lane_change_waypoints(waypoints_np,lp,vehicle_speed, world.world)
 
-        waypoints_np = remove_dup_wp(waypoints_np)
+        # print(lane_change_lane_ids,lane_change_lane_ids.shape)
+        lane_changes,lane_change_lane_ids = remove_dup_wp_lc(lane_changes,lane_change_lane_ids)
+        # print(lane_change_lane_ids,lane_change_lane_ids.shape)
+        lane_change_idx = get_lane_change_ids(lane_changes,waypoints_np)
 
+
+        for i in range (waypoints_np.shape[0]):
+
+            if(i in lane_change_idx):
+                world.world.debug.draw_point(carla.Location(x=waypoints_np[i,0],y=waypoints_np[i,1],z=0.2), size=0.03,
+                    color=carla.Color(r=255, g=0, b=0), life_time=800,
+                    persistent_lines=True)
+            else:
+                world.world.debug.draw_point(carla.Location(x=waypoints_np[i,0],y=waypoints_np[i,1],z=0.2),size=0.03,
+                                    color=carla.Color(r=0, g=255, b=0), life_time=800,
+                                    persistent_lines=True)
+
+        
+
+        # print(lane_change_lane_ids)
+        # print(lane_change_idx.shape)
+        
+        # raise Exception
+        # print(lane_changes , lane_changes.shape)
 
         #################################################
         #############  Walker spawn  ####################
@@ -1029,11 +1210,18 @@ def game_loop(args):
 
 
 
-        for w in waypoints_np:
-            world.world.debug.draw_string(carla.Location(x=w[0],y=w[1],z=0), 'O', draw_shadow=False,
-                                   color=carla.Color(r=0, g=255, b=0), life_time=500,
-                                   persistent_lines=True)
+        
+        # raise Exception
 
+        # time.sleep(10)
+    
+        # sleep_time_start= time.time()
+        # while(time.time()-sleep_time_start<30):
+        #     world.world.wait_for_tick()
+        
+        time.sleep(WAIT_TIME_BEFORE_START)
+
+        environment = Environment(world.world,world.player,world_map)
         ################################################################
         #############        Initializing Controller      ##############
         ################################################################
@@ -1046,11 +1234,7 @@ def game_loop(args):
         ################################################################
 
 
-        bp = BehaviouralPlanner(world.world, world_map, world.player, environment, lp, waypoints_np, HOP_RESOLUTION )
-
-
-
-
+        bp = BehaviouralPlanner(world.world, world_map, world.player, environment, lp, waypoints_np, HOP_RESOLUTION ,lane_change_idx,lane_change_lane_ids)
 
         sim_start_timestamp = world.world.get_snapshot().timestamp.elapsed_seconds
 
@@ -1065,8 +1249,7 @@ def game_loop(args):
         start_x, start_y, start_yaw = get_current_pose(world.player.get_transform())
         send_control_command(world.player, throttle=0.0, steer=0.0, brake=1.0)
 
-        spectator = world.world.get_spectator()
-        spectator.set_transform(world.player.get_transform())
+        
 
         #############################################
         # Scenario Execution Loop
@@ -1087,18 +1270,72 @@ def game_loop(args):
         #                        [-LENGTH/(2*(2**0.5)),-WIDTH*(7**0.5)/(4)],
         #                        [-LENGTH/(2*(2**0.5)), WIDTH*(7**0.5)/(4)],
         #                        [ LENGTH/(2*(2**0.5)),-WIDTH*(7**0.5)/(4)]])
-        
-        while True:
-            if (LEAD_SPAWN):
+        count=0
+        # while True:
+        #     for event in pygame.event.get():
+        #         if event.type == pygame.QUIT:
+        #             return 
+        #         else:
+        #             pass
 
-                cmd=Agent.run_step(False)
-                send_control_command(leading_vehicle,cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+        #     world.tick(clock)
+        #     world.render(display)
+        #     pygame.display.flip()
+        spawned_ped = False
+        spawned_scl = False
+
+        ovr_spawned = False
+        overtake_vehicle = None
+        route_ovr = genarate_global_path(global_path_points_set_ovr,world_map)
+        waypoints_ovr = np.array(route_ovr)[:,0]
+        OVR_X =  waypoints_ovr[spawn_wpt_parked_ovt].transform.location.x
+        OVR_Y =  waypoints_ovr[spawn_wpt_parked_ovt].transform.location.y
+
+        lane_change_spawned = False
+        lane_change_vehicle = None
+        route_lane_change = genarate_global_path(global_path_points_set_lane_change,world_map)
+        waypoints_lane_change = np.array(route_lane_change)[:,0]
+        LANE_CHANGE_X =  waypoints_lane_change[spw_pt_lane_change].transform.location.x
+        LANE_CHANGE_Y =  waypoints_lane_change[spw_pt_lane_change].transform.location.y  
+
+        danger_spawned = False
+        danger_vehicle = None
+        danger_route = genarate_global_path(global_path_points_set_danger,world_map)
+        waypoints_danger = np.array(danger_route)[:,0]
+        DANGER_X =  waypoints_danger[spwn_waypoint_danger].transform.location.x
+        DANGER_Y =  waypoints_danger[spwn_waypoint_danger].transform.location.y  
+
+        i_plt=0
+        while True:
+            
+            # y = np.random.random()
+            # plt.scatter(i_plt, y)
+            # # plt.pause(0.05)
+
+            # plt.show()
+            # i_plt+=1
+
+            if SPECTATOR:
+                if (count%30==0):
+                
+                    specTrans = world.player.get_transform()
+                    specTrans.rotation.pitch = -90
+                    specTrans.rotation.yaw += 90
+                    specTrans.location.z = 50
+                    spectator.set_transform(specTrans)
+                count+=1
+            # for veh in vehicle_actor_list:
+            #     print(veh,get_speed(veh))
+            if (LEAD_SPAWN):
+                cmd_lead=Agent.run_step(False)
+                send_control_command(leading_vehicle,cmd_lead.throttle,cmd_lead.steer,cmd_lead.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
 
             if (NAVIGATION_SPAWN):
                 for j in range (len(actor_list)):
                     cmd=agent_list[j].run_step(False)
                     send_control_command(actor_list[j],cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
-
+            
+           
             # lead_waypoint = world_map.get_waypoint(leading_vehicle.get_transform().location,project_to_road=True)
             # lead_lane = lead_waypoint.lane_id   
             # print("lead",lead_lane)   
@@ -1106,6 +1343,8 @@ def game_loop(args):
             # ego_waypoint = world_map.get_waypoint(world.player.get_transform().location,project_to_road=True)
             # ego_lane = ego_waypoint.lane_id   
             # print("ego",ego_lane)   
+
+
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -1125,6 +1364,7 @@ def game_loop(args):
             
             current_x, current_y, current_yaw = get_current_pose(world.player.get_transform())
             current_speed = get_speed(world.player)
+            print("speed",current_speed)
 
             # ####!!!!
             
@@ -1156,10 +1396,119 @@ def game_loop(args):
             if frame % LP_FREQUENCY_DIVISOR == 0:
                 
                 ego_state = [current_x, current_y, current_yaw]
+                _,closest_index=get_closest_index(waypoints_np,ego_state)
+                
+                if (OVERTAKE_SPAWN):
+    
+                    dist_overtake = (((ego_state[0]-OVR_X)**2)+((ego_state[1]-OVR_Y)**2))**0.5
 
-                local_waypoints = bp.state_machine(ego_state,current_timestamp,prev_timestamp,current_speed)
+                    #spwaning a ovetake vehicle
+                    if (dist_overtake < 70 and ovr_spawned== False):
+                        x_ovt=OVR_X  #waypoints[spawn_wpt_parked_ovt].transform.location.x
+                        y_ovt=OVR_Y  #waypoints[spawn_wpt_parked_ovt].transform.location.y 
+                        z_ovt=Z
+
+                        blueprint_library = client.get_world().get_blueprint_library()
+                        my_car_bp = blueprint_library.filter("model3")[0]
+
+                        overtake_vehicle_tansform=carla.Transform(carla.Location(x=x_ovt, y=y_ovt, z=z_ovt),carla.Rotation(yaw = waypoints_ovr[spawn_wpt_parked_ovt].transform.rotation.yaw,pitch=waypoints_ovr[spawn_wpt_parked_ovt].transform.rotation.pitch))
+                        # while True:
+                        overtake_vehicle =world.world.try_spawn_actor(my_car_bp, overtake_vehicle_tansform)
+                            
+                            # if overtake_vehicle is not None:
+                            #     break
+                        print(overtake_vehicle)
+                        if overtake_vehicle is not None:
+                            print("gjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjsad")
+                            actor_list.append(overtake_vehicle)
+                            overtake_agent=BasicAgent(overtake_vehicle,OVERTAKE_VEHICLE_SPEED)
+                            # Agent.set_destination(world.world,world_map.get_spawn_points()[50])
+                            if OVERTAKE_VEHICLE_SPEED>0:
+                                overtake_agent.set_path(route_ovr[spawn_wpt_parked_ovt:])
+                            ovr_spawned = True
+                            if (lane_change_vehicle is not None):
+                                client.apply_batch([carla.command.DestroyActor(lane_change_vehicle)])
+                                lane_change_vehicle = None
+                                lane_change_spawned = False
+
+                    if ovr_spawned== True:
+                        cmd_overtake=overtake_agent.run_step(False)
+                        send_control_command(overtake_vehicle,cmd_overtake.throttle,cmd_overtake.steer,cmd_overtake.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+                
+                  
+            
+                if (LANE_CHANGE_VEHICLE):  
+                    dist_lane_change = (((ego_state[0]-LANE_CHANGE_X)**2)+((ego_state[1]-LANE_CHANGE_Y)**2))**0.5  
+                    if (dist_lane_change<23 and lane_change_spawned==False):
+                        #spwaning a leading vehicle
+                        x_lane_change=LANE_CHANGE_X
+                        y_lane_change=LANE_CHANGE_Y
+                        z_lane_change=0.2
+                        #1.4203450679814286772
+
+                        blueprint_library = client.get_world().get_blueprint_library()
+                        my_car_bp = blueprint_library.filter("model3")[0]
+
+                        lane_change_tansform=carla.Transform(carla.Location(x=x_lane_change, y=y_lane_change, z=z_lane_change),carla.Rotation(yaw= waypoints_lane_change[spw_pt_lane_change].transform.rotation.yaw,pitch=waypoints_lane_change[spw_pt_lane_change].transform.rotation.pitch))
+                        lane_change_vehicle=world.world.try_spawn_actor(my_car_bp, lane_change_tansform)
+                        if lane_change_vehicle is not None:
+                            actor_list.append(lane_change_vehicle)
+                            lane_change_agent=BasicAgent(lane_change_vehicle,LANE_CHANGE_SPEED)
+                            # Agent.set_destination(world.world,world_map.get_spawn_points()[50])
+                            if LANE_CHANGE_SPEED>0:
+                                # Agent.set_path(route[spawn_wpt_parked:])
+                                lane_change_agent.set_path(route_lane_change[spw_pt_lane_change:])
+                            lane_change_spawned = True
+
+                    if lane_change_spawned== True:
+                        cmd_lane_change=lane_change_agent.run_step(False)
+                        send_control_command(lane_change_vehicle,cmd_lane_change.throttle,cmd_lane_change.steer,cmd_lane_change.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+                
+                if (DANGER_CAR):   
+                    dist_danger = (((ego_state[0]-DANGER_X)**2)+((ego_state[1]-DANGER_Y)**2))**0.5  
+                    dist_fixd_spwnpt = (((ego_state[0]-spawn_pts[125].location.x)**2)+((ego_state[1]-spawn_pts[125].location.y)**2))**0.5  
+
+                    # if (dist_danger<DIST_DANGER and danger_spawned==False):
+                    if (dist_fixd_spwnpt<DIST_125 and danger_spawned==False):
+                        x_danger = DANGER_X
+                        y_danger = DANGER_Y
+                        z_danger = 0.2
+
+                    
+                        blueprint_library = client.get_world().get_blueprint_library()
+                        danger_car_bp = blueprint_library.filter("model3")[0]
+
+                        danger_vehicle_tansform=carla.Transform(carla.Location(x=x_danger, y=y_danger, z=z_danger),carla.Rotation(yaw= waypoints_danger[0].transform.rotation.yaw,pitch= waypoints_danger[0].transform.rotation.pitch))
+                        danger_vehicle=world.world.spawn_actor(danger_car_bp, danger_vehicle_tansform)
+                        if danger_vehicle is not None:
+                            actor_list.append(danger_vehicle)
+                            danger_car_agent=BasicAgent(danger_vehicle,100)
+                            
+                            if DANGER_SPEED>0:
+                                danger_car_agent.set_path(danger_route[spwn_waypoint_danger:])
+                            danger_spawned = True
+
+                    if danger_spawned== True:
+                        cmd_danger=danger_car_agent.danger_step(False)
+                        send_control_command(danger_vehicle,DANGER_THROTTLE,cmd_danger.steer,cmd_danger.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+
+
+
+                if (WALKER_SPAWN ):
+                    if (spawned_ped == False):
+                        jaywalking_ped,spawned_ped=jaywalking(client,ego_state,vehicle_id_list,all_id)
+                
+                    if (spawned_scl==False):
+                        school_ped,spawned_scl = school(client,ego_state)
+                    
+                else:
+                    jaywalking_ped = None
+                    school_ped=None
+
+                local_waypoints = bp.state_machine(ego_state,current_timestamp,prev_timestamp,current_speed,overtake_vehicle,lane_change_vehicle,danger_vehicle,jaywalking_ped,school_ped)
                 # print(len(local_waypoints),len(local_waypoints[0]))
 
+                
 
 
 
@@ -1234,16 +1583,21 @@ def game_loop(args):
 
                 controller.update_controls()
                 cmd_throttle, cmd_steer, cmd_brake = controller.get_commands()
+                # Output controller command to CARLA server
+                # print(cmd_throttle,cmd_steer,cmd_brake)
+                send_control_command(world.player, throttle=cmd_throttle, steer= cmd_steer, brake=cmd_brake)
+
             else:
                 cmd_throttle = 0.0
                 cmd_steer = 0.0
                 cmd_brake = 0.0
+                # Output controller command to CARLA server
+                # print(cmd_throttle,cmd_steer,cmd_brake)
+                send_control_command(world.player, throttle=cmd_throttle, steer= cmd_steer, brake=cmd_brake,hand_brake=True)
+            
 
 
-            # Output controller command to CARLA server
-            # print(cmd_throttle,cmd_steer,cmd_brake)
-            send_control_command(world.player, throttle=cmd_throttle, steer= cmd_steer, brake=cmd_brake)
-          
+            
             # Find if reached the end of waypoint. If the car is within
             # DIST_THRESHOLD_TO_LAST_WAYPOINT to the last waypoint,
             # the simulation will end.
@@ -1259,28 +1613,34 @@ def game_loop(args):
             frame+=1
 
             toc = time.time()
-            # print(toc-tic)
-            
-
-            world.tick(clock)
-            world.render(display)
-            pygame.display.flip()
+           
             # print(1/(toc - tic))
             if(toc-tic>SIMULATION_TIME_STEP):
                 continue
             else:
 
                 time.sleep(SIMULATION_TIME_STEP - (toc-tic))
-
+    
+        
     finally:
+        
+        if NO_VEHICLES>0:
+            # Destroy Spawned Vehicels
+            print('\ndestroying %d vehicles' % len(vehicle_id_list))
+            client.apply_batch([carla.command.DestroyActor(x) for x in vehicle_id_list])
 
-        if (world and world.recording_enabled):
-            client.stop_recorder()
+        if NO_WALKERS>0:
+            # Destroy Spawned Walkers
+            for i in range(0, len(all_id), 2):
+                all_actors[i].stop()
+            print('\ndestroying %d walkers' % len(walkers_list))
+            client.apply_batch([carla.command.DestroyActor(x) for x in all_id])
 
-        if world is not None:
-            world.destroy()
+        # while True:
+        #     print("finish")
 
-        pygame.quit()
+
+
 
         # if sync and synchronous_master:
         #     settings = world.get_settings()
@@ -1299,12 +1659,9 @@ def game_loop(args):
 
         # time.sleep(0.5)
 
-
-
 # ==============================================================================
 # -- main() --------------------------------------------------------------------
 # ==============================================================================
-
 
 def main():
     argparser = argparse.ArgumentParser(

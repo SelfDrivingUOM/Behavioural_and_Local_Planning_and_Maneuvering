@@ -7,7 +7,7 @@ import glob
 import os
 import sys
 import time
-from os_carla import WINDOWS
+from os_carla import WINDOWS, YASINTHA_WINDOWS, GERSHOM_WINDOWS
 # ==============================================================================
 # -- Find CARLA module ---------------------------------------------------------
 # ==============================================================================
@@ -16,6 +16,19 @@ if WINDOWS:
         sys.path.append(glob.glob('C:/Carla0.99/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
     except IndexError:
         pass
+
+elif YASINTHA_WINDOWS:
+    try:
+        sys.path.append(glob.glob('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+    except IndexError:
+        pass
+    
+elif GERSHOM_WINDOWS:
+    try:
+        sys.path.append(glob.glob('D:/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+    except IndexError:
+        pass
+    
 else:
     try:
         sys.path.append(glob.glob('/home/selfdriving/carla-precompiled/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
@@ -59,6 +72,7 @@ class Controller2D(object):
         self._conv_rad_to_steer  = 180.0 / 60.0 / np.pi
         self._pi                 = np.pi
         self._2pi                = 2.0 * np.pi
+        self._throttle_mean      = np.zeros(40,)
 
         # self.lateral_control = MPC(-80000,-100000,1000,1800,1.4,1.4,0.001,35,15,np.pi/3,0.0344)
         # self.lateral_control = NMPC(1.4,1.4,800,80000,0.1,35,15,np.pi/3,0.07)  #0.034
@@ -72,6 +86,9 @@ class Controller2D(object):
         self.vars.create_var("t_previous",0)
         self.vars.create_var("last_error",0)
         self.vars.create_var("tot_error",0)
+
+        self._throttle_mean      = np.zeros(40,)
+        self._brake_mean         = np.zeros(10,)
 
     def update_values(self, x, y, yaw, speed, timestamp, frame,velocity,beta,d_shi):
         self._current_x         = x
@@ -96,9 +113,19 @@ class Controller2D(object):
     def get_commands(self):
         return self._set_throttle, self._set_steer, self._set_brake
 
+    # def set_throttle(self, input_throttle):
+    #     # Clamp the throttle command to valid bounds
+    #     self._throttle_mean = self._throttle_mean[1:]
+    #     self._throttle_mean = np.append(self._throttle_mean,np.array([input_throttle]))
+    #     throttle = np.mean(self._throttle_mean)
+    #     throttle           = np.fmax(np.fmin(throttle, 1.0), 0.0)
+    #     self._set_throttle = throttle
+
     def set_throttle(self, input_throttle):
         # Clamp the throttle command to valid bounds
+        self._throttle_mean = self._throttle_mean[1:]
         throttle           = np.fmax(np.fmin(input_throttle, 1.0), 0.0)
+        throttle = np.mean(np.append(self._throttle_mean,np.array([throttle])))
         self._set_throttle = throttle
 
     def set_steer(self, input_steer_in_rad):
@@ -110,6 +137,16 @@ class Controller2D(object):
         # Clamp the steering command to valid bounds
         brake           = np.fmax(np.fmin(input_brake, 1.0), 0.0)
         self._set_brake = brake
+    
+
+    # def set_brake(self, input_brake):
+    #     # Clamp the brake command to valid bounds
+    #     self._brake_mean = self._brake_mean[1:]
+    #     self._brake_mean = np.append(self._brake_mean,np.array([input_brake]))
+    #     brake = np.mean(self._brake_mean)
+    #     brake           = np.fmax(np.fmin(brake, 1.0), 0.0)
+    #     self._set_brake = brake
+
 
     def update_controls(self):
         ######################################################
@@ -175,9 +212,9 @@ class Controller2D(object):
             ######################################################
             ######################################################
            
-            Kp = 2
-            Kd = 0.1
-            Ki = 0.02
+            Kp = 2#0.5
+            Kd = 0.1#0.2
+            Ki = 0.02#0
 
             delta_t = t - self.vars.t_previous
 
