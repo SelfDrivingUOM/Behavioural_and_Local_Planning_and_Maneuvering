@@ -131,7 +131,6 @@ class VelocityPlanner:
                 example:
                     profile[2][1]: 
                     returns the 3rd point's y position in the local path
-
                     profile[5]:
                     returns [x5, y5, v5] (6th point in the local path)
         """
@@ -188,7 +187,6 @@ class VelocityPlanner:
                 example:
                     profile[2][1]: 
                     returns the 3rd point's y position in the local path
-
                     profile[5]:
                     returns [x5, y5, v5] (6th point in the local path)
         """
@@ -387,7 +385,6 @@ class VelocityPlanner:
                 example:
                     profile[2][1]: 
                     returns the 3rd point's y position in the local path
-
                     profile[5]:
                     returns [x5, y5, v5] (6th point in the local path)
         """
@@ -501,7 +498,6 @@ class VelocityPlanner:
                 example:
                     profile[2][1]: 
                     returns the 3rd point's y position in the local path
-
                     profile[5]:
                     returns [x5, y5, v5] (6th point in the local path)
         """
@@ -640,4 +636,3 @@ def calc_final_speed(v_i, a, d):
     if temp < 0: return 0.0000001
     else: return sqrt(temp)
     # ------------------------------------------------------------------
-
