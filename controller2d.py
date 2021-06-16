@@ -229,6 +229,7 @@ class Controller2D(object):
 
             k_ = 0.5
             val = np.tanh(k_*pid_val)
+            print("val",val)
             if(val>=0):
                 throttle_output = val
                 brake_output    = 0

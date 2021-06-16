@@ -395,12 +395,6 @@ class VelocityPlanner:
         # Find the closest point to the lead vehicle on our planned path.
         min_index = len(path[0]) - 1
         min_dist = float('Inf')
-        # for i in range(len(path)):
-        #     dist = np.linalg.norm([path[0][i] - lead_car_state[0], 
-        #                            path[1][i] - lead_car_state[1]])
-        #     if dist < min_dist:
-        #         min_dist = dist
-        #         min_index = i
         path = np.array(path)
         lead_car_state = np.array(lead_car_state).reshape((3,1))
 
@@ -413,48 +407,50 @@ class VelocityPlanner:
         # the minimum of the desired speed and the ego vehicle's velocity, from
         # the closest point to the lead vehicle on our planned path.
         desired_speed = min(lead_car_state[2,0], desired_speed)
-        ramp_end_index = min_index
-        distance = min_dist
-        distance_gap = desired_speed *(self._time_gap)*0.5
+        # # ramp_end_index = min_index
+        ramp_end_index = int( min_index/2)
+        temp_index = ramp_end_index
+        distance = 0
+        # # distance_gap = desired_speed *(self._time_gap)*0.5
 
         # print(lead_car_state[2,0],start_speed)
 
-        while (ramp_end_index > 0) and (distance > distance_gap):
-            distance += np.linalg.norm([path[0][ramp_end_index] - path[0][ramp_end_index-1], 
-                                        path[1][ramp_end_index] - path[1][ramp_end_index-1]])
-            ramp_end_index -= 1
+        print(distance)
+        print(path.shape)
+        while (temp_index > 0):
+            distance += np.linalg.norm([path[0][temp_index] - path[0][temp_index-1], 
+                                        path[1][temp_index] - path[1][temp_index-1]])
+            temp_index -= 1
+            # print(distance)
 
-            # print(distance,ramp_end_index)
-        # print(min_index,ramp_end_index,distance_gap,min_dist)
         # We now need to reach the ego vehicle's speed by the time we reach the
         # time gap point, ramp_end_index, which therefore is the end of our ramp
         # velocity profile.
-        if desired_speed < start_speed:
-            decel_distance = calc_distance(start_speed, desired_speed, -self._a_max)
-        else:
-            decel_distance = calc_distance(start_speed, desired_speed, self._a_max)
+        
+        a_required = (desired_speed**2 - start_speed**2)/(2*distance)
+
+        print("a_required", a_required)
 
         # Here we will compute the speed profile from our initial speed to the
         # end of the ramp.
         vi = start_speed
-        for i in range(ramp_end_index + 1):
+        for i in range(1, ramp_end_index + 1):
             dist = np.linalg.norm([path[0][i] - path[0][i-1], 
                                    path[1][i] - path[1][i-1]])
-            if desired_speed < start_speed:
-                vf = calc_final_speed(vi, -self._a_max, dist)
-            else:
-                vf = calc_final_speed(vi, self._a_max, dist)
+            print("dist",dist)
 
-            # profile.append([path[0][i], path[1][i], vi])
-            profile.append([path[0][i], path[1][i], lead_car_state[2,0]])
+            vf = calc_final_speed(vi, a_required, dist)
+
+            # profile.append([path[0][i], path[1][i], lead_car_state[2,0]])
+            profile.append([path[0][i-1], path[1][i-1], vi])
             vi = vf
 
         # Once we hit the time gap point, we need to be at the desired speed.
         # If we can't get there using a_max, do an abrupt change in the profile
         # to use the controller to decelerate more quickly.
-        for i in range(ramp_end_index + 1, len(path[0])):
-            # profile.append([path[0][i], path[1][i], desired_speed])
-            profile.append([path[0][i], path[1][i], lead_car_state[2,0]])
+        for i in range(ramp_end_index, len(path[0])):
+            # profile.append([path[0][i], path[1][i], lead_car_state[2,0]])
+            profile.append([path[0][i], path[1][i], desired_speed])
            
 
         # Interpolate between the zeroth state and the first state.
@@ -471,6 +467,8 @@ class VelocityPlanner:
         self._prev_trajectory = profile
 
         return profile
+
+
 
     # Computes a profile for nominal speed tracking.
     def nominal_profile(self, path, start_speed, desired_speed):
@@ -508,10 +506,11 @@ class VelocityPlanner:
         profile = []
         # Compute distance travelled from start speed to desired speed using
         # a constant acceleration.
+        A_MAX_NOMINAL = 1
         if desired_speed < start_speed:
-            accel_distance = calc_distance(start_speed, desired_speed, -self._a_max)
+            accel_distance = calc_distance(start_speed, desired_speed, -A_MAX_NOMINAL)
         else:
-            accel_distance = calc_distance(start_speed, desired_speed, self._a_max)
+            accel_distance = calc_distance(start_speed, desired_speed, A_MAX_NOMINAL)
 
         # Here we will compute the end of the ramp for our velocity profile.
         # At the end of the ramp, we will maintain our final speed.
@@ -528,12 +527,12 @@ class VelocityPlanner:
             dist = np.linalg.norm([path[0][i+1] - path[0][i], 
                                    path[1][i+1] - path[1][i]])
             if desired_speed < start_speed:
-                vf = calc_final_speed(vi, -self._a_max, dist)
+                vf = calc_final_speed(vi, -A_MAX_NOMINAL, dist)
                 # clamp speed to desired speed
                 if vf < desired_speed:
                     vf = desired_speed
             else:
-                vf = calc_final_speed(vi, self._a_max, dist)
+                vf = calc_final_speed(vi, A_MAX_NOMINAL, dist)
                 # clamp speed to desired speed
                 if vf > desired_speed:
                     vf = desired_speed
@@ -543,8 +542,10 @@ class VelocityPlanner:
 
         # If the ramp is over, then for the rest of the profile we should
         # track the desired speed.
-        for i in range(ramp_end_index+1, len(path[0])):
-            profile.append([path[0][i], path[1][i], desired_speed])
+        for i in range(ramp_end_index, len(path[0])):
+            # profile.append([path[0][i], path[1][i], desired_speed])
+            profile.append([path[0][i], path[1][i], vi])
+        
 
         # Interpolate between the zeroth state and the first state.
         # This prevents the myopic controller from getting stuck at the zeroth

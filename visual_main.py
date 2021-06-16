@@ -344,6 +344,7 @@ class World(object):
         #     self.player = self.world.try_spawn_actor(blueprint, spawn_point)
             # self.player = spawned_player
         # Set up the sensors.
+        self.imu_sensor = IMUSensor(self.player)
         self.camera_manager = CameraManager(self.player, self.hud, self._gamma)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
@@ -404,6 +405,8 @@ class HUD(object):
         self._show_info = True
         self._info_text = []
         self._server_clock = pygame.time.Clock()
+        self.speed_queue = collections.deque(np.zeros(200))
+        self.acceleration_queue = collections.deque(np.zeros(200))
 
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
@@ -419,14 +422,21 @@ class HUD(object):
         v = world.player.get_velocity()
         c = world.player.get_control()
         # vehicles = world.world.get_actors().filter('vehicle.*')
+
+        self.speed_queue.popleft()
+        self.speed_queue.append(math.sqrt(v.x**2 + v.y**2 + v.z**2)/10)          
+        self.acceleration_queue.popleft()
+        self.acceleration_queue.append(math.sqrt(world.imu_sensor.accelerometer[0]**2 
+                                       + world.imu_sensor.accelerometer[1]**2)/10)
         self._info_text = [
             'Server:  % 16.0f FPS' % self.server_fps,
             'Client:  % 16.0f FPS' % clock.get_fps(),
             '',
-            'Vehicle: % 20s' % get_actor_display_name(world.player, truncate=20),
-            'Map:     % 20s' % world.map.name,
             'Simulation time: % 12s' % datetime.timedelta(seconds=int(self.simulation_time)),
             '',
+            
+            
+            'Location:% 20s' % ('(% 5.1f, % 5.1f)' % (t.location.x, t.location.y)),
             '']
         if isinstance(c, carla.VehicleControl):
             self._info_text += [
@@ -441,7 +451,17 @@ class HUD(object):
             self._info_text += [
                 ('Speed:', c.speed, 0.0, 5.556),
                 ('Jump:', c.jump)]
-
+        self._info_text += [
+            '',
+            'Speed plot (ms-1):',
+            list(self.speed_queue),
+            "",
+            'Speed:   % 15.0f m/s' % (math.sqrt(v.x**2 + v.y**2 + v.z**2)),
+            "",
+            'Acc. plot (ms-2):',
+            list(self.acceleration_queue),
+            "",
+            'Acceleration:% 11.0f m/s2' % (math.sqrt((world.imu_sensor.accelerometer[0])**2+(world.imu_sensor.accelerometer[1])**2))]
         # if len(vehicles) > 1:
         #     self._info_text += ['Nearby vehicles:']
         #     distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
@@ -675,6 +695,44 @@ def game_loop(args):
             world.destroy()
 
         pygame.quit()
+
+# ==============================================================================
+# -- IMUSensor -----------------------------------------------------------------
+# ==============================================================================
+
+
+class IMUSensor(object):
+    def __init__(self, parent_actor):
+        self.sensor = None
+        self._parent = parent_actor
+        self.accelerometer = (0.0, 0.0, 0.0)
+        self.gyroscope = (0.0, 0.0, 0.0)
+        self.compass = 0.0
+        world = self._parent.get_world()
+        bp = world.get_blueprint_library().find('sensor.other.imu')
+        self.sensor = world.spawn_actor(
+            bp, carla.Transform(), attach_to=self._parent)
+        # We need to pass the lambda a weak reference to self to avoid circular
+        # reference.
+        weak_self = weakref.ref(self)
+        self.sensor.listen(
+            lambda sensor_data: IMUSensor._IMU_callback(weak_self, sensor_data))
+
+    @staticmethod
+    def _IMU_callback(weak_self, sensor_data):
+        self = weak_self()
+        if not self:
+            return
+        limits = (-99.9, 99.9)
+        self.accelerometer = (
+            max(limits[0], min(limits[1], sensor_data.accelerometer.x)),
+            max(limits[0], min(limits[1], sensor_data.accelerometer.y)),
+            max(limits[0], min(limits[1], sensor_data.accelerometer.z)))
+        self.gyroscope = (
+            max(limits[0], min(limits[1], math.degrees(sensor_data.gyroscope.x))),
+            max(limits[0], min(limits[1], math.degrees(sensor_data.gyroscope.y))),
+            max(limits[0], min(limits[1], math.degrees(sensor_data.gyroscope.z))))
+        self.compass = math.degrees(sensor_data.compass)
 
 # ==============================================================================
 # -- main() --------------------------------------------------------------------

@@ -50,8 +50,8 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
 NO_AGENT_VEHICLES = 0
-NO_VEHICLES =  0
-NO_WALKERS  =  0
+NO_VEHICLES =  250
+NO_WALKERS  =  50
 ONLY_HIGWAY =  0
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
@@ -71,10 +71,10 @@ NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
 # global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 ##########correct global path###########################
-# global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104]
+global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104]
 
 # global_path_points_set =[226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
-global_path_points_set=[74,109,[288,54],[287,53],104]
+# global_path_points_set=[74,109,[288,54],[287,53],104]
 
 #global_path_points_set =[25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 # global_path_points_set =[45,163,273,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
@@ -94,21 +94,21 @@ global_path_points_set_lead =[24,[24,230],[228,23],45,159]
 LEAD_SPAWN_POINT = global_path_points_set_lead[0]
 LEAD_END_POINT = global_path_points_set_lead[-1]
 
-LANE_CHANGE_VEHICLE = False
+LANE_CHANGE_VEHICLE = True
 LANE_CHANGE_SPEED = 20
 global_path_points_set_lane_change =[24,[24,230],[228,23],45,159,269]
 LANE_CHANGE_END_POINT = global_path_points_set_lead[-1]
-spw_pt_lane_change = 8
+spw_pt_lane_change = 9
 
 
-OVERTAKE_SPAWN = False
+OVERTAKE_SPAWN = True
 spawn_wpt_parked_ovt = 30 
 OVERTAKE_VEHICLE_SPEED  = 15                # m/s
 global_path_points_set_ovr =[155,195]
 OVR_X = 207
 OVR_Y = -28
 
-DANGER_CAR   = False
+DANGER_CAR   = True
 DANGER_CAR_SPAWN = 55
 DANGER_CAR_END = 285
 global_path_points_set_danger=[DANGER_CAR_SPAWN,DANGER_CAR_END]
@@ -118,13 +118,14 @@ DIST_DANGER = 80
 DANGER_THROTTLE = 1.2
 DIST_125 = 15
 
+WALKER_SPAWN =  True
 
 
 OVERTAKE_WALKERS = False
 spawn_wpt_overtake_wlker = -20
 
 NAVIGATION_SPAWN = False
-WALKER_SPAWN =  False
+
 
 PRINT_SPAWN_POINTS = True
 SPECTATOR = False
@@ -493,6 +494,57 @@ def add_lane_change_waypoints(waypoints,lp,velocity,world,map_):
             # print(path_wp.shape)
             i+=10
             lane_changes = np.append(lane_changes,path_wp[:2,:].T,axis=0)
+
+        elif((np.linalg.norm(waypoints[i+1, :2]-waypoints[i,:2]) > 2) and (i > 6) and (i<waypoints.shape[0]-6) and (i>waypoints.shape[0]-20)):
+            
+
+            # world.debug.draw_string(carla.Location(x=waypoints[i,0],y=waypoints[i,1],z=0), 'H', draw_shadow=False,
+            #         color=carla.Color(r=0, g=0, b=255), life_time=500,
+            #         persistent_lines=True)
+
+            lane_changes = np.append(lane_changes,np.array([waypoints[i,:2]]),axis = 0)
+  
+
+
+            lanechange_laneid.append([wp_1.lane_id,wp_1.section_id,wp_1.road_id])
+            start_index = i
+            end_index = i+10
+            count+=1
+
+            start_vector = (waypoints[start_index] - waypoints[start_index-1])
+            start_vector[2] = 0
+
+            theta = find_angle(np.array([1,0,0]),start_vector)
+
+            wpe  = waypoints[end_index] - waypoints[start_index]
+            wp_e = waypoints[end_index+1] - waypoints[start_index]
+
+            wpe_x = wpe[0] * cos(theta) - wpe[1] * sin(theta)
+            wpe_y = wpe[0] * sin(theta) + wpe[1] * cos(theta)
+            wp_e_x = wp_e[0] * cos(theta) - wp_e[1] * sin(theta)
+            wp_e_y = wp_e[0] * sin(theta) + wp_e[1] * cos(theta)
+
+            delta_x = wp_e_x - wpe_x
+            delta_y = wp_e_y - wpe_y
+
+            heading = np.arctan2(delta_y,delta_x)
+
+            goal = [wpe_x,wpe_y,heading]
+            path = lp.plan_lane_change(goal)
+            
+            transform = waypoints[start_index]
+            transform[2] = -theta
+            path = np.array([path])
+            paths = local_planner.transform_paths(path, transform)
+            path = paths[0]
+            
+            path_wp = np.vstack((path[:2],np.full((1,path.shape[1]),velocity)))
+            # print(path_wp.shape)
+            updated_waypoints = np.append(updated_waypoints,path_wp.T,axis=0)
+
+            # print(path_wp.shape)
+            i+=10
+            lane_changes = np.append(lane_changes,path_wp[:2,:].T,axis=0)
         else:
             updated_waypoints = np.append(updated_waypoints,waypoints[i+1].reshape((1,3)),axis=0)
             i+=1
@@ -605,14 +657,14 @@ class World(object):
                 print('There are no spawn points available in your map/town.')
                 print('Please add some Vehicle Spawn Point to your UE4 scene.')
                 sys.exit(1)
-            spawn_point = self.map.get_spawn_points()[spawn_point]
+            spawn_pt = self.map.get_spawn_points()[spawn_point]
             # spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
             if spawn_point==70:
-                spawn_loc = carla.Location(x=spawn_point.location.x +11,y=spawn_point.location.y -1.5,z=spawn_point.location.z)
-                spawn_tranform = carla.Transform(location=spawn_loc,rotation=spawn_point.rotation )
+                spawn_loc = carla.Location(x=spawn_pt.location.x +11,y=spawn_pt.location.y -1.5,z=spawn_pt.location.z)
+                spawn_tranform = carla.Transform(location=spawn_loc,rotation=spawn_pt.rotation )
                 self.player = self.world.try_spawn_actor(blueprint, spawn_tranform)
             else:
-                self.player = self.world.try_spawn_actor(blueprint, spawn_point)
+                self.player = self.world.try_spawn_actor(blueprint, spawn_pt)
             
 
 
@@ -1056,8 +1108,8 @@ def game_loop(args):
             waypoints_np = np.append(waypoints_np, np.array([[waypoints[i].transform.location.x, waypoints[i].transform.location.y, vehicle_speed]]),axis=0)
 
         if global_path_points_set[-1]==104:
-            for d in range(3,0,-1):
-                waypoints_np = np.append(waypoints_np, np.array([[-135.6,-31.525-d, 0]]),axis=0)
+            for d in range(16,0,-1):
+                waypoints_np = np.append(waypoints_np, np.array([[-135.6,-26.525-d, 0]]),axis=0)
         waypoints_np = remove_dup_wp(waypoints_np)
 
         waypoints_np,lane_changes,lane_change_lane_ids = add_lane_change_waypoints(waypoints_np,lp,vehicle_speed, world.world,world_map)
@@ -1222,7 +1274,7 @@ def game_loop(args):
         # while(time.time()-sleep_time_start<30):
         #     world.world.wait_for_tick()
         
-        time.sleep(WAIT_TIME_BEFORE_START)
+        # time.sleep(WAIT_TIME_BEFORE_START)
 
         environment = Environment(world.world,world.player,world_map)
         ################################################################
@@ -1250,7 +1302,7 @@ def game_loop(args):
         # Store pose history starting from the start position
         
         start_x, start_y, start_yaw = get_current_pose(world.player.get_transform())
-        send_control_command(world.player, throttle=0.0, steer=0.0, brake=1.0)
+        send_control_command(world.player, throttle=0.0, steer=0.0, brake=0.0)
 
         
 
@@ -1274,16 +1326,7 @@ def game_loop(args):
         #                        [-LENGTH/(2*(2**0.5)), WIDTH*(7**0.5)/(4)],
         #                        [ LENGTH/(2*(2**0.5)),-WIDTH*(7**0.5)/(4)]])
         count=0
-        # while True:
-        #     for event in pygame.event.get():
-        #         if event.type == pygame.QUIT:
-        #             return 
-        #         else:
-        #             pass
-
-        #     world.tick(clock)
-        #     world.render(display)
-        #     pygame.display.flip()
+       
         spawned_ped = False
         spawned_scl = False
 
@@ -1359,7 +1402,7 @@ def game_loop(args):
             
             current_x, current_y, current_yaw = get_current_pose(world.player.get_transform())
             current_speed = get_speed(world.player)
-            print("speed",current_speed)
+            # print("speed",current_speed)
 
             # ####!!!!
             
@@ -1382,7 +1425,7 @@ def game_loop(args):
 
 
             if current_timestamp <= WAIT_TIME_BEFORE_START:   
-                send_control_command(world.player, throttle=0.0, steer=0.0, brake=1.0)
+                send_control_command(world.player, throttle=0.0, steer=0.0, brake=0.0)
                 continue
             else:
                 current_timestamp = current_timestamp - WAIT_TIME_BEFORE_START
@@ -1434,7 +1477,7 @@ def game_loop(args):
             
                 if (LANE_CHANGE_VEHICLE):  
                     dist_lane_change = (((ego_state[0]-LANE_CHANGE_X)**2)+((ego_state[1]-LANE_CHANGE_Y)**2))**0.5  
-                    if (dist_lane_change<23 and lane_change_spawned==False):
+                    if (dist_lane_change<26 and lane_change_spawned==False):
                         #spwaning a leading vehicle
                         x_lane_change=LANE_CHANGE_X
                         y_lane_change=LANE_CHANGE_Y
@@ -1630,6 +1673,10 @@ def game_loop(args):
                 all_actors[i].stop()
             print('\ndestroying %d walkers' % len(walkers_list))
             client.apply_batch([carla.command.DestroyActor(x) for x in all_id])
+
+        cmd_throttle = 0.0
+        cmd_steer = 0.0
+        cmd_brake = 0.0
 
         send_control_command(world.player, throttle=cmd_throttle, steer= cmd_steer, brake=cmd_brake,hand_brake=True)
 

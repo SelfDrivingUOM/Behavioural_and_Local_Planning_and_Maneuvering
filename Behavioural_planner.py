@@ -53,7 +53,7 @@ dict_                           = ["FOLLOW_LANE","DECELERATE_TO_STOP","STAY_STOP
 
 # important variables
 SPEED                           = 5.5      # Vehicle speed (m/s)
-SPEED_DEFAULT                   = 5.5      #Dont change this
+SPEED_DEFAULT                   = 5      #Dont change this
 SPEED_HIGHWAY                   = 9
 
 TRAFFIC_LIGHT_CHECK_DISTANCE    = 35      # Distance to detect traffic lights (m)
@@ -65,7 +65,7 @@ OVERTAKE_RANGE                  = 15      # Range to overtake vehicles (m)
 DEBUG_STATE_MACHINE             = False   # Set this to true to see all function outputs in state machine. This is better for full debug
 ONLY_STATE_DEBUG                = False    # Set this to true to see current state of state machine
 UNSTRUCTURED                    = True    # Set this to True to behave according to the unstructured walkers
-TRAFFIC_LIGHT                   = False   # Set this to True to on traffic lights 
+TRAFFIC_LIGHT                   = True   # Set this to True to on traffic lights 
 FOLLOW_LANE_OFFSET              = 0.2     # Path goal point offset in follow lane  (m)
 DECELERATE_OFFSET               = 0.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      # Path goal point offset in decelerate state (m) 
 Z                               = 1.843102
@@ -273,13 +273,13 @@ class BehaviouralPlanner:
             lead_waypoint = self._map.get_waypoint(closest_vehicle.get_transform().location,project_to_road=True)
             lead_lane = lead_waypoint.lane_id
             if ((ego_lane!=goal_lane) and (goal_lane==lead_lane) and not self._intersection_state):
-                self._follow_lead_range = FOLLOW_LEAD_LANE_CHANGE + 5+(self._speed - SPEED_DEFAULT)
+                self._follow_lead_range = FOLLOW_LEAD_LANE_CHANGE +(self._speed - SPEED_DEFAULT)
                 
             else:
-                self._follow_lead_range = FOLLOW_LEAD_RANGE#+ (self._speed - SPEED_DEFAULT)*2+20
+                self._follow_lead_range = FOLLOW_LEAD_RANGE + (self._speed - SPEED_DEFAULT)
                 
         else:
-            self._follow_lead_range = FOLLOW_LEAD_RANGE#+ (self._speed - SPEED_DEFAULT)*2+20
+            self._follow_lead_range = FOLLOW_LEAD_RANGE + (self._speed - SPEED_DEFAULT)
                 
 
         ############# Changing overtake range in highway#################
@@ -338,8 +338,12 @@ class BehaviouralPlanner:
             self._goal_index = goal_index
             # Set the goal state by getting the location and giving derired speed
             self._goal_state = self._waypoints[goal_index]
-            if (goal_index==self._waypoints.shape[0]-1):
-                self._goal_state[2] = 0
+            if (goal_index==self._waypoints.shape[0]-3):
+                self._goal_state[2] = 3
+            elif (goal_index==self._waypoints.shape[0]-2):
+                self._goal_state[2] = 3
+            elif (goal_index==self._waypoints.shape[0]-1):
+                self._goal_state[2] = 2.5
             else:
                 self._goal_state[2] = self._speed
 
