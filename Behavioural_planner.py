@@ -52,9 +52,9 @@ EMERGENCY_STOP                  = 6
 dict_                           = ["FOLLOW_LANE","DECELERATE_TO_STOP","STAY_STOPPED","INTERSECTION","FOLLOW_LEAD_VEHICLE","OVERTAKE","EMERGENCY_STOP"]
 
 # important variables
-SPEED                           = 10#5.5      # Vehicle speed (m/s)
-SPEED_DEFAULT                   = 10#5.5      #Dont change this
-SPEED_HIGHWAY                   = 20
+SPEED                           = 5.5      # Vehicle speed (m/s)
+SPEED_DEFAULT                   = 5.5      #Dont change this
+SPEED_HIGHWAY                   = 9
 
 TRAFFIC_LIGHT_CHECK_DISTANCE    = 35      # Distance to detect traffic lights (m)
 BP_LOOKAHEAD_BASE               = 8.0     # Base distance to create lattice paths (m)
@@ -338,7 +338,10 @@ class BehaviouralPlanner:
             self._goal_index = goal_index
             # Set the goal state by getting the location and giving derired speed
             self._goal_state = self._waypoints[goal_index]
-            self._goal_state[2] = self._speed
+            if (goal_index==self._waypoints.shape[0]-1):
+                self._goal_state[2] = 0
+            else:
+                self._goal_state[2] = self._speed
 
             # self.num_layers = (goal_index - closest_index)//5
         

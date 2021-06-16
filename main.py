@@ -70,9 +70,11 @@ NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
 
 # global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
-global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104,253]
+##########correct global path###########################
+# global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104]
 
 # global_path_points_set =[226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+global_path_points_set=[74,109,[288,54],[287,53],104]
 
 #global_path_points_set =[25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 # global_path_points_set =[45,163,273,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
@@ -436,9 +438,7 @@ def add_lane_change_waypoints(waypoints,lp,velocity,world,map_):
     i=0
     count= 0
     while(True):
-        print(waypoints.shape[0])
-        print(i)
-        if(i==(waypoints.shape[0]-10)):
+        if(i==(waypoints.shape[0]-1)):
             break
         wp_1 = map_.get_waypoint(carla.Location(x= waypoints[i+1,0],y = waypoints[i+1,1],z=0),project_to_road = True)
         wp_2 = map_.get_waypoint(carla.Location(x= waypoints[i,0],y = waypoints[i,1],z=0),project_to_road = True)
@@ -607,10 +607,13 @@ class World(object):
                 sys.exit(1)
             spawn_point = self.map.get_spawn_points()[spawn_point]
             # spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
-            spawn_loc = carla.Location(x=spawn_point.location.x +11,y=spawn_point.location.y -1.5,z=spawn_point.location.z)
-            spawn_tranform = carla.Transform(location=spawn_loc,rotation=spawn_point.rotation )
-            self.player = self.world.try_spawn_actor(blueprint, spawn_tranform)
-            # self.player = spawned_player
+            if spawn_point==70:
+                spawn_loc = carla.Location(x=spawn_point.location.x +11,y=spawn_point.location.y -1.5,z=spawn_point.location.z)
+                spawn_tranform = carla.Transform(location=spawn_loc,rotation=spawn_point.rotation )
+                self.player = self.world.try_spawn_actor(blueprint, spawn_tranform)
+            else:
+                self.player = self.world.try_spawn_actor(blueprint, spawn_point)
+            
 
 
 
@@ -626,8 +629,6 @@ def get_lane_change_ids(lane_changes, waypoints):
     return index
 
 def game_loop(args):
-    pygame.init()
-    pygame.font.init()
     world = None
     
     try:
@@ -649,42 +650,47 @@ def game_loop(args):
         if PRINT_SPAWN_POINTS:
             misc.spawn_pts_print(world_map,world.world)
 
-        lane_loc1=carla.Location(x=68.79,y=202.23,z=0.2)
-        lane_loc2=carla.Location(x=72.79,y=204.9,z=0.2)
-        lane_wpt1 =  world_map.get_waypoint(lane_loc1,project_to_road = True,lane_type = carla.LaneType.Driving)
-        lane_wpt2 =  world_map.get_waypoint(lane_loc2,project_to_road = True,lane_type = carla.LaneType.Driving)
-        world.world.debug.draw_string(lane_wpt1.transform.location,"X", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-        world.world.debug.draw_string(lane_wpt2.transform.location,"X", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+       
 
-        print(lane_wpt1.transform.location)
-        print(lane_wpt2.transform.location)
-
-        lane_wpt1_loc = carla.Location(x=lane_wpt1.transform.location.x,y=lane_wpt1.transform.location.y,z=lane_wpt1.transform.location.z)
-        lane_wpt2_loc = carla.Location(x=lane_wpt2.transform.location.x,y=lane_wpt2.transform.location.y,z=lane_wpt2.transform.location.z)
-        global_path_points_set.insert(19,[lane_wpt1_loc])
-
-        global_path_points_set.insert(20,[lane_wpt2_loc])
-        print(global_path_points_set)
-
-
+        a=163
         
-        lane_loc3=carla.Location(x=92.34,y=-204.33,z=0.2)
-        lane_loc4=carla.Location(x=87.79,y=-200.96,z=0.2)
-        lane_wpt3 =  world_map.get_waypoint(lane_loc3,project_to_road = True,lane_type = carla.LaneType.Driving)
-        lane_wpt4 =  world_map.get_waypoint(lane_loc4,project_to_road = True,lane_type = carla.LaneType.Driving)
-        world.world.debug.draw_string(lane_wpt3.transform.location,"X", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-        world.world.debug.draw_string(lane_wpt4.transform.location,"X", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+        if a in global_path_points_set:
+            lane_loc1=carla.Location(x=68.79,y=202.23,z=0.2)
+            lane_loc2=carla.Location(x=72.79,y=204.9,z=0.2)
+            lane_wpt1 =  world_map.get_waypoint(lane_loc1,project_to_road = True,lane_type = carla.LaneType.Driving)
+            lane_wpt2 =  world_map.get_waypoint(lane_loc2,project_to_road = True,lane_type = carla.LaneType.Driving)
+            world.world.debug.draw_string(lane_wpt1.transform.location,"X", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+            world.world.debug.draw_string(lane_wpt2.transform.location,"X", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
 
-        print(lane_wpt3.transform.location)
-        print(lane_wpt4.transform.location)
+            print(lane_wpt1.transform.location)
+            print(lane_wpt2.transform.location)
 
-        lane_wpt3_loc = carla.Location(x=lane_wpt3.transform.location.x,y=lane_wpt3.transform.location.y,z=lane_wpt3.transform.location.z)
-        lane_wpt4_loc = carla.Location(x=lane_wpt4.transform.location.x,y=lane_wpt4.transform.location.y,z=lane_wpt4.transform.location.z)
+            lane_wpt1_loc = carla.Location(x=lane_wpt1.transform.location.x,y=lane_wpt1.transform.location.y,z=lane_wpt1.transform.location.z)
+            lane_wpt2_loc = carla.Location(x=lane_wpt2.transform.location.x,y=lane_wpt2.transform.location.y,z=lane_wpt2.transform.location.z)
+            idx_163=global_path_points_set.index(163)
+            global_path_points_set.insert(idx_163+1,[lane_wpt1_loc])
+            global_path_points_set.insert(idx_163+2,[lane_wpt2_loc])
 
-        global_path_points_set.insert(22,[lane_wpt3_loc])
-        global_path_points_set.insert(23,[lane_wpt4_loc])
+        b=155
+        if b in global_path_points_set:
+        
+            lane_loc3=carla.Location(x=92.34,y=-204.33,z=0.2)
+            lane_loc4=carla.Location(x=87.79,y=-200.96,z=0.2)
+            lane_wpt3 =  world_map.get_waypoint(lane_loc3,project_to_road = True,lane_type = carla.LaneType.Driving)
+            lane_wpt4 =  world_map.get_waypoint(lane_loc4,project_to_road = True,lane_type = carla.LaneType.Driving)
+            world.world.debug.draw_string(lane_wpt3.transform.location,"X", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
+            world.world.debug.draw_string(lane_wpt4.transform.location,"X", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
 
-        loc_end=carla.Location(x=-134.56,y=-31.525,z=0.2)
+            print(lane_wpt3.transform.location)
+            print(lane_wpt4.transform.location)
+
+            lane_wpt3_loc = carla.Location(x=lane_wpt3.transform.location.x,y=lane_wpt3.transform.location.y,z=lane_wpt3.transform.location.z)
+            lane_wpt4_loc = carla.Location(x=lane_wpt4.transform.location.x,y=lane_wpt4.transform.location.y,z=lane_wpt4.transform.location.z)
+            idx_155=global_path_points_set.index(155)
+            global_path_points_set.insert(idx_155+1,[lane_wpt3_loc])
+            global_path_points_set.insert(idx_155+2,[lane_wpt4_loc])
+            
+        # loc_end_3=carla.Location(x=-135,y=-31.525,z=0.2)
         # loc_end=carla.Location(x=-131.68,y=-34.19,z=0.2)
 
         # endwpt =  world_map.get_waypoint(lane_loc3,project_to_road = True,lane_type = carla.LaneType.Sidewalk)
@@ -1046,14 +1052,12 @@ def game_loop(args):
                         NUMBER_OF_LAYERS)
 
 
-        # route = trace_route(start_point, end_point,HOP_RESOLUTION, world.player, world.world)
-        # waypoints = np.array(route)[:,0]
-        # waypoints_np = np.empty((0,3))
-        # vehicle_speed = 5
-
         for i in range(waypoints.shape[0]):
             waypoints_np = np.append(waypoints_np, np.array([[waypoints[i].transform.location.x, waypoints[i].transform.location.y, vehicle_speed]]),axis=0)
-        waypoints_np = np.append(waypoints_np, np.array([[loc_end.x, loc_end.y, 0]]),axis=0)
+
+        if global_path_points_set[-1]==104:
+            for d in range(3,0,-1):
+                waypoints_np = np.append(waypoints_np, np.array([[-135.6,-31.525-d, 0]]),axis=0)
         waypoints_np = remove_dup_wp(waypoints_np)
 
         waypoints_np,lane_changes,lane_change_lane_ids = add_lane_change_waypoints(waypoints_np,lp,vehicle_speed, world.world,world_map)
@@ -1065,7 +1069,6 @@ def game_loop(args):
         lane_changes,lane_change_lane_ids = remove_dup_wp_lc(lane_changes,lane_change_lane_ids)
         # print(lane_change_lane_ids,lane_change_lane_ids.shape)
         lane_change_idx = get_lane_change_ids(lane_changes,waypoints_np)
-
 
         for i in range (waypoints_np.shape[0]):
 
@@ -1343,14 +1346,6 @@ def game_loop(args):
             # ego_waypoint = world_map.get_waypoint(world.player.get_transform().location,project_to_road=True)
             # ego_lane = ego_waypoint.lane_id   
             # print("ego",ego_lane)   
-
-
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return 
-                else:
-                    pass
 
             # clock.tick_busy_loop(60)
 
@@ -1635,6 +1630,8 @@ def game_loop(args):
                 all_actors[i].stop()
             print('\ndestroying %d walkers' % len(walkers_list))
             client.apply_batch([carla.command.DestroyActor(x) for x in all_id])
+
+        send_control_command(world.player, throttle=cmd_throttle, steer= cmd_steer, brake=cmd_brake,hand_brake=True)
 
         # while True:
         #     print("finish")
