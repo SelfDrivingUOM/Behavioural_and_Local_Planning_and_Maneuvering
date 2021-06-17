@@ -127,7 +127,7 @@ spawn_wpt_overtake_wlker = -20
 NAVIGATION_SPAWN = False
 
 
-PRINT_SPAWN_POINTS = True
+PRINT_SPAWN_POINTS = False
 SPECTATOR = False
 
 Z                   = 1.843102
@@ -1134,146 +1134,6 @@ def game_loop(args):
                                     persistent_lines=True)
 
         
-
-        # print(lane_change_lane_ids)
-        # print(lane_change_idx.shape)
-        
-        # raise Exception
-        # print(lane_changes , lane_changes.shape)
-
-        #################################################
-        #############  Walker spawn  ####################
-        #################################################
-
-        # lp.waypoints_update(waypoints_np)
-        
-     
-   
-        #     actor_list.append(walker)
-        # x = -70 - 5 junction
-        #3 junction x = -70, y =150
-
-        ############
-        ### School = (x = 20, y = 45, z = 0)
-        ############
-
-        # loc = carla.Location(x = -120, y = 140, z = 0)
-        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-       
-        # raise Exception
-        # get_line(np.array([(1,1),(2,2),(2,3),(5,3)]))
-
-        # raise Exception
-
-        # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
-        
-        # junc_points = misc.print_junction(world,waypoint)
-
-        # loc = carla.Location(x = 22, y = 140,z = 0 )
-        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-        # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
-
-        # loc = carla.Location(x = 27, y = 190,z = 0 )
-        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-
-        # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
-        # junc_points = misc.print_junction(world,waypoint)
-
-
-
-        # loc = carla.Location(x = 155, y = 0,z = 0 )
-        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-
-        # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
-        
-        # junc_points = misc.print_junction(world,waypoint)
-
-        # loc = carla.Location(x = -270, y = 0,z = 0 )
-        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-
-        # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
-        
-        # junc_points = misc.print_junction(world,waypoint)
-
-        # loc = carla.Location(x = -270, y = 6,z = 0 )
-        # world.world.debug.draw_string(loc, 'X', draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-
-        # waypoint = world_map.get_waypoint(loc,project_to_road = True,lane_type = (carla.LaneType.Driving|carla.LaneType.Sidewalk|carla.LaneType.Parking|carla.LaneType.Parking))
-        
-        # print(junc_points)
-
-        # lines = misc.get_line(junc_points)
-        # misc.draw_hex(world,lines)
-        # inter_junc_points = misc.solve_lines(lines)
-
-        # box_points = misc.get_box(world_map,inter_junc_points)
-
-        # for i in range(box_points.shape[0]):
-        #     print(inter_junc_points[i])
-        #     world.world.debug.draw_string(carla.Location(x=box_points[i,0],y = box_points[i,1],z = 1),"A", draw_shadow=False,color=carla.Color(r=255, g=255, b=0), life_time=10000,persistent_lines=True)
-        
-
-        # raise Exception
-                    # print(waypoint.lane_type)
-            
-
-
-        # # print()
-
-
-    
-        
-
-        # raise Exception
-        # print(waypoint.get_junction())
-        # L = waypoint.get_junction().get_waypoints(carla.LaneType.Driving)
-        # L = L[:len(L)//2]
-
-        # import random
-
-        # print(len(L))
-        # for i in L:
-
-        #     # rand_r = random.randint(0,255)
-        #     # rand_g = random.randint(0,255)
-        #     # rand_b = random.randint(0,255)
-        #     for j in i:
-        #         # print(j.lane_id,j.road_id,j.section_id,j.lane_type)
-        #         world.world.debug.draw_string(j.transform.location,"A", draw_shadow=False,color=carla.Color(r=255, g=0, b=0), life_time=10000,persistent_lines=True)
-            # time.sleep(5)
-            # print("")
-
-        # raise Exception
-        # # print(waypoint.lane_type,waypoint.lane_id,waypoint.section_id,waypoint.is_junction)
-
-        # world.world.debug.draw_string(waypoint.transform.location, 'X', draw_shadow=False,color=carla.Color(r=0, g=0, b=255), life_time=100,persistent_lines=True)
-        # print(waypoint.lane_id,waypoint.lane_type)
-
-        # raise Exception
-        # world.world.debug.draw_string(waypoint.transform.location, 'X', draw_shadow=False,color=carla.Color(r=0, g=255, b=0), life_time=10000,persistent_lines=True)
-        # print(waypoint.lane_id,waypoint.lane_type)
-
-        # walker_transform=carla.Transform(carla.Location(x= -6.5, y=-125.1, z= 1.152402 ),carla.Rotation(yaw= 1.4203450679814286772))
-        
-        # # walker_transform=carla.Transform(carla.Location(x= -12.5, y=-125.1, z= 1.152402 ),carla.Rotation(yaw= 1.4203450679814286772))
-        
-        # # debug_print()
-        # walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
-
-        # walker.go_to_location(carla.Location(x = 1951,y = -12672 ,z= 14.6974))
-        # walker.set_max_speed(0.2)
-
-
-
-        
-        # raise Exception
-
-        # time.sleep(10)
-    
-        # sleep_time_start= time.time()
-        # while(time.time()-sleep_time_start<30):
-        #     world.world.wait_for_tick()
-        
         # time.sleep(WAIT_TIME_BEFORE_START)
 
         environment = Environment(world.world,world.player,world_map)
@@ -1544,7 +1404,7 @@ def game_loop(args):
                     school_ped=None
 
                 local_waypoints = bp.state_machine(ego_state,current_timestamp,prev_timestamp,current_speed,overtake_vehicle,lane_change_vehicle,danger_vehicle,jaywalking_ped,school_ped)
-                # print(len(local_waypoints),len(local_waypoints[0]))
+                # print(local_waypoints,len(local_waypoints[0]))
 
                 
 
@@ -1622,6 +1482,7 @@ def game_loop(args):
                 controller.update_controls()
                 cmd_throttle, cmd_steer, cmd_brake = controller.get_commands()
                 # Output controller command to CARLA server
+                # print(cmd_throttle,cmd_steer,cmd_brake)
                 # print(cmd_throttle,cmd_steer,cmd_brake)
                 send_control_command(world.player, throttle=cmd_throttle, steer= cmd_steer, brake=cmd_brake)
 

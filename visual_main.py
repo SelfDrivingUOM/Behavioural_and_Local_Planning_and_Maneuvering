@@ -427,7 +427,7 @@ class HUD(object):
         self.speed_queue.append(math.sqrt(v.x**2 + v.y**2 + v.z**2)/10)          
         self.acceleration_queue.popleft()
         self.acceleration_queue.append(math.sqrt(world.imu_sensor.accelerometer[0]**2 
-                                       + world.imu_sensor.accelerometer[1]**2)/10)
+                                       + world.imu_sensor.accelerometer[1]**2)/30)
         self._info_text = [
             'Server:  % 16.0f FPS' % self.server_fps,
             'Client:  % 16.0f FPS' % clock.get_fps(),
@@ -440,13 +440,13 @@ class HUD(object):
             '']
         if isinstance(c, carla.VehicleControl):
             self._info_text += [
-                ('Throttle:', c.throttle, 0.0, 1.0),
+                # ('Throttle:', c.throttle, 0.0, 1.0),
                 ('Steer:', c.steer, -1.0, 1.0),
-                ('Brake:', c.brake, 0.0, 1.0),
+                # ('Brake:', c.brake, 0.0, 1.0),
                 ('Reverse:', c.reverse),
-                ('Hand brake:', c.hand_brake),
-                ('Manual:', c.manual_gear_shift),
-                'Gear:        %s' % {-1: 'R', 0: 'N'}.get(c.gear, c.gear)]
+                ('Hand brake:', c.hand_brake)]
+                # ('Manual:', c.manual_gear_shift)]
+                # 'Gear:        %s' % {-1: 'R', 0: 'N'}.get(c.gear, c.gear)]
         elif isinstance(c, carla.WalkerControl):
             self._info_text += [
                 ('Speed:', c.speed, 0.0, 5.556),
@@ -456,12 +456,16 @@ class HUD(object):
             'Speed plot (ms-1):',
             list(self.speed_queue),
             "",
-            'Speed:   % 15.0f m/s' % (math.sqrt(v.x**2 + v.y**2 + v.z**2)),
+            'Speed:   % 15.1f m/s' % (math.sqrt(v.x**2 + v.y**2 + v.z**2)),
             "",
             'Acc. plot (ms-2):',
             list(self.acceleration_queue),
             "",
-            'Acceleration:% 11.0f m/s2' % (math.sqrt((world.imu_sensor.accelerometer[0])**2+(world.imu_sensor.accelerometer[1])**2))]
+            # 'Acceleration:% 11.1f m/s2' % (math.sqrt(world.imu_sensor.accelerometer[0]**2 
+            #                            + world.imu_sensor.accelerometer[1]**2))]
+
+            'Acceleration:% 11.1f m/s2' % (min((self.acceleration_queue[-1]+self.acceleration_queue[-2]+self.acceleration_queue[-3]+self.acceleration_queue[-4]+self.acceleration_queue[-5])*30/5,4.8))]
+
         # if len(vehicles) > 1:
         #     self._info_text += ['Nearby vehicles:']
         #     distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
@@ -494,8 +498,17 @@ class HUD(object):
                     break
                 if isinstance(item, list):
                     if len(item) > 1:
-                        points = [(x + 8, v_offset + 8 + (1.0 - y) * 30) for x, y in enumerate(item)]
+                        new_item_list = np.array(item)
+                        new_item_list = np.convolve(new_item_list, np.ones(5), 'valid') / 5
+                        # new_item_list = np.append(np.array([0,0]), new_item_list)
+                        # new_item_list = np.append(new_item_list, np.array([0,0]))
+                        new_item_list = new_item_list.tolist()
+                        
+                        points = [(x + 8, v_offset + 8 + (1.0 - y) * 30) for x, y in enumerate(new_item_list)]
+                        # points = [(x + 8, v_offset + 8 + (1.0 - y) * 30) for x, y in enumerate(item)]
                         pygame.draw.lines(display, (255, 136, 0), False, points, 2)
+                        # points = [(x + 8, v_offset + 8 + (1.0 - y) * 30) for x, y in enumerate(item)]
+                        # pygame.draw.lines(display, (255, 136, 0), False, points, 2)
                     item = None
                     v_offset += 18
                 elif isinstance(item, tuple):
@@ -517,6 +530,73 @@ class HUD(object):
                     display.blit(surface, (8, v_offset))
                 v_offset += 18
         self._notifications.render(display)
+
+    # def render(self, display):
+    #     temp_var = True
+    #     if self._show_info:
+    #         info_surface = pygame.Surface((220, self.dim[1]))
+    #         info_surface.set_alpha(100)
+    #         display.blit(info_surface, (0, 0))
+    #         v_offset = 4
+    #         bar_h_offset = 100
+    #         bar_width = 106
+    #         for item in self._info_text:
+    #             if v_offset + 18 > self.dim[1]:
+    #                 break
+    #             if isinstance(item, list):
+    #                 if temp_var:
+    #                     temp_var = False
+    #                     if len(item) > 1:
+    #                         # points = [(x + 8, v_offset + 8 + (1.0 - y) * 30) for x, y in enumerate(item)]
+    #                         points = [(x + 8, v_offset + 80 + (1.0 - y) * 30) for x, y in enumerate(item)]
+    #                         pygame.draw.lines(display, (255, 136, 0), False, points, 2)
+
+    #                         # # speed = 10 line
+    #                         # axis_vel1 = [(x + 8, v_offset + 110 - 30) for x, y in enumerate(range(200))]
+    #                         # pygame.draw.lines(display, (255, 255, 255), False, axis_vel1, 1)
+    #                         # speed = 0 line
+    #                         axis_vel2 = [(x + 8, v_offset + 110) for x, y in enumerate(range(200))]
+    #                         pygame.draw.lines(display, (255, 255, 255), False, axis_vel2, 1)
+    #                     item = None
+    #                     v_offset += 18
+    #                 else:
+    #                     if len(item) > 1:
+    #                         # points = [(x + 8, v_offset + 8 + (1.0 - y) * 30) for x, y in enumerate(item)]
+    #                         points = [(x + 8, v_offset + 80 + 90 + (1.0 - y) * 30) for x, y in enumerate(item)]
+    #                         pygame.draw.lines(display, (255, 0, 0), False, points, 2)
+
+    #                         # # acc. = 10 line
+    #                         # axis_acc1 = [(x + 8, v_offset + 200 - 30) for x, y in enumerate(range(200))]
+    #                         # pygame.draw.lines(display, (255, 255, 255), False, axis_acc1, 1)
+    #                         # acc. = 0 line
+    #                         axis_acc2 = [(x + 8, v_offset + 200) for x, y in enumerate(range(200))]
+    #                         pygame.draw.lines(display, (255, 255, 255), False, axis_acc2, 1)
+    #                     item = None
+    #                     v_offset += 18
+    #             elif isinstance(item, tuple):
+    #                 if isinstance(item[1], bool):
+    #                     rect = pygame.Rect((bar_h_offset, v_offset + 8), (6, 6))
+    #                     pygame.draw.rect(display, (255, 255, 255), rect, 0 if item[1] else 1)
+    #                 else:
+    #                     rect_border = pygame.Rect((bar_h_offset, v_offset + 8), (bar_width, 6))
+    #                     pygame.draw.rect(display, (255, 255, 255), rect_border, 1)
+    #                     f = (item[1] - item[2]) / (item[3] - item[2])
+    #                     if item[2] < 0.0:
+    #                         rect = pygame.Rect((bar_h_offset + f * (bar_width - 6), v_offset + 8), (6, 6))
+    #                     else:
+    #                         rect = pygame.Rect((bar_h_offset, v_offset + 8), (f * bar_width, 6))
+    #                     pygame.draw.rect(display, (255, 255, 255), rect)
+    #                 item = item[0]
+    #             if item:  # At this point has to be a str.
+    #                 if item == 'Acc. plot (ms-2):':
+    #                     surface = self._font_mono.render(item, True, (255, 255, 255))
+    #                     display.blit(surface, (8, v_offset + 95))
+    #                 else:
+    #                     surface = self._font_mono.render(item, True, (255, 255, 255))
+    #                     display.blit(surface, (8, v_offset))
+    #             v_offset += 18
+    #     self._notifications.render(display)
+    #     # self.help.render(display)
         
 # ==============================================================================
 # -- FadingText ----------------------------------------------------------------

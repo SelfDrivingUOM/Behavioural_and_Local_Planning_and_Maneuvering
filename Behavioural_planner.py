@@ -63,7 +63,7 @@ FOLLOW_LEAD_RANGE               = 12       # Range to follow lead vehicles (m)
 FOLLOW_LEAD_LANE_CHANGE         = 18
 OVERTAKE_RANGE                  = 15      # Range to overtake vehicles (m)
 DEBUG_STATE_MACHINE             = False   # Set this to true to see all function outputs in state machine. This is better for full debug
-ONLY_STATE_DEBUG                = False    # Set this to true to see current state of state machine
+ONLY_STATE_DEBUG                = True    # Set this to true to see current state of state machine
 UNSTRUCTURED                    = True    # Set this to True to behave according to the unstructured walkers
 TRAFFIC_LIGHT                   = True   # Set this to True to on traffic lights 
 FOLLOW_LANE_OFFSET              = 0.2     # Path goal point offset in follow lane  (m)
@@ -225,7 +225,6 @@ class BehaviouralPlanner:
             print(dict_[self._state])
 
         open_loop_speed = self._lp._velocity_planner.get_open_loop_speed(current_timestamp - prev_timestamp)
-        # print("openloopSpeed:",open_loop_speed)
         self._open_loop_speed = open_loop_speed
         self._lookahead = (BP_LOOKAHEAD_BASE*(1-self._isOvertake)) + ((OVERTAKE_LOOKAHEAD_BASE + self._overtakeLookahead)*self._isOvertake) + (BP_LOOKAHEAD_TIME * open_loop_speed)
         # print("lookahead", self._lookahead)
