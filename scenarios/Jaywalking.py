@@ -16,19 +16,19 @@ def jaywalking(client,ego_state,vehicle_id_list,all_id):
         blueprint_library = client.get_world().get_blueprint_library()
         blueprintsWalkers = blueprint_library.filter("walker.pedestrian.*")
 
-        # walker_bp = random.choice(blueprintsWalkers)
-        # walker_transform=carla.Transform(carla.Location(x=x_walk2, y=y_walk2, z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
-        # walker = client.get_world().spawn_actor(walker_bp, walker_transform)
+        walker_bp = random.choice(blueprintsWalkers)
+        walker_transform=carla.Transform(carla.Location(x=x_walk2, y=y_walk2, z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+        walker = client.get_world().spawn_actor(walker_bp, walker_transform)
 
-        # if(walker!=None):
+        if(walker!=None):
 
-        #     walker_control = carla.WalkerControl()
-        #     walker_control.speed = 0.2
-        #     walker_heading = head
-        #     walker_rotation = carla.Rotation(0,walker_heading,0)
-        #     walker_control.direction = walker_rotation.get_forward_vector()
-        #     walker.apply_control(walker_control)
-        #     walkers.append(walker)
+            walker_control = carla.WalkerControl()
+            walker_control.speed = 0.2
+            walker_heading = head
+            walker_rotation = carla.Rotation(0,walker_heading,0)
+            walker_control.direction = walker_rotation.get_forward_vector()
+            walker.apply_control(walker_control)
+            walkers.append(walker)
 
 
 
@@ -79,28 +79,28 @@ def jaywalking(client,ego_state,vehicle_id_list,all_id):
                 walker_control.direction = walker_rotation.get_forward_vector()
                 walker.apply_control(walker_control)
 
-        # x_walk5= -62
-        # y_walk5= -81
-        # for i in range(3):
-        #     walker_bp = random.choice(blueprintsWalkers)
-        #     # walker_transform=carla.Transform(carla.Location(x=x_walk2+(NUMBER_OF_STUDENT_IN_LEFT-i), y=y_walk2-j, z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
-        #     walker_transform=carla.Transform(carla.Location(x=x_walk5-i, y=y_walk5, z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
-        #     walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
+        x_walk5= -62
+        y_walk5= -81
+        for i in range(3):
+            walker_bp = random.choice(blueprintsWalkers)
+            # walker_transform=carla.Transform(carla.Location(x=x_walk2+(NUMBER_OF_STUDENT_IN_LEFT-i), y=y_walk2-j, z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+            walker_transform=carla.Transform(carla.Location(x=x_walk5-i, y=y_walk5, z= 1.438 ),carla.Rotation(yaw= 1.4203450679814286772))
+            walker = client.get_world().try_spawn_actor(walker_bp, walker_transform)
 
-        #     if(walker!=None):
-        #         walkers.append(walker)
-        #         walker_control = carla.WalkerControl()
-        #         # walker_control.speed = 0.7+0.1*j
-        #         # walker_heading = -90+(i+j-3)*2*((-1)**i)
-        #         walker_control.speed = 1.5
-        #         #walker_control.speed = 0.205+0.005*(j-3)**2
-        #         # walker_heading = 0+(i+j-3)*2*((-1)**i) #near scl
-        #         walker_heading = -16
-        #         walker_rotation = carla.Rotation(0,walker_heading,0)
-        #         walker_control.direction = walker_rotation.get_forward_vector()
-        #         walker.apply_control(walker_control)
+            if(walker!=None):
+                walkers.append(walker)
+                walker_control = carla.WalkerControl()
+                # walker_control.speed = 0.7+0.1*j
+                # walker_heading = -90+(i+j-3)*2*((-1)**i)
+                walker_control.speed = 1.5
+                #walker_control.speed = 0.205+0.005*(j-3)**2
+                # walker_heading = 0+(i+j-3)*2*((-1)**i) #near scl
+                walker_heading = -17
+                walker_rotation = carla.Rotation(0,walker_heading,0)
+                walker_control.direction = walker_rotation.get_forward_vector()
+                walker.apply_control(walker_control)
 
-        x_walk6= 7.5
+        x_walk6= 7
         y_walk6=-81
 
         for i in range(3):
@@ -114,7 +114,7 @@ def jaywalking(client,ego_state,vehicle_id_list,all_id):
                 walker_control = carla.WalkerControl()
                 # walker_control.speed = 0.7+0.1*j
                 # walker_heading = -90+(i+j-3)*2*((-1)**i)
-                walker_control.speed = 5
+                walker_control.speed = 5.7
                 #walker_control.speed = 0.205+0.005*(j-3)**2
                 # walker_heading = 0+(i+j-3)*2*((-1)**i) #near scl
                 walker_heading = -90
@@ -129,4 +129,3 @@ def jaywalking(client,ego_state,vehicle_id_list,all_id):
 
     else:
         return None,False
-        

@@ -144,7 +144,7 @@ def school(client,ego_state):
                 walker_control = carla.WalkerControl()
                 # walker_control.speed = 0.7+0.1*j
                 # walker_heading = -90+(i+j-3)*2*((-1)**i)
-                walker_control.speed = 0.2
+                walker_control.speed = 0.23
                 #walker_control.speed = 0.205+0.005*(j-3)**2
                 # walker_heading = 0+(i+j-3)*2*((-1)**i) #near scl
                 walker_heading = -110

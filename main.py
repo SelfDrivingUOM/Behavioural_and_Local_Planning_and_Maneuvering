@@ -49,8 +49,8 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
                                  # selected path
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
-NO_AGENT_VEHICLES = 0
-NO_VEHICLES =  250
+NO_AGENT_VEHICLES = 1
+NO_VEHICLES =  200
 NO_WALKERS  =  50
 ONLY_HIGWAY =  0
 
@@ -73,6 +73,9 @@ NUMBER_OF_STUDENT_IN_COLUMNS = 5
 ##########correct global path###########################
 global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104]
 
+###########starting near highway###############################
+# global_path_points_set = [45,163,155,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104]
+###################Jaywalking start#######################
 # global_path_points_set =[226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 # global_path_points_set=[74,109,[288,54],[287,53],104]
 
@@ -80,7 +83,7 @@ global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26]
 # global_path_points_set =[45,163,273,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 # global_path_points_set =[225,77,168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 # global_path_points_set =[157,74,109,288,[54,260],[53,253],253]
-# global_path_points_set   = [25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set   = [25,[216,24],[213,23],228,45,163,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 
 
 
@@ -95,7 +98,7 @@ LEAD_SPAWN_POINT = global_path_points_set_lead[0]
 LEAD_END_POINT = global_path_points_set_lead[-1]
 
 LANE_CHANGE_VEHICLE = True
-LANE_CHANGE_SPEED = 20
+LANE_CHANGE_SPEED = 16
 global_path_points_set_lane_change =[24,[24,230],[228,23],45,159,269]
 LANE_CHANGE_END_POINT = global_path_points_set_lead[-1]
 spw_pt_lane_change = 9
@@ -113,7 +116,7 @@ DANGER_CAR_SPAWN = 55
 DANGER_CAR_END = 285
 global_path_points_set_danger=[DANGER_CAR_SPAWN,DANGER_CAR_END]
 spwn_waypoint_danger = 15
-DANGER_SPEED  = 15
+DANGER_SPEED  = 50
 DIST_DANGER = 80
 DANGER_THROTTLE = 1.2
 DIST_125 = 15
@@ -696,6 +699,7 @@ def game_loop(args):
         
         with open('ego_id.txt','w') as file:
             file.write(str(world.player.id))
+        file_state = open('state.txt', 'w')
         # world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=200 , y=0,z=0), thickness=0.5, color=carla.Color(r=255, g=0, b=0), life_time=-1.)
         # world.world.debug.draw_line(carla.Location(x=0 , y=0,z=0),carla.Location(x=0 , y=200,z=0), thickness=0.5, color=carla.Color(r=0, g=255, b=0), life_time=-1.)
 
@@ -921,26 +925,29 @@ def game_loop(args):
         spawn_pts=world_map.get_spawn_points()
 
         if (NAVIGATION_SPAWN):
+            pass
             
-            
-            spawn_pts.remove(start_point)
-            for i in range (len(spawn_pts)):
-                #print(i,len(spawn_pts)-1-i)
-                if(i==SPAWN_POINT):
-                    continue
-                if (i >= NO_AGENT_VEHICLES):
-                    break 
-                else:
-                    blueprint_library = world.world.get_blueprint_library()
-                    vehicle_bp=blueprint_library.filter("model3")[0]
-                    start_point=world_map.get_spawn_points()[i]
-                    end_point = world_map.get_spawn_points()[len(spawn_pts)-1-i]
-                    end = [end_point.location.x,end_point.location.y,end_point.location.z]
-                    vehicle = world.world.spawn_actor(vehicle_bp, start_point)
-                    actor_list.append(vehicle)
-                    Agent=BasicAgent(vehicle,20)
-                    Agent.set_destination(end)
-                    agent_list.append(Agent)
+            # spawn_pts.remove(start_point)
+            # # for i in range (len(spawn_pts)):
+            # #     #print(i,len(spawn_pts)-1-i)
+            # #     if(i==SPAWN_POINT):
+            # #         continue
+            # #     if (i >= NO_AGENT_VEHICLES):
+            # #         break 
+            # #     else:
+            # blueprint_library = world.world.get_blueprint_library()
+            # vehicle_bp=blueprint_library.filter("model3")[0]
+            # start_point=world_map.get_spawn_points()[DANGER_CAR_SPAWN]
+            # end_point = world_map.get_spawn_points()[DANGER_CAR_END]
+            # end = [end_point.location.x,end_point.location.y,end_point.location.z]
+            # vehicle = world.world.spawn_actor(vehicle_bp, start_point)
+            # actor_list.append(vehicle)
+            # Agent=BasicAgent(vehicle,50)
+            # # Agent.set_destination(end)
+            # danger_route = genarate_global_path(global_path_points_set_danger,world_map)
+
+            # Agent.set_path(danger_route[:])
+            # agent_list.append(Agent)
 
                     #debug=world.debug
 
@@ -1237,9 +1244,10 @@ def game_loop(args):
                 send_control_command(leading_vehicle,cmd_lead.throttle,cmd_lead.steer,cmd_lead.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
 
             if (NAVIGATION_SPAWN):
-                for j in range (len(actor_list)):
-                    cmd=agent_list[j].run_step(False)
-                    send_control_command(actor_list[j],cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
+                pass
+                # for j in range (len(actor_list)):
+                #     cmd=agent_list[j].run_step(False)
+                #     send_control_command(actor_list[j],cmd.throttle,cmd.steer,cmd.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
             
            
             # lead_waypoint = world_map.get_waypoint(leading_vehicle.get_transform().location,project_to_road=True)
@@ -1320,7 +1328,6 @@ def game_loop(args):
                             print("gjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjsad")
                             actor_list.append(overtake_vehicle)
                             overtake_agent=BasicAgent(overtake_vehicle,OVERTAKE_VEHICLE_SPEED)
-                            # Agent.set_destination(world.world,world_map.get_spawn_points()[50])
                             if OVERTAKE_VEHICLE_SPEED>0:
                                 overtake_agent.set_path(route_ovr[spawn_wpt_parked_ovt:])
                             ovr_spawned = True
@@ -1380,14 +1387,14 @@ def game_loop(args):
                         danger_vehicle=world.world.spawn_actor(danger_car_bp, danger_vehicle_tansform)
                         if danger_vehicle is not None:
                             actor_list.append(danger_vehicle)
-                            danger_car_agent=BasicAgent(danger_vehicle,100)
+                            danger_car_agent=BasicAgent(danger_vehicle,20)
                             
                             if DANGER_SPEED>0:
                                 danger_car_agent.set_path(danger_route[spwn_waypoint_danger:])
                             danger_spawned = True
 
                     if danger_spawned== True:
-                        cmd_danger=danger_car_agent.danger_step(False)
+                        cmd_danger=danger_car_agent.run_step(False)
                         send_control_command(danger_vehicle,DANGER_THROTTLE,cmd_danger.steer,cmd_danger.brake, hand_brake=False, reverse=False,manual_gear_shift = False)
 
 
@@ -1403,7 +1410,7 @@ def game_loop(args):
                     jaywalking_ped = None
                     school_ped=None
 
-                local_waypoints = bp.state_machine(ego_state,current_timestamp,prev_timestamp,current_speed,overtake_vehicle,lane_change_vehicle,danger_vehicle,jaywalking_ped,school_ped)
+                local_waypoints = bp.state_machine(ego_state,current_timestamp,prev_timestamp,current_speed,overtake_vehicle,lane_change_vehicle,danger_vehicle,jaywalking_ped,school_ped,file_state)
                 # print(local_waypoints,len(local_waypoints[0]))
 
                 

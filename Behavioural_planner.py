@@ -50,6 +50,7 @@ OVERTAKE                        = 5
 EMERGENCY_STOP                  = 6
 
 dict_                           = ["FOLLOW_LANE","DECELERATE_TO_STOP","STAY_STOPPED","INTERSECTION","FOLLOW_LEAD_VEHICLE","OVERTAKE","EMERGENCY_STOP"]
+dict_display                    = ["FOLLOW LANE","DECELERATE TO STOP","STAY STOPPED","INTERSECTION","FOLLOW LEAD VEHICLE","OVERTAKE","EMERGENCY STOP"]
 
 # important variables
 SPEED                           = 5.5      # Vehicle speed (m/s)
@@ -81,7 +82,7 @@ DIST_WALKER_INTERSECTION        = 40      # Dont decrease this unless you make t
 WALKER_DIST_RANGE_BASE          = 6       # Minimum walker detection distance in unsrtuctured  (m)
 WALKER_DIST_RANGE_MAX           = 10      # Maximum walker detection distance in unsrtuctured  (m)
 LANE_WIDTH_WALKERS              = 2       # Width of checking walkers for botth left and right (m)
-LANE_WIDTH_INTERSECTION         = 3
+LANE_WIDTH_INTERSECTION         = 3.2
 LANE_WIDTH_DEFAULT              = 1.7
 LEAD_SPEED_THRESHOLD            = 0.5     # Threshold to stop when there is a lead vehicle
 
@@ -183,7 +184,7 @@ class BehaviouralPlanner:
     #####              State Machine                ######
     ######################################################
 
-    def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed,overtake_vehicle,lane_change_vehicle,danger_vehicle,jaywalking_ped,school_ped):
+    def state_machine(self, ego_state, current_timestamp, prev_timestamp,current_speed,overtake_vehicle,lane_change_vehicle,danger_vehicle,jaywalking_ped,school_ped,file_state):
         """
         param   : ego_state         : List containing location and heading of ego- vehicle
                                       [x coordinate of ego vehicle (m), y coordinate of ego vehicle (m), yaw of ego vehicle (degrees)]
@@ -204,7 +205,10 @@ class BehaviouralPlanner:
                                             local_waypoints[5]:
                                             returns [x5, y5, v5] (6th point in the local path)
         """
-
+        # file_state.write(dict_[self._state])
+        file_state.seek(0)
+        file_state.write(dict_display[self._state])
+        file_state.truncate()
         # set map traffic lights green
         if (TRAFFIC_LIGHT == False):
             for junc_id in self._traffic_lights .keys():
@@ -402,7 +406,7 @@ class BehaviouralPlanner:
                                                                                                     "{}".format('-'*20), \
                                                                                                     "{}".format(dict_[self._previous_state])  ))
            
-            if (emergency_min_collision!=1):
+            if (emergency_min_collision<1):
                 self._state   = EMERGENCY_STOP
                    
             elif(walker_collide):
@@ -549,7 +553,7 @@ class BehaviouralPlanner:
                                                                                                     "LanePathBlock_lead={}".format(lane_path_blcked_folwLead), \
                                                                                                     "{}".format(dict_[self._previous_state])  ))
 
-            if (emergency_min_collision!=1):
+            if (emergency_min_collision<1):
                 self._state   = EMERGENCY_STOP
             
             elif(self.is_speed_less()):
@@ -799,7 +803,7 @@ class BehaviouralPlanner:
                                                                                                     "LanePathBlocked ={}".format(lane_path_blcked_folwLead), \
                                                                                                     "{}".format(dict_[self._previous_state])  ))
     
-            if (emergency_min_collision!=1):
+            if (emergency_min_collision<1):
                 self._state   = EMERGENCY_STOP
                 print("intersection emergency")
 
@@ -1099,7 +1103,7 @@ class BehaviouralPlanner:
                                                                                                     "{}".format('-'*20), \
                                                                                                     "{}".format(dict_[self._previous_state])  ))
 
-            if (emergency_min_collision!=1):
+            if (emergency_min_collision<1):
                 self._state   = EMERGENCY_STOP
 
             elif(walker_collide):
@@ -1896,7 +1900,6 @@ class BehaviouralPlanner:
 
                 ego_velocity  = self._ego_vehicle.get_velocity()
                 ego_velocity = np.array([ego_velocity.x,ego_velocity.y,ego_velocity.z])
-                # angle between lead velocity and ego velocity(radians)             
                 angle = np.arccos(np.dot(ego_velocity,lead_velocity)/(np.linalg.norm(ego_velocity)*lead_speed))
                 
                 if(lead_speed <LEAD_SPEED_THRESHOLD):

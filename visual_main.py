@@ -398,6 +398,7 @@ class HUD(object):
         mono = default_font if default_font in fonts else fonts[0]
         mono = pygame.font.match_font(mono)
         self._font_mono = pygame.font.Font(mono, 12 if os.name == 'nt' else 14)
+        self._font_mono1 = pygame.font.Font(mono,18 )
         self._notifications = FadingText(font, (width, 40), (0, height - 40))
         self.server_fps = 0
         self.frame = 0
@@ -422,6 +423,8 @@ class HUD(object):
         v = world.player.get_velocity()
         c = world.player.get_control()
         # vehicles = world.world.get_actors().filter('vehicle.*')
+        with open('state.txt','r') as file:
+            state = file.read()
 
         self.speed_queue.popleft()
         self.speed_queue.append(math.sqrt(v.x**2 + v.y**2 + v.z**2)/10)          
@@ -451,21 +454,31 @@ class HUD(object):
             self._info_text += [
                 ('Speed:', c.speed, 0.0, 5.556),
                 ('Jump:', c.jump)]
+        
         self._info_text += [
             '',
             'Speed plot (ms-1):',
             list(self.speed_queue),
             "",
+            "                       time(s)",
             'Speed:   % 15.1f m/s' % (math.sqrt(v.x**2 + v.y**2 + v.z**2)),
             "",
             'Acc. plot (ms-2):',
             list(self.acceleration_queue),
             "",
+            "                       time(s)",
             # 'Acceleration:% 11.1f m/s2' % (math.sqrt(world.imu_sensor.accelerometer[0]**2 
             #                            + world.imu_sensor.accelerometer[1]**2))]
 
-            'Acceleration:% 11.1f m/s2' % (min((self.acceleration_queue[-1]+self.acceleration_queue[-2]+self.acceleration_queue[-3]+self.acceleration_queue[-4]+self.acceleration_queue[-5])*30/5,4.8))]
-
+            'Acceleration:% 11.1f m/s2' % (min((self.acceleration_queue[-1]+self.acceleration_queue[-2]+self.acceleration_queue[-3]+self.acceleration_queue[-4]+self.acceleration_queue[-5])*30/5,4.8)),
+            ""]
+        self._info_text += [
+            'Current State: ']
+        self._info_text += [
+            state]
+        
+        # self._info_text = [
+        #     'State:  %s' % state]
         # if len(vehicles) > 1:
         #     self._info_text += ['Nearby vehicles:']
         #     distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
@@ -509,6 +522,8 @@ class HUD(object):
                         pygame.draw.lines(display, (255, 136, 0), False, points, 2)
                         # points = [(x + 8, v_offset + 8 + (1.0 - y) * 30) for x, y in enumerate(item)]
                         # pygame.draw.lines(display, (255, 136, 0), False, points, 2)
+                        axis_0_pts = [(x + 8, v_offset + 8 + 30) for x in range(len(new_item_list))]
+                        pygame.draw.lines(display, (255, 255, 255), False, axis_0_pts, 1)
                     item = None
                     v_offset += 18
                 elif isinstance(item, tuple):
@@ -525,8 +540,11 @@ class HUD(object):
                             rect = pygame.Rect((bar_h_offset, v_offset + 8), (f * bar_width, 6))
                         pygame.draw.rect(display, (255, 255, 255), rect)
                     item = item[0]
-                if item:  # At this point has to be a str.
-                    surface = self._font_mono.render(item, True, (255, 255, 255))
+                if item:
+                    if item==self._info_text[-1]:
+                        surface = self._font_mono1.render(item, True, (255, 255, 255))  # At this point has to be a str.
+                    else:
+                        surface = self._font_mono.render(item, True, (255, 255, 255))
                     display.blit(surface, (8, v_offset))
                 v_offset += 18
         self._notifications.render(display)
