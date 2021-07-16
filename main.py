@@ -8,7 +8,7 @@ from scenarios.school import school
 from scenarios.Jaywalking import jaywalking
 
 ITER_FOR_SIM_TIMESTEP  = 100     # no. iterations to compute approx sim timestep
-WAIT_TIME_BEFORE_START = 2       # game seconds (time before controller start)
+WAIT_TIME_BEFORE_START = 10       # game seconds (time before controller start)
 TOTAL_RUN_TIME         = 100.00  # game seconds (total runtime before sim end)
 TOTAL_FRAME_BUFFER     = 300     # number of frames to buffer after total runtime
 SIMULATION_TIME_STEP   = 0.034
@@ -50,16 +50,48 @@ INTERP_MAX_POINTS_PLOT    = 10   # number of points used for displaying
 INTERP_DISTANCE_RES       = 0.1  # distance between interpolated points
 
 NO_AGENT_VEHICLES = 1
-NO_VEHICLES =  200
-NO_WALKERS  =  50
+NO_VEHICLES =  0
+NO_WALKERS  =  0
 ONLY_HIGWAY =  0
 
 NUMBER_OF_STUDENT_IN_ROWS    = 10
 NUMBER_OF_STUDENT_IN_COLUMNS = 5
+LIVE = False
+MANUAL = False
+SCENARIO = False
+
+##################Live Demonstration Path################
+if LIVE:
+    global_path_points_set = [70,149,[112,283],[113,284],142,[278,114],[279,115],56,126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
+    MANUAL = True
+##########correct global path###########################
+if not LIVE:
+    global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104]
+    SCENARIO=True
+    NO_VEHICLES =  175
+    NO_WALKERS  =  25
+
+
+
+# global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25]#,[216,24],[213,23],228,45,163,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+
+###########starting near highway###############################
+# global_path_points_set = [45,163,155,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104]
+###################Jaywalking start#######################
+# global_path_points_set = [226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104]
+# global_path_points_set=[109,[288,54],[287,53],104]
+# global_path_points_set = [89,157,74,109,288,[54,260],[53,253],253]
+
+#global_path_points_set =[25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set =[45,163,273,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set =[225,77,168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set =[157,74,109,288,[54,260],[53,253],253]
+# global_path_points_set   = [25,[216,24],[213,23],228,45,163,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
 
 # global_path_points_set = [60,130,62,301,32,[32,28],[31,17],17]
 # global_path_points_set = [126,[7,72],[5,71],150,[150,87],[158,88],88, 92 ]
-# global_path_points_set = [35,112,[112,283],[113,284],142,[278,114],[279,115],56,126,[7,72],[5,71],150,87,91,218,[79,81],[80,82],224,263,259,48,[237,8],[236,9],145,99,220,119,252,[175,116],[181,117],117]
+# global_path_points_set = [70,149,[112,283],[113,284],142,[278,114],[279,115],56,126,[7,72],[5,71],150,87,91,218,[79,81],[80,82],224,263,259,48,[237,8],[236,9],145,99,220,119,252,[175,116],[181,117],117]
+
 # global_path_points_set = [229,80,82,224,263,259,48,[237,8],[236,9],145,99,220,119,252,[175,116],[181,117],117]
 # global_path_points_set = [45,163,273,162,256,197,226]
 # global_path_points_set=[9,145,99,220,119,252,[175,116],[181,117],117]
@@ -69,26 +101,14 @@ NUMBER_OF_STUDENT_IN_COLUMNS = 5
 
 
 
-# global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
-##########correct global path###########################
-global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104]
-
-###########starting near highway###############################
-# global_path_points_set = [45,163,155,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104]
-###################Jaywalking start#######################
-# global_path_points_set =[226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
-# global_path_points_set=[74,109,[288,54],[287,53],104]
-
-#global_path_points_set =[25,[216,24],[213,23],228,45,163,[273,162],[272,155],255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
-# global_path_points_set =[45,163,273,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
-# global_path_points_set =[225,77,168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
-# global_path_points_set =[157,74,109,288,[54,260],[53,253],253]
-# global_path_points_set   = [25,[216,24],[213,23],228,45,163,155,255,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,288,[54,260],[53,253],253]
-
 
 
 SPAWN_POINT = global_path_points_set[0]#189#26  #36 ##20/40-best
 END_POINT   = global_path_points_set[-1]    #0     #119
+
+
+
+
 
 LEAD_SPAWN  = False
 spawn_wpt_parked = 0
@@ -97,21 +117,21 @@ global_path_points_set_lead =[24,[24,230],[228,23],45,159]
 LEAD_SPAWN_POINT = global_path_points_set_lead[0]
 LEAD_END_POINT = global_path_points_set_lead[-1]
 
-LANE_CHANGE_VEHICLE = True
+LANE_CHANGE_VEHICLE = SCENARIO
 LANE_CHANGE_SPEED = 16
 global_path_points_set_lane_change =[24,[24,230],[228,23],45,159,269]
 LANE_CHANGE_END_POINT = global_path_points_set_lead[-1]
 spw_pt_lane_change = 9
 
 
-OVERTAKE_SPAWN = True
+OVERTAKE_SPAWN = SCENARIO
 spawn_wpt_parked_ovt = 30 
 OVERTAKE_VEHICLE_SPEED  = 15                # m/s
 global_path_points_set_ovr =[155,195]
 OVR_X = 207
 OVR_Y = -28
 
-DANGER_CAR   = True
+DANGER_CAR   = SCENARIO
 DANGER_CAR_SPAWN = 55
 DANGER_CAR_END = 285
 global_path_points_set_danger=[DANGER_CAR_SPAWN,DANGER_CAR_END]
@@ -121,7 +141,7 @@ DIST_DANGER = 80
 DANGER_THROTTLE = 1.2
 DIST_125 = 15
 
-WALKER_SPAWN =  True
+WALKER_SPAWN =  SCENARIO
 
 
 OVERTAKE_WALKERS = False
@@ -645,8 +665,12 @@ class World(object):
     def start(self,spawn_point):
         # Get a random blueprint.
         blueprint = self.world.get_blueprint_library().filter("model3")[0]
+        # if blueprint.has_attribute('color'):
+        #     color = random.choice(blueprint.get_attribute('color').recommended_values)
+        #     blueprint.set_attribute('color', color)
         if blueprint.has_attribute('color'):
-            color = random.choice(blueprint.get_attribute('color').recommended_values)
+            print(blueprint.get_attribute('color').recommended_values)
+            color = blueprint.get_attribute('color').recommended_values[1]
             blueprint.set_attribute('color', color)
         if blueprint.has_attribute('driver_id'):
             driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
@@ -1140,8 +1164,8 @@ def game_loop(args):
                                     color=carla.Color(r=0, g=255, b=0), life_time=800,
                                     persistent_lines=True)
 
-        
-        # time.sleep(WAIT_TIME_BEFORE_START)
+        if MANUAL:
+            time.sleep(WAIT_TIME_BEFORE_START)
 
         environment = Environment(world.world,world.player,world_map)
         ################################################################
@@ -1384,7 +1408,7 @@ def game_loop(args):
                         danger_car_bp = blueprint_library.filter("model3")[0]
 
                         danger_vehicle_tansform=carla.Transform(carla.Location(x=x_danger, y=y_danger, z=z_danger),carla.Rotation(yaw= waypoints_danger[0].transform.rotation.yaw,pitch= waypoints_danger[0].transform.rotation.pitch))
-                        danger_vehicle=world.world.spawn_actor(danger_car_bp, danger_vehicle_tansform)
+                        danger_vehicle=world.world.try_spawn_actor(danger_car_bp, danger_vehicle_tansform)
                         if danger_vehicle is not None:
                             actor_list.append(danger_vehicle)
                             danger_car_agent=BasicAgent(danger_vehicle,20)
@@ -1545,6 +1569,9 @@ def game_loop(args):
         cmd_throttle = 0.0
         cmd_steer = 0.0
         cmd_brake = 0.0
+        file_state.seek(0)
+        file_state.write("STAY STOPPED")
+        file_state.truncate()
 
         send_control_command(world.player, throttle=cmd_throttle, steer= cmd_steer, brake=cmd_brake,hand_brake=True)
 

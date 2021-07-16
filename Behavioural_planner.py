@@ -18,6 +18,7 @@
 #####                 FILE IMPORTS              ######
 ######################################################
 
+
 from scenarios.Jaywalking import jaywalking
 import numpy as np
 import glob
@@ -53,7 +54,7 @@ dict_                           = ["FOLLOW_LANE","DECELERATE_TO_STOP","STAY_STOP
 dict_display                    = ["FOLLOW LANE","DECELERATE TO STOP","STAY STOPPED","INTERSECTION","FOLLOW LEAD VEHICLE","OVERTAKE","EMERGENCY STOP"]
 
 # important variables
-SPEED                           = 5.5      # Vehicle speed (m/s)
+SPEED                           = 5.5    # Vehicle speed (m/s)
 SPEED_DEFAULT                   = 5      #Dont change this
 SPEED_HIGHWAY                   = 9
 
@@ -70,6 +71,8 @@ TRAFFIC_LIGHT                   = True   # Set this to True to on traffic lights
 FOLLOW_LANE_OFFSET              = 0.2     # Path goal point offset in follow lane  (m)
 DECELERATE_OFFSET               = 0.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      # Path goal point offset in decelerate state (m) 
 Z                               = 1.843102
+
+DANGER_CAR_TRAFFIC_LIGHT        = False
 
 # normal variables
 BP_LOOKAHEAD_TIME               = 1.0     # Lookahead creating time (s) 
@@ -208,23 +211,36 @@ class BehaviouralPlanner:
         # file_state.write(dict_[self._state])
         file_state.seek(0)
         file_state.write(dict_display[self._state])
+        # file_state.write("DECELERATE TO STOP")
+
         file_state.truncate()
+
+        if danger_vehicle is not None:
+             self._speed = SPEED
+        elif jaywalking_ped is not None:
+            self._speed = SPEED-2
+        
+
         # set map traffic lights green
         if (TRAFFIC_LIGHT == False):
             for junc_id in self._traffic_lights .keys():
                 self.traffic_light_green(self._traffic_lights[junc_id])
 
-        # if school_ped is not None:
-        (self._traffic_lights[53][1]).set_state(carla.TrafficLightState.Red)
-        (self._traffic_lights[53][2]).set_state(carla.TrafficLightState.Green)  ## Our traffic
-        (self._traffic_lights[53][0]).set_state(carla.TrafficLightState.Red)
-        (self._traffic_lights[53][3]).set_state(carla.TrafficLightState.Red)
+        if DANGER_CAR_TRAFFIC_LIGHT:
+            (self._traffic_lights[53][1]).set_state(carla.TrafficLightState.Red)
+            (self._traffic_lights[53][2]).set_state(carla.TrafficLightState.Green)  ## Our traffic
+            (self._traffic_lights[53][0]).set_state(carla.TrafficLightState.Red)
+            (self._traffic_lights[53][3]).set_state(carla.TrafficLightState.Red)
             
 
             
 
         if(self._collission_actor!=None):
             draw_bound_box_actor(self._collission_actor,self._world,255,0,0)
+            dist = np.sqrt(np.sum(np.square(np.array([self._collission_actor.get_location().x,self._collission_actor.get_location().y]) \
+                                    - np.array([ego_state[0],ego_state[1]]))))-self._ego_vehicle.bounding_box.extent.x-self._collission_actor.bounding_box.extent.x
+            print(dist)
+
         if(ONLY_STATE_DEBUG):
             print(dict_[self._state])
 
