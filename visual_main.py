@@ -2,8 +2,7 @@ from __future__ import print_function
 
 from networkx.exception import ExceededMaxIterations
 from tools import misc
-from os_carla import WINDOWS
-from os_carla import YASINTHA_WINDOWS,GERSHOM_WINDOWS
+from os_carla import *
 from scenarios.school import school
 from scenarios.Jaywalking import jaywalking
 
@@ -179,6 +178,25 @@ elif GERSHOM_WINDOWS:
 
         try:
             sys.path.append('D:/WindowsNoEditor/PythonAPI/carla/agents/navigation')
+
+        except IndexError:
+            pass
+elif SAUMYA_UBUNTU:
+    try:
+        sys.path.append(glob.glob('/home/pq-saumya/Documents/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    except IndexError:
+        pass
+
+    if (NAVIGATION_SPAWN):
+
+        try:
+            sys.path.append('/home/pq-saumya/Documents/CARLA_0.9.9/PythonAPI/carla/')
+
+        except IndexError:
+            pass
+
+        try:
+            sys.path.append('/home/pq-saumya/Documents/CARLA_0.9.9/PythonAPI/carla/agents/navigation')
 
         except IndexError:
             pass

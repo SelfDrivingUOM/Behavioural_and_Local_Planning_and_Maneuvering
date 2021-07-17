@@ -2,7 +2,7 @@ import numpy as np
 from tools.misc import draw_bound_box_actor, draw_bound_box
 import time
 from collections import defaultdict
-from os_carla import WINDOWS,YASINTHA_WINDOWS
+from os_carla import *
 import sys
 import glob
 
@@ -19,6 +19,11 @@ if WINDOWS:
 elif YASINTHA_WINDOWS:
     try:
         sys.path.append(glob.glob('C:/Users/4Axis/Desktop/Project/Carla/WindowsNoEditor/PythonAPI/carla/dist/carla-0.9.9-py3.7-win-amd64.egg' )[0])
+    except IndexError:
+        pass
+elif SAUMYA_UBUNTU:
+    try:
+        sys.path.append(glob.glob('/home/pq-saumya/Documents/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
     except IndexError:
         pass
 

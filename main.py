@@ -2,8 +2,7 @@ from __future__ import print_function
 
 from networkx.exception import ExceededMaxIterations
 from tools import misc
-from os_carla import WINDOWS
-from os_carla import YASINTHA_WINDOWS,GERSHOM_WINDOWS
+from os_carla import *
 from scenarios.school import school
 from scenarios.Jaywalking import jaywalking
 
@@ -68,8 +67,8 @@ if LIVE:
 if not LIVE:
     global_path_points_set =[70,149,112,283,136,103,66,206,242,[243,42],296,[296,26],[290,25],25,[216,24],[213,23],228,45,163,155,197,226,[225,77],168,[168,94],[166,93],89,157,74,109,[288,54],[287,53],104]
     SCENARIO=True
-    NO_VEHICLES =  175
-    NO_WALKERS  =  25
+    NO_VEHICLES =  100
+    NO_WALKERS  =  0
 
 
 
@@ -165,9 +164,6 @@ import sys
 import time
 
 import numpy as np
-import matplotlib.pyplot as plt
-
-plt.axis([0, 10, 0, 1])
 # ==============================================================================
 # -- Find CARLA module ----------------------------------------------------------
 # ==============================================================================
@@ -230,6 +226,27 @@ elif GERSHOM_WINDOWS:
 
         except IndexError:
             pass
+
+elif SAUMYA_UBUNTU:
+    try:
+        sys.path.append(glob.glob('/home/pq-saumya/Documents/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    except IndexError:
+        pass
+
+    if (NAVIGATION_SPAWN):
+
+        try:
+            sys.path.append('/home/pq-saumya/Documents/CARLA_0.9.9/PythonAPI/carla/')
+
+        except IndexError:
+            pass
+
+        try:
+            sys.path.append('/home/pq-saumya/Documents/CARLA_0.9.9/PythonAPI/carla/agents/navigation')
+
+        except IndexError:
+            pass
+
 
 else:
     try:

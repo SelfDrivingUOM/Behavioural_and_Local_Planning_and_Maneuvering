@@ -59,6 +59,24 @@ elif YASINTHA_WINDOWS:
     except IndexError:
         pass
 
+elif SAUMYA_UBUNTU:
+    try:
+        sys.path.append(glob.glob('/home/pq-saumya/Documents/CARLA_0.9.9/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg' )[0])
+    except IndexError:
+        pass
+
+    try:
+        sys.path.append('/home/pq-saumya/Documents/CARLA_0.9.9/PythonAPI/carla/')
+
+    except IndexError:
+        pass
+
+    try:
+        sys.path.append('/home/pq-saumya/Documents/CARLA_0.9.9/PythonAPI/carla/agents/navigation')
+
+    except IndexError:
+        pass
+
 
 
 else:
