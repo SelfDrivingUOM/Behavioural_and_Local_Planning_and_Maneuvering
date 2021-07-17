@@ -72,7 +72,7 @@ FOLLOW_LANE_OFFSET              = 0.2     # Path goal point offset in follow lan
 DECELERATE_OFFSET               = 0.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      # Path goal point offset in decelerate state (m) 
 Z                               = 1.843102
 
-DANGER_CAR_TRAFFIC_LIGHT        = False
+DANGER_CAR_TRAFFIC_LIGHT        = True
 
 # normal variables
 BP_LOOKAHEAD_TIME               = 1.0     # Lookahead creating time (s) 
